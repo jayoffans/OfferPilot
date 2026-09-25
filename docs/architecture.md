@@ -3,7 +3,9 @@
 **版本：** 0.1（项目启动稿）  
 **日期：** 2026-09-25
 
-> **Phase 0 实施范围：** 当前代码仅搭建 FastAPI、Pydantic 配置、SQLAlchemy 数据库连接和健康检查，使用本地 SQLite。尚未接入 PostgreSQL、Redis、对象存储、异步 Worker、用户身份或业务 Agent。本文其余 PostgreSQL/Redis/对象存储设计描述后续 MVP 目标架构，不表示这些组件已实现。
+> **当前实施范围：** Phase 0 已搭建 FastAPI、Pydantic 配置、SQLAlchemy 数据库连接和健康检查；Phase 1-1 增加本地 SQLite 的简历文档、画像、画像事实模型及 Alembic 迁移；Phase 1-2 增加本地开发用 PDF 上传、PyMuPDF 文本提取及 `resume_documents` 保存；Phase 1-3 第一阶段增加四字段的内存抽取核心与 DeepSeek Provider，尚未接入 API 或持久化。尚未接入 PostgreSQL、Redis、对象存储、异步 Worker、用户身份或业务 Agent。本文其余 PostgreSQL/Redis/对象存储设计描述后续 MVP 目标架构，不表示这些组件已实现。
+
+Phase 1-2 上传接口仅在 `development` 环境可用，默认上传目录为本地 `backend/uploads/`；仅接收不超过 10 MiB、50 页且有可选中文本的 PDF。PyMuPDF 采用 AGPL 或商业许可，正式发布前需确定适用许可方案。
 
 ## 1. 架构决策摘要
 

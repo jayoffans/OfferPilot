@@ -1,11 +1,24 @@
 # OfferPilot 数据库设计
 
-**版本：** 0.1（逻辑模型）  
+**版本：** 0.3（目标逻辑模型 + Phase 1-1/1-2 实现说明）
+
 **日期：** 2026-09-25
 
-## 1. 设计原则
+## 当前实现：Phase 1-1 ～ Phase 1-2
 
-> **Phase 0 状态：** 当前只建立 SQLAlchemy `Base`、SQLite Engine 和 Session 依赖，没有业务 ORM 模型或数据库迁移。以下表是后续 MVP 的逻辑设计；PostgreSQL 特有类型和约束需在实际迁移时按目标数据库落实。
+本阶段按当前任务建立三张 SQLite 表，并通过 Alembic 初始迁移创建；下文第 1～4 节仍是后续 MVP 的目标逻辑设计，两者尚未完全一致。
+
+| 已实现表 | 核心字段 | 关系 |
+|---|---|---|
+| `resume_documents` | UUID `id`、`file_name`、`file_path`、`file_type`、可空 `raw_text`、`created_at` | 一个简历文档最多有一个画像 |
+| `profiles` | UUID `id`、`resume_id`、可空的 `name` / `phone` / `email`、JSON `education` / `skills` / `projects` / `internships`、`created_at` | `resume_id` 唯一且指向简历文档；一个画像可有多个事实 |
+| `profile_facts` | UUID `id`、`profile_id`、`field_name`、JSON `value`、`confidence`、`source_text`、`created_at` | `profile_id` 指向画像；`confidence` 限制在 0～1 |
+
+删除简历文档时，数据库级外键和 ORM 关系会级联删除其画像及事实；`file_path` 指向的实际文件不由数据库删除。Phase 1-2 的 `POST /resume/upload` 将通过验证的 PDF 原件保存在本地 `backend/uploads/`，提取出的可选中文本写入 `raw_text`。解析或数据库保存失败时会尝试移除本次上传的文件。当前没有画像字段解析流程。
+
+**数据边界：** `raw_text`、联系方式和证据片段属于敏感个人信息。本阶段将原件保存在本地文件系统、文本保存在本地 SQLite；尚无用户归属字段、租户授权、字段加密、正式保留/导出/删除流程，因此上传接口只在 `development` 环境启用，仅用于本机开发和合成样本，不应用真实用户简历或向外提供服务。后续引入用户系统时，需以迁移增加用户归属和数据生命周期能力，再开放给真实用户。SQLite 的 `created_at` 使用 UTC `CURRENT_TIMESTAMP`，但自身不保留时区信息。
+
+## 1. 设计原则
 
 - PostgreSQL 保存业务事实和工作流状态；简历原件存私有对象存储，数据库保留对象键。
 - 所有用户数据表带 `user_id` 或通过受约束的父关系归属用户；查询必须校验当前身份，不能信任客户端传入的 `user_id`。

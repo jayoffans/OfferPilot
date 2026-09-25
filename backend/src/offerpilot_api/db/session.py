@@ -1,16 +1,16 @@
-"""SQLite engine and request-scoped SQLAlchemy sessions."""
+"""Database engine and request-scoped SQLAlchemy sessions."""
 
 from collections.abc import Generator
 from pathlib import Path
 
-from sqlalchemy import create_engine
-from sqlalchemy.engine import Engine, make_url
+from sqlalchemy import create_engine, event
+from sqlalchemy.engine import Engine, URL, make_url
 from sqlalchemy.orm import Session, sessionmaker
 
 from offerpilot_api.core.config import BACKEND_ROOT, get_settings
 
 
-def _prepare_database_url(database_url: str):
+def prepare_database_url(database_url: str) -> URL:
     """Create a local SQLite parent directory and anchor relative paths to backend/."""
 
     url = make_url(database_url)
@@ -25,15 +25,27 @@ def _prepare_database_url(database_url: str):
     return url.set(database=str(database_path))
 
 
-def _build_engine() -> Engine:
-    settings = get_settings()
-    url = _prepare_database_url(settings.database_url)
+def build_engine(database_url: str) -> Engine:
+    """Build an engine and enforce foreign keys for SQLite connections."""
+
+    url = prepare_database_url(database_url)
     connect_args = {"check_same_thread": False} if url.get_backend_name() == "sqlite" else {}
+    new_engine = create_engine(url, connect_args=connect_args, pool_pre_ping=True)
 
-    return create_engine(url, connect_args=connect_args, pool_pre_ping=True)
+    if url.get_backend_name() == "sqlite":
+
+        @event.listens_for(new_engine, "connect")
+        def enable_foreign_keys(dbapi_connection, _connection_record) -> None:
+            cursor = dbapi_connection.cursor()
+            try:
+                cursor.execute("PRAGMA foreign_keys=ON")
+            finally:
+                cursor.close()
+
+    return new_engine
 
 
-engine = _build_engine()
+engine = build_engine(get_settings().database_url)
 SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
 
 
