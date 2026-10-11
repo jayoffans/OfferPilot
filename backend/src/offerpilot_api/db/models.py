@@ -1,4 +1,4 @@
-"""Resume intelligence persistence models."""
+"""Identity and resume intelligence persistence models."""
 
 from __future__ import annotations
 
@@ -6,20 +6,96 @@ import uuid
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import JSON, CheckConstraint, DateTime, Float, ForeignKey, String, Text, Uuid, UniqueConstraint, func
+from sqlalchemy import (
+    JSON, Boolean, CheckConstraint, DateTime, Float, ForeignKey, Index, Integer,
+    String, Text, UniqueConstraint, Uuid, func, text, true,
+)
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from offerpilot_api.db.base import Base
 
 
-class ResumeDocument(Base):
-    __tablename__ = "resume_documents"
+class User(Base):
+    __tablename__ = "users"
+    __table_args__ = (UniqueConstraint("email_normalized", name="uq_users_email_normalized"),)
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    email_normalized: Mapped[str] = mapped_column(String(255), nullable=False)
+    password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, server_default=true(), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.current_timestamp(), nullable=False)
+
+
+class RegistrationInvitation(Base):
+    __tablename__ = "registration_invitations"
+    __table_args__ = (UniqueConstraint("token_hash", name="uq_registration_invitations_token_hash"),)
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    token_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    email_normalized: Mapped[str] = mapped_column(String(255), nullable=False)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    consumed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.current_timestamp(), nullable=False)
+
+
+class AuthSession(Base):
+    __tablename__ = "auth_sessions"
+    __table_args__ = (UniqueConstraint("token_hash", name="uq_auth_sessions_token_hash"),)
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    token_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.current_timestamp(), nullable=False)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class AuthThrottle(Base):
+    __tablename__ = "auth_throttles"
+    __table_args__ = (CheckConstraint("attempt_count >= 0", name="ck_auth_throttles_attempt_count"),)
+
+    key_hash: Mapped[str] = mapped_column(String(64), primary_key=True)
+    window_started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    attempt_count: Mapped[int] = mapped_column(Integer, default=0, server_default=text("0"), nullable=False)
+
+
+class ResumeDocument(Base):
+    __tablename__ = "resume_documents"
+    __table_args__ = (
+        Index("uq_resume_documents_object_key", "object_key", unique=True),
+        CheckConstraint("byte_size >= 0", name="ck_resume_documents_byte_size"),
+        CheckConstraint(
+            "processing_status IN ('uploading', 'uploaded', 'parsed', 'failed')",
+            name="ck_resume_documents_processing_status",
+        ),
+        CheckConstraint(
+            "lifecycle_status IN ('active', 'deleting', 'delete_failed')",
+            name="ck_resume_documents_lifecycle_status",
+        ),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid(as_uuid=True),
+        ForeignKey("users.id", name="fk_resume_documents_user_id_users", ondelete="RESTRICT"),
+        nullable=True,
+        index=True,
+    )
     file_name: Mapped[str] = mapped_column(String(255), nullable=False)
     file_path: Mapped[str] = mapped_column(String(2048), nullable=False)
     file_type: Mapped[str] = mapped_column(String(100), nullable=False)
     raw_text: Mapped[str | None] = mapped_column(Text, nullable=True)
+    object_key: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    byte_size: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    sha256: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    processing_status: Mapped[str] = mapped_column(
+        String(24), default="parsed", server_default=text("'parsed'"), nullable=False
+    )
+    lifecycle_status: Mapped[str] = mapped_column(
+        String(24), default="active", server_default=text("'active'"), nullable=False
+    )
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.current_timestamp(), nullable=False)
 
     profile: Mapped[Profile | None] = relationship(
@@ -27,6 +103,34 @@ class ResumeDocument(Base):
         cascade="all, delete-orphan",
         single_parent=True,
     )
+
+
+class ResumeFileOperation(Base):
+    """Minimal cleanup/idempotency record that survives deletion of the resume."""
+
+    __tablename__ = "resume_file_operations"
+    __table_args__ = (
+        CheckConstraint("reason IN ('upload', 'delete')", name="ck_resume_file_operations_reason"),
+        CheckConstraint(
+            "status IN ('uploading', 'deleting', 'delete_failed', 'deleted')",
+            name="ck_resume_file_operations_status",
+        ),
+        CheckConstraint("attempt_count >= 0", name="ck_resume_file_operations_attempt_count"),
+    )
+
+    # Deliberately no resume FK: retain the tombstone after hard deletion.
+    resume_id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True)
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("users.id", ondelete="RESTRICT"), nullable=False, index=True
+    )
+    object_key: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    legacy_path: Mapped[str | None] = mapped_column(String(2048), nullable=True)
+    reason: Mapped[str] = mapped_column(String(16), nullable=False)
+    status: Mapped[str] = mapped_column(String(24), nullable=False)
+    attempt_count: Mapped[int] = mapped_column(Integer, default=0, server_default=text("0"), nullable=False)
+    error_code: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.current_timestamp(), nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.current_timestamp(), nullable=False)
 
 
 class Profile(Base):

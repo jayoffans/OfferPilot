@@ -30,7 +30,7 @@ def build_engine(database_url: str) -> Engine:
 
     url = prepare_database_url(database_url)
     connect_args = {"check_same_thread": False} if url.get_backend_name() == "sqlite" else {}
-    new_engine = create_engine(url, connect_args=connect_args, pool_pre_ping=True)
+    new_engine = create_engine(url, connect_args=connect_args, pool_pre_ping=True, hide_parameters=True)
 
     if url.get_backend_name() == "sqlite":
 

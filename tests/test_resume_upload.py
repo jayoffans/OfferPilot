@@ -3,6 +3,7 @@
 import tempfile
 import unittest
 from pathlib import Path
+from uuid import UUID
 
 import pymupdf
 from fastapi.testclient import TestClient
@@ -14,6 +15,7 @@ from offerpilot_api.db.base import Base
 from offerpilot_api.db.models import ResumeDocument
 from offerpilot_api.db.session import build_engine, get_db
 from offerpilot_api.main import create_app
+from offerpilot_api.identity.services import create_invitation
 
 
 def make_pdf(text: str) -> bytes:
@@ -30,7 +32,11 @@ class ResumeUploadTests(unittest.TestCase):
         database_url = f"sqlite:///{(self.root / 'test.db').as_posix()}"
         self.engine = build_engine(database_url)
         Base.metadata.create_all(self.engine)
-        settings = Settings(database_url=database_url, upload_dir=self.root / "uploads")
+        settings = Settings(
+            database_url=database_url,
+            upload_dir=self.root / "uploads",
+            session_cookie_secure=False,
+        )
         app = create_app()
 
         def test_db():
@@ -40,6 +46,24 @@ class ResumeUploadTests(unittest.TestCase):
         app.dependency_overrides[get_db] = test_db
         app.dependency_overrides[get_settings] = lambda: settings
         self.client = TestClient(app)
+        with Session(self.engine) as session:
+            invitation = create_invitation(session, email="upload-test@example.com")
+        registration = self.client.post(
+            "/api/v1/auth/register",
+            json={
+                "email": "upload-test@example.com",
+                "password": "Synthetic-upload-password-2026",
+                "invite_token": invitation,
+            },
+        )
+        self.assertEqual(registration.status_code, 201)
+        login = self.client.post(
+            "/api/v1/auth/login",
+            json={"email": "upload-test@example.com", "password": "Synthetic-upload-password-2026"},
+        )
+        self.assertEqual(login.status_code, 200)
+        self.user_id = UUID(login.json()["user"]["id"])
+        self.client.headers["X-CSRF-Token"] = login.json()["csrf_token"]
 
     def tearDown(self) -> None:
         self.client.close()
@@ -61,8 +85,11 @@ class ResumeUploadTests(unittest.TestCase):
             document = session.scalar(select(ResumeDocument))
             self.assertIsNotNone(document)
             self.assertEqual(str(document.id), response.json()["id"])
+            self.assertEqual(document.user_id, self.user_id)
             self.assertIn("Python internship", document.raw_text)
-            self.assertTrue(Path(document.file_path).is_file())
+            self.assertEqual(document.file_path, "")
+            self.assertTrue((self.root / "uploads" / document.object_key).is_file())
+            self.assertEqual(document.processing_status, "parsed")
 
     def test_non_pdf_extension_is_rejected_without_persistence(self) -> None:
         response = self.client.post(
@@ -101,6 +128,7 @@ class ResumeUploadTests(unittest.TestCase):
         self.client.app.dependency_overrides[get_settings] = lambda: Settings(
             environment="production",
             upload_dir=self.root / "uploads",
+            session_cookie_secure=False,
         )
         response = self.client.post(
             "/resume/upload",

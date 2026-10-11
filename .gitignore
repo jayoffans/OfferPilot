@@ -20,3 +20,12 @@ uploads/
 .pytest_cache/
 .ruff_cache/
 .mypy_cache/
+
+# Web build, local test evidence and credentials
+node_modules/
+.next/
+*.tsbuildinfo
+frontend/artifacts/
+frontend/test-results/
+frontend/playwright-report/
+frontend/coverage/

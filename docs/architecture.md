@@ -1,15 +1,26 @@
 # OfferPilot 系统架构与技术方案
 
-**版本：** 0.1（项目启动稿）  
-**日期：** 2026-09-25
+**版本：** 0.4（保留目标设计，补充 S1-3 Web 边界）
+**日期：** 2026-10-11
 
-> **当前实施范围：** Phase 0 已搭建 FastAPI、Pydantic 配置、SQLAlchemy 数据库连接和健康检查；Phase 1-1 增加本地 SQLite 的简历文档、画像、画像事实模型及 Alembic 迁移；Phase 1-2 增加本地开发用 PDF 上传、PyMuPDF 文本提取及 `resume_documents` 保存；Phase 1-3 第一阶段增加四字段的内存抽取核心与 DeepSeek Provider，尚未接入 API 或持久化。尚未接入 PostgreSQL、Redis、对象存储、异步 Worker、用户身份或业务 Agent。本文其余 PostgreSQL/Redis/对象存储设计描述后续 MVP 目标架构，不表示这些组件已实现。
+> **当前实施范围：** Phase 0～1-3 已有 FastAPI、配置、SQLAlchemy/SQLite、健康检查、三表与初始迁移、本机 PDF 上传/文本提取、四字段内存抽取核心与 Provider。S1-1 新增邀请注册、Argon2id、数据库会话、当前用户和简历父链对象授权；S1-2 新增私有本地 Storage Adapter、原件下载、文件/派生删除、清理记录与有限恢复 CLI。AI 抽取仍未接入 API/持久化。S1-3 已增加 Next.js 中文工作台与同源 API 代理。尚无 PostgreSQL、Redis、云对象存储、Worker、画像确认、岗位匹配或业务 Agent。下文保留后续目标设计，优先级以 PLAN/PRD/Roadmap 为准。
 
 Phase 1-2 上传接口仅在 `development` 环境可用，默认上传目录为本地 `backend/uploads/`；仅接收不超过 10 MiB、50 页且有可选中文本的 PDF。PyMuPDF 采用 AGPL 或商业许可，正式发布前需确定适用许可方案。
 
+
+### S1-3 已实现的 Web 边界
+
+`frontend/src/app` 以 App Router 提供中文页面；`src/components` 封装任务 UI，`src/lib/api.ts` 使用真实 OpenAPI 生成的 `schema.d.ts`。`/api/v1/[...path]` 只代理当前 auth/me/resumes 白名单方法与路径，目标来自服务端环境配置；不接受客户端任意 URL、用户归属或数据库操作。FastAPI 仍负责密码、会话、CSRF、资源授权与所有文件领域规则。
+
+代理保留原 Origin、Sec-Fetch-Site、X-CSRF-Token 和唯一会话 Cookie，只转发后端的 offerpilot_session Set-Cookie；no-store、限体积、55 秒请求上限，读取请求体与上游请求均可取消，没有写操作自动重试。后端与前端都显式配置可信 Web origin，不能把不可信来源改写为可信来源。浏览器仅内存保存 CSRF，刷新从 auth/csrf 恢复；会话秘密只在 HttpOnly Cookie。旧请求迟到不能覆盖新会话 CSRF 或触发新会话退出。
+
+当前是客户端确认会话后显示工作台，API 由后端强制授权，页面不包含服务端预渲染的个人资料。文件状态和清理通过真实 lifecycle 接口读取；自动查询有次数/间隔上限，页面卸载终止请求。详见 [前端设计](../frontend/DESIGN.md) 与 [S1-3 验收](S1-3-acceptance.md)。本批没有 Worker、队列、AI 或新数据表；账户导出/注销仍单独后续验收。
+
 ## 1. 架构决策摘要
 
-- 采用**模块化单体 + 独立异步 Worker**，早期不拆微服务，降低部署与调试成本。
+**待决策说明：** 下列 Next.js、PostgreSQL 具体版本、Celery/Redis、对象存储、部署容器和观测供应商均为原设计候选，未由本轮验证或安装。保持模块化单体；Worker 在 S2 长任务需要时再决定，Browser 独立 S7，DOCX/OCR 和通知首发后评估。MVP 岗位来源为粘贴/手动输入，不访问保存的 URL。具体容量、价格、数据期限与部署许可需相应批次验证。
+
+- 采用**模块化单体**；独立异步 Worker 为后续有持久任务时的候选，早期不拆微服务，降低部署与调试成本。
 - Web 使用 Next.js/TypeScript；API、解析、Agent 编排使用 Python/FastAPI，共享明确的 OpenAPI 契约。
 - PostgreSQL 是业务事实的主存储；Redis 只承载任务队列/短期协调，不作为事实数据库。
 - 简历原件放私有对象存储，数据库只保存对象键和元数据；敏感文本按需加密或控制访问。
@@ -46,6 +57,24 @@ flowchart LR
 - **Redis：** Worker broker/短期协调；不放简历正文、长期令牌或唯一业务状态。
 
 ## 3. 逻辑模块
+
+### S1-2 已落地边界
+
+HTTP 路由只处理会话/CSRF、Schema、附件头与安全错误；`services/resume.py` 复用原 PDF 规则，协调先入库上传记录、存储、文本解析、CAS 完成和失败补偿；`resume_ingestion/lifecycle.py` 承载 owner 过滤、删除意图、清理状态、下载完整性、幂等和迟到结果隔离；`storage.py` 只处理不透明对象键的受限 save/read/delete，拒绝路径穿越、符号链接/reparse 与创建证明冲突。不使用云 SDK 或进程内锁伪装跨进程可靠性。
+
+数据库先持久化上传/删除记录，再执行文件操作。托管文件的 PDF/part/claim 共用私有根目录；claim 使用已入库简历 ID 证明本次创建，防止对象键碰撞和数据库更新失败时误删原有对象。处理中断由 `recover.py` 显式、有限批次恢复；证明损坏/归属冲突只安全失败并要求可信操作员核对，不扫描删除未知对象。已完成删除保留最小 owner/ID 幂等记录，正文/画像/事实/文件引用均清除。
+
+当前受限文件 IO、解析和 CAS 持有 SQLite 写事务，使并发删/下载/上传按提交顺序一致；原件先完整读入受大小限制的内存并关句柄再响应。迟到处理只允许 active 文档完成，硬删父表 FK 兜底。该保守方案适用于本机验证；公开部署前再验证容量、超时/解析隔离与生产存储，不能将写锁或本机恢复 CLI 当成已交付 Worker/生产 SLA。优先复用这条领域状态边界，未来 Adapter/Worker 替换不得绕过 owner 和状态检查。
+
+### S1-1 已落地边界
+
+`identity` 管理密码、邀请、会话与限流；`api/routes/auth.py` 只负责 HTTP；`identity/dependencies.py` 统一从 Cookie/数据库解析用户并验证 CSRF。没有客户端可信 user_id 或无状态 JWT；可撤销 opaque 会话适合当前单体，复用数据库而不增加 Redis。成熟 `argon2-cffi` 使用 Argon2id 默认参数，不自行实现密码算法；增加了默认 12～128 字符和合法 UTF-8 输入校验。
+
+`resume_ingestion/access.py` 在服务端 owner 条件下读取/修改元数据；画像/事实经简历父链查询。`services/resume.py` 新上传强制 UUID owner。列表/详情响应显式限定字段，授权先于写入；PATCH 仅改显示名，保留原件存储路径。旧上传兼容路径同样需会话与 CSRF，development 限制保留。
+
+服务器保存会话/邀请 SHA-256 摘要，不保存原 token。会话固定期限、登录轮换、退出撤销、过期或账户停用拒绝；Cookie HttpOnly/SameSite=Lax，非 development 强制 Secure。CSRF 为会话秘密的用途专属 HMAC，每次修改验证；登录/注册 JSON + Origin/Fetch Metadata 保护。限流用数据库条件更新/唯一约束，按账号和实际连接 IP 限制，有界窗口和 429；部署前须验证代理转发头信任，不能相信任意客户端 IP 头。
+
+错误、验证失败与 SQL 参数均脱敏；OpenAPI 显式声明安全错误 Schema，所有个人 API 返回 no-store。日志不打印请求体、Cookie、密码、邀请或个人字段；管理员 CLI 唯一例外是按授权向本机终端输出一次邀请秘密，不作为服务日志。暂无找回密码、邮箱验证、会话管理界面、账户删除或安全审计事件表；不能据 S1-1 宣称完成生产认证体系。
 
 | 模块 | 职责 | 主要边界 |
 |---|---|---|

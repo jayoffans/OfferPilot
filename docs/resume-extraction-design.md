@@ -6,7 +6,7 @@
 
 输入是已有 `resume_documents.raw_text`，输出是带证据的 Student Profile 候选事实，覆盖 `name`、`phone`、`email`、`education`、`skills`、`projects`、`internships`。模型只做文本抽取，不推断未写明的能力、经历、日期或成果；用户确认前不更新 `profiles` 中的正式字段。
 
-现有 Phase 1-1 模型无法区分候选与已确认事实，也没有解析运行版本。落地持久化前须添加向前迁移；当前第一阶段只返回内存对象，不修改数据库或 API。当前无用户身份与授权，只能使用获准的本地合成样本验证，不得把真实简历发送给外部模型。
+现有 Phase 1-1 模型无法区分候选与已确认事实，也没有解析运行版本。落地持久化前须添加向前迁移；当前抽取第一阶段只返回内存对象，不修改数据库或 API。S1-1 已增加用户身份和简历父链授权，但未接入抽取 API、候选持久化、BYOK 或数据处理同意；仍只用获准的本地合成样本验证，不把真实简历发送给外部模型。S2 后续才落实本设计。
 
 ## 2. 整体设计计划的文件
 
@@ -22,14 +22,14 @@
 | `backend/src/offerpilot_api/resume_ingestion/fact_mapper.py` | 将通过验证的叶子字段映射成候选 `profile_facts`。 |
 | `backend/src/offerpilot_api/services/resume_extraction.py` | 编排读取、调用、校验、映射和事务；不放在 router 或 prompt 中。 |
 | `backend/src/offerpilot_api/resume_ingestion/prompts/resume_extract_v1.txt` | 固定版本的系统提示模板。 |
-| `backend/migrations/versions/0002_resume_extraction_review.py` | 计划为候选状态、证据位置和运行版本增加持久化结构。 |
+| `backend/migrations/versions/<下一可用版本>_resume_extraction_review.py` | 后续为候选状态、证据位置和运行版本增加迁移；0002 已用于 S1-1，不能覆盖或重用。 |
 | `tests/test_resume_extraction.py` | 使用假 Provider 覆盖有效证据、无证据、冲突、畸形 JSON、重试上限与重复运行。 |
 
 实施时还需更新 `core/config.py`、`.env.example`、`pyproject.toml`、`uv.lock` 和数据库文档。密钥只从环境或 Secret Manager 注入，不进入仓库。
 
 ## 3. DeepSeek 调用模块与数据流
 
-1. 服务端根据已授权的 `resume_id` 读取 `raw_text`；为空时停止。设置输入长度、调用次数、时长和输出 token 上限。超出模型预算时明确失败，不静默截断；分段抽取留待独立设计。当前尚无身份系统，不开放真实用户调用。
+1. 服务端根据已授权的 `resume_id` 读取 `raw_text`；为空时停止。设置输入长度、调用次数、时长和输出 token 上限。超出模型预算时明确失败，不静默截断；分段抽取留待独立设计。S1-1 仅建立身份边界，未授权模型数据处理或接通该用例，不开放真实用户抽取调用。
 2. 创建状态为 `pending` 的解析运行记录，按 `resume_id + raw_text` 指纹 + schema/prompt/model 版本去重，避免重试生成重复事实。
 3. 在个人数据处理配置获批准后，仅将必要的文本发送给 Provider；不发送 PDF 二进制、路径、文件名、数据库 ID 或无关用户信息。联系字段本身属于本次抽取目标，无法通过简单脱敏替代合规审批。
 4. `LLMProvider` 接口接收文本和 schema/prompt 版本。DeepSeek Adapter 使用受配置约束的 `base_url`、模型名和 API Key；调用 JSON Output，系统提示明确要求 JSON，禁用工具。调用元数据只保留模型名、版本、耗时、token 数和脱敏错误码。初始策略为单次 30 秒超时、最多 2 次调用，参数可由配置收紧。

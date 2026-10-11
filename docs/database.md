@@ -1,22 +1,55 @@
 # OfferPilot 数据库设计
 
-**版本：** 0.3（目标逻辑模型 + Phase 1-1/1-2 实现说明）
+**版本：** 0.6（保留目标模型，说明 S1-3 不改变持久化结构）
 
-**日期：** 2026-09-25
+**日期：** 2026-10-11
 
-## 当前实现：Phase 1-1 ～ Phase 1-2
+## 当前实现：Phase 1-1 ～ Phase 1-3、S1-1/S1-2 持久化与 S1-3 展示
 
-本阶段按当前任务建立三张 SQLite 表，并通过 Alembic 初始迁移创建；下文第 1～4 节仍是后续 MVP 的目标逻辑设计，两者尚未完全一致。
+初始迁移建立三张业务表；S1-1 用新迁移 `0002_identity_ownership` 增加四张身份表和 nullable owner；S1-2 仅追加 `0003_resume_file_lifecycle` 的文件元信息/状态与清理记录。0001、0002 未修改。S1-3 复用上述表和 0003，不新增或变更持久化字段、迁移或用户数据保留策略；前端不访问数据库。下文第 1～4 节保留后续目标逻辑设计，不表示已实现；例如目标 `users.auth_subject` 与当前本地密码账户不同，目标 `profiles` 偏好实体也不同于现有按简历的画像。后续通过向前迁移整合，不直接改旧表含义。
 
 | 已实现表 | 核心字段 | 关系 |
 |---|---|---|
-| `resume_documents` | UUID `id`、`file_name`、`file_path`、`file_type`、可空 `raw_text`、`created_at` | 一个简历文档最多有一个画像 |
+| `resume_documents` | UUID `id`、nullable UUID `user_id`、`file_name`、兼容旧 `file_path`、`file_type`、可空 `raw_text`、`object_key`、`byte_size`、`sha256`、`processing_status`、`lifecycle_status`、`created_at` | owner 外键 users ON DELETE RESTRICT；一个简历最多一个画像；对象键唯一 |
 | `profiles` | UUID `id`、`resume_id`、可空的 `name` / `phone` / `email`、JSON `education` / `skills` / `projects` / `internships`、`created_at` | `resume_id` 唯一且指向简历文档；一个画像可有多个事实 |
 | `profile_facts` | UUID `id`、`profile_id`、`field_name`、JSON `value`、`confidence`、`source_text`、`created_at` | `profile_id` 指向画像；`confidence` 限制在 0～1 |
 
-删除简历文档时，数据库级外键和 ORM 关系会级联删除其画像及事实；`file_path` 指向的实际文件不由数据库删除。Phase 1-2 的 `POST /resume/upload` 将通过验证的 PDF 原件保存在本地 `backend/uploads/`，提取出的可选中文本写入 `raw_text`。解析或数据库保存失败时会尝试移除本次上传的文件。当前没有画像字段解析流程。
+删除简历文档时，数据库级外键和 ORM 关系会级联删除其画像及事实；实际文件由 Storage Adapter 删除。双上传路由保留原有限制，新文件写入私有配置根目录，用服务端对象键代替绝对路径（新 `file_path` 为兼容空串），可选中文本写入 `raw_text`。先持久化上传记录，解析完成清除记录；失败执行有记录的补偿而非忽略 unlink 异常。当前没有 AI 画像字段解析流程。
 
-**数据边界：** `raw_text`、联系方式和证据片段属于敏感个人信息。本阶段将原件保存在本地文件系统、文本保存在本地 SQLite；尚无用户归属字段、租户授权、字段加密、正式保留/导出/删除流程，因此上传接口只在 `development` 环境启用，仅用于本机开发和合成样本，不应用真实用户简历或向外提供服务。后续引入用户系统时，需以迁移增加用户归属和数据生命周期能力，再开放给真实用户。SQLite 的 `created_at` 使用 UTC `CURRENT_TIMESTAMP`，但自身不保留时区信息。
+**数据边界：** `raw_text`、联系方式和证据属于个人数据。S1-1 服务端父链授权、S1-2 私有下载/单份简历原件与派生删除已实现；仍是本地文件/SQLite，无字段加密、账户导出/注销、正式保留及备份删除政策；上传仍仅本机 development 合成样本。SQLite `created_at` 使用 UTC `CURRENT_TIMESTAMP`，本身不保留时区信息。PostgreSQL/JSONB、云存储及加密是目标方案，具体版本、部署与期限待验证。
+
+### S1-2 文件元信息与清理记录
+
+| 表/字段 | 用途与必要性 | 保留、删除与日志规则 |
+|---|---|---|
+| `resume_documents.object_key`, `byte_size`, `sha256` | 不透明私有文件引用、大小/完整性核验；唯一键，大小 CHECK 非负 | 仅服务端生成/使用，不返回键或路径；随文件生命周期清除，不记日志；旧行三字段 NULL 不回填 |
+| `processing_status` | CHECK uploading/uploaded/parsed/failed；区分文件写入与文本解析完成 | 仅 parsed+active 可普通业务读取；当前上传为同步，uploaded 是事务内中间态，不承诺可轮询到所有瞬时状态 |
+| `lifecycle_status` | CHECK active/deleting/delete_failed；控制普通读写隔离 | 删除意图提交即隐藏、清 raw_text/Profile/Fact；最终成功硬删文档；旧行默认 active/parsed，owner 不变 |
+| `resume_file_operations.resume_id`, `user_id`, `reason`, `status` | 已入库上传记录、删除补偿和幂等；reason upload/delete，status uploading/deleting/delete_failed/deleted | resume_id PK **不外键简历**，需在硬删后保留删除完成记录；user_id FK RESTRICT，只供同 owner 查询/重试，无客户端归属；上传失败清理完成则删除记录 |
+| `object_key`, `legacy_path` | 清理失败/文档硬删时仍能定位可信对象；legacy_path 仅旧库受限兼容 | 完成删除清空两引用；待清理期间保留，不外显、不记录日志；越界/NULL-owner 不自动处理 |
+| `attempt_count`, `error_code`, `created_at`, `updated_at` | 非负次数、安全错误分类与有限恢复排查 | 仅同 owner 安全状态返回；不保存原始异常、文件名、正文、Token；最小完成记录尚无 TTL，需未来账户生命周期/隐私政策决定并迁移 |
+
+文件系统 `.claim` 写入已入库简历 UUID hex，证明随机键由本次操作创建；不是认证 Token，不向客户端暴露。数据库 journal 在 `.claim/.part/PDF` 前提交，持久化中断可追踪。写锁/owner/CAS 防并发恢复与迟到结果复活；最后硬删再次利用 FK 清掉迟到子行。对象碰撞或证明损坏安全失败、保留可恢复记录，无法证明者需要可信运维停写核对而非自动擦除。
+
+0003 SQLite 原生加列/check/index，不重建父表；隔离测试覆盖空库和含 0002 owner/正文/画像/事实的数据，全部保持原值及关系。存在任一清理记录、新元信息或非默认状态时拒绝 downgrade，不能删除恢复依据。记录逻辑清空、表硬删、文件 unlink 不代表备份/磁盘/SQLite 空闲页安全擦除；恢复删除重放属后续上线工作。
+
+### S1-1 身份表、用途及保留边界
+
+| 表/字段 | 用途与必要性 | 保留、删除与日志规则 |
+|---|---|---|
+| `users.id`, `email_normalized`, `password_hash`, `is_active`, `created_at` | UUID 归属；规范化邮箱用于登录/邀请绑定、唯一；Argon2id 哈希用于验证；状态用于停用 | 本机账户存续期间保留；未实现注销/密码恢复，后续账户生命周期批次补删除；不返回哈希，不记邮箱/密码/哈希日志；邮箱不代表已验证 |
+| `registration_invitations.id`, `token_hash`, `email_normalized`, `expires_at`, `consumed_at`, `created_at` | 高熵一次邀请摘要、绑定收件邮箱、到期与原子消费 | 默认有效 48 小时，过期/消费记录当前保留，清理期限待生命周期批次；明文不落库，CLI 只显示一次；不记日志 |
+| `auth_sessions.id`, `user_id`, `token_hash`, `created_at`, `expires_at`, `revoked_at` | opaque 会话摘要、owner、固定有效期/撤销；外键删除用户时 CASCADE | 默认 12 小时；到期/撤销立即不可用，记录暂无物理清理；生命周期批次落实；Cookie/token/摘要均不记日志 |
+| `auth_throttles.key_hash`, `window_started_at`, `attempt_count` | 账号或实际连接 IP 的 SHA-256 桶，跨进程限定尝试次数 | 后续认证请求时清除一天前桶，静默系统不主动清理；非匿名化，期限与流量容量上线前验证；不记原始 IP/邮箱/摘要 |
+| `resume_documents.user_id` | owner 索引、外键；新上传取服务端当前用户，旧行 NULL | S1-2 单份简历删除覆盖原件与画像/事实；无自动认领/转移接口；不记个人正文/路径 |
+
+画像/事实不增加重复 owner 列，经 `Profile.resume_id → ResumeDocument.user_id` 和 `ProfileFact.profile_id` 外键父链授权。API 每次服务查询带当前 owner；空或未解析的 owner 在服务层拒绝。NULL 历史记录不出现在任何用户列表，按 ID 访问与跨用户/不存在同样 404，注册不会认领旧记录。
+
+### 迁移与验证边界
+
+SQLite 使用原生 nullable `ALTER TABLE ... ADD COLUMN ... REFERENCES users`，避免重建父表触发已有画像/事实级联丢失；其他数据库使用标准 add/FK 路径，但本批仅实测 SQLite。迁移不回填旧记录，不修改 raw_text、画像或事实。用户删除被已有简历 RESTRICT，账户删除应先完成明确生命周期清理，不把资源变成无人所有。
+
+测试覆盖临时空库、含旧三表数据的 0001 快照、唯一约束、外键/级联、元数据一致与安全降级。SQLite 内联新增 FK 的 SQLAlchemy 反射不显示 ON DELETE，测试直接核实 PRAGMA，再补反射比较；未来 autogenerate 须人工审查，不能把反射差异当作需重建表。只有身份四表均无数据才允许 downgrade；存在任何身份/限流/邀请记录时拒绝降级，以避免丢失认证/所有权，应向前修复或恢复已验证备份。没有在既有实际数据库执行本轮迁移。
 
 ## 1. 设计原则
 
