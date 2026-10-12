@@ -1827,6 +1827,654 @@
           }
         }
       }
+    },
+    "/api/v1/resumes/{resume_id}/extraction": {
+      "get": {
+        "tags": [
+          "resume-extraction"
+        ],
+        "summary": "Capability",
+        "operationId": "capability_api_v1_resumes__resume_id__extraction_get",
+        "parameters": [
+          {
+            "name": "resume_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Resume Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExtractionCapabilityResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        }
+      }
+    },
+    "/api/v1/resumes/{resume_id}/extraction-runs": {
+      "post": {
+        "tags": [
+          "resume-extraction"
+        ],
+        "summary": "Create Run",
+        "operationId": "create_run_api_v1_resumes__resume_id__extraction_runs_post",
+        "parameters": [
+          {
+            "name": "resume_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Resume Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExtractionRunCreateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExtractionRunResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        }
+      }
+    },
+    "/api/v1/extraction-runs/{run_id}": {
+      "get": {
+        "tags": [
+          "resume-extraction"
+        ],
+        "summary": "Read Run",
+        "operationId": "read_run_api_v1_extraction_runs__run_id__get",
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Run Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExtractionRunResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        }
+      }
+    },
+    "/api/v1/extraction-runs/{run_id}/candidates": {
+      "get": {
+        "tags": [
+          "resume-extraction"
+        ],
+        "summary": "Read Candidates",
+        "operationId": "read_candidates_api_v1_extraction_runs__run_id__candidates_get",
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Run Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExtractionRunCandidatesResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        }
+      }
+    },
+    "/api/v1/extraction-runs/{run_id}/cancel": {
+      "post": {
+        "tags": [
+          "resume-extraction"
+        ],
+        "summary": "Cancel Run",
+        "operationId": "cancel_run_api_v1_extraction_runs__run_id__cancel_post",
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Run Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExtractionRunMutationRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExtractionRunResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        }
+      }
+    },
+    "/api/v1/extraction-runs/{run_id}/retry": {
+      "post": {
+        "tags": [
+          "resume-extraction"
+        ],
+        "summary": "Retry Run",
+        "operationId": "retry_run_api_v1_extraction_runs__run_id__retry_post",
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Run Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExtractionRunMutationRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExtractionRunResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        }
+      }
     }
   },
   "components": {
@@ -1882,6 +2530,149 @@
           "source_text"
         ],
         "title": "CandidateEvidence"
+      },
+      "CandidateExtractionMetadata": {
+        "properties": {
+          "schema_version": {
+            "type": "string",
+            "const": "2.0",
+            "title": "Schema Version",
+            "default": "2.0"
+          },
+          "prompt_version": {
+            "type": "string",
+            "const": "resume_extract_v2",
+            "title": "Prompt Version",
+            "default": "resume_extract_v2"
+          },
+          "provider": {
+            "type": "string",
+            "const": "mock",
+            "title": "Provider",
+            "default": "mock"
+          },
+          "test_result": {
+            "type": "boolean",
+            "const": true,
+            "title": "Test Result",
+            "default": true
+          },
+          "source_text_sha256": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$",
+            "title": "Source Text Sha256"
+          },
+          "source_layout_sha256": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$",
+            "title": "Source Layout Sha256"
+          },
+          "source_file_sha256": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[a-f0-9]{64}$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source File Sha256"
+          },
+          "text_layout_version": {
+            "type": "string",
+            "const": "1.0",
+            "title": "Text Layout Version",
+            "default": "1.0"
+          },
+          "category": {
+            "type": "string",
+            "enum": [
+              "education",
+              "skill",
+              "project",
+              "experience"
+            ],
+            "title": "Category"
+          },
+          "item_path": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 1,
+            "pattern": "^[a-z_0-9.\\[\\]]+$",
+            "title": "Item Path"
+          },
+          "scope_text": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 3000,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scope Text"
+          },
+          "scope_locations": {
+            "items": {
+              "$ref": "#/components/schemas/EvidenceLocation"
+            },
+            "type": "array",
+            "maxItems": 20,
+            "title": "Scope Locations"
+          },
+          "fields": {
+            "items": {
+              "$ref": "#/components/schemas/ExtractedFieldTrace"
+            },
+            "type": "array",
+            "maxItems": 60,
+            "title": "Fields"
+          },
+          "review_reasons": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 20,
+            "title": "Review Reasons"
+          },
+          "evidence_status": {
+            "type": "string",
+            "enum": [
+              "supported",
+              "unsupported",
+              "needs_review"
+            ],
+            "title": "Evidence Status",
+            "default": "needs_review"
+          },
+          "duplicate_proposals_removed": {
+            "type": "integer",
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Duplicate Proposals Removed",
+            "default": 0
+          },
+          "confidence_interpretation": {
+            "type": "string",
+            "const": "model_reported_not_truth_probability",
+            "title": "Confidence Interpretation",
+            "default": "model_reported_not_truth_probability"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "source_text_sha256",
+          "source_layout_sha256",
+          "category",
+          "item_path",
+          "fields"
+        ],
+        "title": "CandidateExtractionMetadata"
       },
       "CareerProfileResponse": {
         "properties": {
@@ -2324,6 +3115,23 @@
             },
             "type": "array",
             "title": "Evidence"
+          },
+          "test_result": {
+            "type": "boolean",
+            "title": "Test Result",
+            "default": false
+          },
+          "provider": {
+            "anyOf": [
+              {
+                "type": "string",
+                "const": "mock"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Provider"
           }
         },
         "type": "object",
@@ -2388,6 +3196,51 @@
           "detail"
         ],
         "title": "ErrorResponse"
+      },
+      "EvidenceLocation": {
+        "properties": {
+          "start": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Start"
+          },
+          "end": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "End"
+          },
+          "page": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Page"
+          },
+          "paragraph": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Paragraph"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "start",
+          "end"
+        ],
+        "title": "EvidenceLocation"
       },
       "ExperienceEntry": {
         "properties": {
@@ -2692,6 +3545,339 @@
         "type": "object",
         "title": "ExperienceValue"
       },
+      "ExtractedFieldTrace": {
+        "properties": {
+          "path": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 1,
+            "pattern": "^[a-z_0-9.\\[\\]]+$",
+            "title": "Path"
+          },
+          "mapped_field": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 40,
+                "pattern": "^[a-z_]+$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mapped Field"
+          },
+          "raw_value": {
+            "type": "string",
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Raw Value"
+          },
+          "source_text": {
+            "type": "string",
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Source Text"
+          },
+          "reported_confidence": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Reported Confidence"
+          },
+          "assertion": {
+            "type": "string",
+            "enum": [
+              "affirmed",
+              "negated",
+              "planned",
+              "uncertain"
+            ],
+            "title": "Assertion"
+          },
+          "normalized_value": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Normalized Value"
+          },
+          "locations": {
+            "items": {
+              "$ref": "#/components/schemas/EvidenceLocation"
+            },
+            "type": "array",
+            "maxItems": 20,
+            "title": "Locations"
+          },
+          "review_reasons": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 15,
+            "title": "Review Reasons"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "path",
+          "raw_value",
+          "source_text",
+          "reported_confidence",
+          "assertion"
+        ],
+        "title": "ExtractedFieldTrace"
+      },
+      "ExtractionCapabilityResponse": {
+        "properties": {
+          "enabled": {
+            "type": "boolean",
+            "title": "Enabled"
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "mock",
+              "disabled"
+            ],
+            "title": "Mode"
+          },
+          "test_result": {
+            "type": "boolean",
+            "title": "Test Result"
+          },
+          "source_version": {
+            "type": "string",
+            "title": "Source Version"
+          },
+          "recent_runs": {
+            "items": {
+              "$ref": "#/components/schemas/ExtractionRunResponse"
+            },
+            "type": "array",
+            "title": "Recent Runs"
+          }
+        },
+        "type": "object",
+        "required": [
+          "enabled",
+          "mode",
+          "test_result",
+          "source_version",
+          "recent_runs"
+        ],
+        "title": "ExtractionCapabilityResponse"
+      },
+      "ExtractionRunCandidatesResponse": {
+        "properties": {
+          "run": {
+            "$ref": "#/components/schemas/ExtractionRunResponse"
+          },
+          "candidates": {
+            "items": {
+              "$ref": "#/components/schemas/ProfileCandidateResponse"
+            },
+            "type": "array",
+            "title": "Candidates"
+          }
+        },
+        "type": "object",
+        "required": [
+          "run",
+          "candidates"
+        ],
+        "title": "ExtractionRunCandidatesResponse"
+      },
+      "ExtractionRunCreateRequest": {
+        "properties": {
+          "idempotency_key": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9_.-]+$",
+            "title": "Idempotency Key"
+          },
+          "source_version": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$",
+            "title": "Source Version"
+          },
+          "mode": {
+            "type": "string",
+            "const": "mock",
+            "title": "Mode"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "idempotency_key",
+          "source_version",
+          "mode"
+        ],
+        "title": "ExtractionRunCreateRequest"
+      },
+      "ExtractionRunMutationRequest": {
+        "properties": {
+          "revision": {
+            "type": "integer",
+            "maximum": 2147483646.0,
+            "minimum": 0.0,
+            "title": "Revision"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "revision"
+        ],
+        "title": "ExtractionRunMutationRequest"
+      },
+      "ExtractionRunResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "resume_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Resume Id"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "queued",
+              "running",
+              "succeeded",
+              "failed",
+              "cancelled"
+            ],
+            "title": "Status"
+          },
+          "mode": {
+            "type": "string",
+            "const": "mock",
+            "title": "Mode"
+          },
+          "test_result": {
+            "type": "boolean",
+            "const": true,
+            "title": "Test Result"
+          },
+          "revision": {
+            "type": "integer",
+            "title": "Revision"
+          },
+          "source_version": {
+            "type": "string",
+            "title": "Source Version"
+          },
+          "attempt_count": {
+            "type": "integer",
+            "title": "Attempt Count"
+          },
+          "max_attempts": {
+            "type": "integer",
+            "title": "Max Attempts"
+          },
+          "call_count": {
+            "type": "integer",
+            "title": "Call Count"
+          },
+          "max_calls": {
+            "type": "integer",
+            "title": "Max Calls"
+          },
+          "candidate_count": {
+            "type": "integer",
+            "title": "Candidate Count"
+          },
+          "schema_version": {
+            "type": "string",
+            "title": "Schema Version"
+          },
+          "extraction_version": {
+            "type": "string",
+            "title": "Extraction Version"
+          },
+          "prompt_version": {
+            "type": "string",
+            "title": "Prompt Version"
+          },
+          "provider_version": {
+            "type": "string",
+            "title": "Provider Version"
+          },
+          "error_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Code"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          },
+          "finished_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finished At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "resume_id",
+          "status",
+          "mode",
+          "test_result",
+          "revision",
+          "source_version",
+          "attempt_count",
+          "max_attempts",
+          "call_count",
+          "max_calls",
+          "candidate_count",
+          "schema_version",
+          "extraction_version",
+          "prompt_version",
+          "provider_version",
+          "error_code",
+          "created_at",
+          "updated_at",
+          "finished_at"
+        ],
+        "title": "ExtractionRunResponse"
+      },
       "HealthResponse": {
         "properties": {
           "status": {
@@ -2860,6 +4046,28 @@
               }
             ],
             "title": "Reviewed At"
+          },
+          "extraction_run_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Extraction Run Id"
+          },
+          "extraction_metadata": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CandidateExtractionMetadata"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "type": "object",

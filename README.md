@@ -1,12 +1,12 @@
 # OfferPilot
 
-当前交付为 **S1 中文账户/私有 PDF 工作台 + S2-1 可信求职画像基础**。登录后进入“我的资料”，分组编辑教育、技能、项目、实习/工作，保存部分资料，查看字段来源，审核已有候选；刷新及重登录恢复已保存数据。上传支持本机 development 文本型 PDF，仍仅保存/解析文件，不生成 AI 候选。BYOK/DeepSeek 真实抽取、岗位匹配、投递管理、完整账户导出/注销和公网部署仍未实现。分批证据见 [docs/PLAN.md](docs/PLAN.md) 与 [S2-1 验收](docs/S2-1-acceptance.md)，前端设计见 [frontend/DESIGN.md](frontend/DESIGN.md)。
+当前交付为 **S1 中文账户/私有 PDF 工作台 + S2-1 可信画像 + S2-2A 合成 Mock 抽取流水线**。上传本身只解析文本；在显式隔离测试模式中可为登记合成 PDF 创建持久任务，验证 V2/原文证据、生成待审核候选，再由用户确认、修改或拒绝。正式画像继续使用同一套 S2-1 审核机制，未经确认绝不自动写入。Mock 及确认后的来源始终标记为测试结果。真实 DeepSeek、付费调用、BYOK、S3、Browser Agent、账户导出/注销和公网部署未启用。分批证据见 [PLAN](docs/PLAN.md)、[S2-1 验收](docs/S2-1-acceptance.md) 与 [S2-2A 验收](docs/S2-2A-acceptance.md)。
 
 ## 本地启动（Windows PowerShell，两个终端）
 
-需要 Python 3.11、uv 和 Node.js 22.12+（本机使用 22.16）。后端与前端分别按锁文件安装；S2-1 无新增依赖。前端保持 Next.js、TypeScript、Tailwind、Radix、Lucide 和生成 OpenAPI 契约，后端追加 0004 的三张画像/候选表。
+需要 Python 3.11、uv 和 Node.js 22.12+（本机使用 22.16）。按现有锁文件安装，本批无新增依赖。后端 head 为 0005（运行与定位），0001～0004 不变；前端继续使用生成 OpenAPI 契约。
 
-**终端 A：后端。** 显式使用一个本机开发库。相对 SQLite 文件路径固定解析到 `backend/`；以下命令不会迁移默认旧库。新库升级到 0004；已有 S1-3 本机库应先备份再执行同一向前升级命令，可继续复用私有目录。不要切换为生产地址。本批只迁移隔离测试库，没有替你修改现有开发或生产库。
+**终端 A：后端。** 显式使用一个本机开发库。相对 SQLite 文件路径固定解析到 `backend/`；以下命令不会迁移默认旧库。新库升级到 0005；已有本机库应先备份再执行同一向前升级命令，可复用私有目录。不要切换为生产地址。本批只迁移隔离测试库，没有替你修改现有开发或生产库。
 
 ```powershell
 Set-Location 'D:\agent 项目\OfferPilot'
@@ -89,7 +89,32 @@ E2E 自行启动 8001 的真实 FastAPI 和 3001 的独立 Next 服务，迁移�
 
 正式画像日期使用 YYYY-MM、未知为 null，毕业时间区分预计/实际，经历状态区分进行中/已结束/未知，不推算年限。手工保存标用户填写，原值确认标简历候选经用户确认，修订标用户提供内容；模型自报置信度不代表正确率。所有写操作检查 revision，旧版本 409 不覆盖数据。资料页面保留冲突输入，支持查看最新保存内容；主动重新载入会明确提醒丢弃本次编辑。
 
-候选只由内部 ingest_profile_candidates 经版本化 Schema、owner/文件状态/证据及批次幂等校验入库，正式 API 没有候选创建或 AI 触发入口。每批最多 100、每用户候选上限 500；相同批次同内容复投不加版本，不同内容 409。S2-1 本机验收使用合成候选夹具，不在产品页面注入假资料。后续 S2-2 需提供真实抽取到该 Schema 的转换及独立调用授权。
+候选由内部 ingest_profile_candidates 经版本化 Schema、owner/文件状态/证据及批次幂等校验入库。每批最多 100、每用户候选上限 500；相同批次同内容复投不加版本，不同内容 409。S2-2A 的 Mock 任务与候选一次提交，候选始终 pending；真实 AI 触发仍未开放。
+
+## S2-2A 隔离 Mock 验证
+
+推荐直接执行现有 `npm.cmd run test:e2e`：launcher 创建临时 SQLite，经 head 迁移、生成登记的合成中文 PDF，使用真实本机 API 和页面完成任务与审核。默认运行环境保持 Mock 关闭；未登记简历会安全失败，不能用于真实 AI 抽取。
+
+如需独立调试，只在自行选定的隔离 development 库/私有目录中开启后端 `OFFERPILOT_MOCK_EXTRACTION_ENABLED=true`，前端服务另开 `OFFERPILOT_MOCK_EXTRACTION_UI=true`。两项均为服务器配置，不包含 Key。默认租约30秒、最多两次执行/共四次调用；创建传入当前 source_version 和幂等键，重复任务不会重复入库。运行 API 见生成 OpenAPI：
+
+| 方法与路径 | 行为 |
+|---|---|
+| GET /api/v1/resumes/{id}/extraction | 开关、资源版本、最近运行 |
+| POST /api/v1/resumes/{id}/extraction-runs | `{idempotency_key, source_version, mode:"mock"}`，202 queued |
+| GET /api/v1/extraction-runs/{id} | 持久状态/版本/次数/安全错误 |
+| GET /api/v1/extraction-runs/{id}/candidates | 仅该运行、同用户候选 |
+| POST /api/v1/extraction-runs/{id}/cancel 或 /retry | `{revision}`；CSRF、状态、资源版本与剩余额度 |
+
+Mock 模式 lifespan 执行器读取持久 queued；关闭服务不丢排队记录，过期 running 可查询失败。相同配置下也可执行有限处理/恢复（不要指向真实开发或生产数据）：
+
+```powershell
+& .\backend\.venv\Scripts\python.exe -B -m offerpilot_api.agent_runtime.process_extractions --limit 10
+& .\backend\.venv\Scripts\python.exe -B -m offerpilot_api.agent_runtime.process_extractions --recover-only --limit 10
+# 独立字段评测只用固定合成响应，不联网，不接收 API Key。
+& .\backend\.venv\Scripts\python.exe -B backend/evaluations/evaluate_resume_extraction_v2.py --output backend/evaluations/s2-2a-synthetic-report.json
+```
+
+评测把独立 gold 与候选逐字段比较并报告错/漏/多字段、保守护栏和位置覆盖。包含刻意错误的模型输出，不能据此计算真实 AI 质量；详见 [合成评测报告](backend/evaluations/s2-2a-synthetic-report.json)。旧真实 DeepSeek 评测脚本仍属另行授权入口，本批不执行。
 
 ## 私有文件与故障恢复
 
@@ -124,10 +149,12 @@ git diff --check
 
 测试创建临时 SQLite 与合成 PDF，身份运行真实 Argon2id、会话和授权；旧抽取回归使用 Fake Provider，不调用付费 API。生命周期核对原始字节/关联表/实际文件，画像验证授权、Schema、revision并发与证据删除。HTTP脚本迁移新临时库、启动随机本机端口，退出后关闭连接并清临时目录。S2-1 最终 **167/167后端、30/30前端单元、12/12 Chromium E2E** 通过，原125后端与S1页面不回归；API契约/类型/lint/build通过，证据见 [S2-1验收](docs/S2-1-acceptance.md)。S1历史结果保留原记录。
 
+S2-2A 最新结果：**222/222 后端、39/39 前端、16/16 完整 Chromium**，真实 HTTP smoke、契约/类型/lint/build、迁移与差异检查通过。合成 PDF 全链中7条候选入库后正式画像仍为空，用户主动确认后才写正式值。并发/取消/删除/旧版本迟到、事务故障、丢提交确认与实际子进程中断/CLI恢复均覆盖；字段错误及定位局限另见 [本批验收](docs/S2-2A-acceptance.md)，不代表真实模型质量。
+
 新迁移 `0003_resume_file_lifecycle` 在 0002 后增加文件元信息、处理/删除状态和独立清理记录；原生 SQLite 加列保留旧 owner、正文及父子关系，旧行默认 active/parsed，不回填对象键或认领 NULL-owner。只在无新元数据/状态/清理记录时允许安全降级；有数据须向前修复或备份恢复。S1-2 未修改 0001、0002；S1-3 未新增迁移，仅升级隔离测试库。PostgreSQL 运行行为尚未验证。
 
 S2-1 追加0004新建三张独立画像/候选表，0001～0003不变；空库和含旧0003数据快照向前验证通过，原owner/NULL-owner/文本/文件元信息/旧事实保持、不自动确认。新数据存在拒绝有损downgrade，空0004可降回0003；不执行offline破坏性降级。PostgreSQL仍待独立验证。
 
 ## 当前边界
 
-当前提供中文账户、简历文件和可信画像管理，未实现 BYOK/真实 AI 抽取、岗位匹配、密码找回/修改、邮箱验证、账户注销、数据导出或生产部署。过期会话和邀请记录保留，限流桶在后续认证请求时清理一天前数据，散列不等于匿名化。恢复须人工显式执行，没有 SLA/队列/云存储保证。验证服务只绑定本机、使用合成数据；**完成 S2-1 后停止，S2-2/S2-3 另行授权**。PostgreSQL、HTTPS、配额、解析隔离/超时、容量、备份和安全日志审计仍需后续验证。
+当前未实现 BYOK/真实 AI 抽取、岗位匹配、密码找回/修改、邮箱验证、账户注销、数据导出或生产部署。Mock 提供本机持久执行与有限恢复，不能当作生产 SLA/队列/云存储保证。过期会话、邀请及最小任务终态的保留政策仍待账户生命周期批次。验证服务只绑定本机、使用合成数据；**完成 S2-2A 后停止，S2-2B/S2-3 另行授权**。PostgreSQL、HTTPS、正式配额/容量、原生解析隔离、备份和安全日志审计仍需后续验证。

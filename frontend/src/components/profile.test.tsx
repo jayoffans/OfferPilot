@@ -11,7 +11,7 @@ vi.mock("next/navigation", () => ({ usePathname: () => "/profile", useRouter: ()
 vi.mock("@/lib/auth", () => ({ useAuth: () => ({ status: "authenticated", user: { id: "synthetic-user", email: "synthetic@example.com" }, signOut: mocks.signOut }) }));
 
 const blank: CareerProfile = { schema_version: "1.0", revision: 0, updated_at: null, education: [], skills: [], projects: [], experiences: [], candidates: [], completion: { populated_groups: [], missing_fields: ["education.school", "skills"], pending_count: 0 } };
-const manual = { kind: "manual" as const, resume_id: null, resume_file_name: null, field_sources: { name: "manual" as const, school: "manual" as const }, evidence: [] };
+const manual = { test_result: false, kind: "manual" as const, resume_id: null, resume_file_name: null, field_sources: { name: "manual" as const, school: "manual" as const }, evidence: [] };
 function candidate(overrides: Partial<ProfileCandidate> = {}): ProfileCandidate {
   return { id: "11111111-1111-4111-8111-111111111111", category: "skill", value: { name: "Java", level: "熟练" }, status: "pending", evidence_status: "unsupported", evidence: [{ field: "name", source_text: "Not proficient in Java" }], resume_id: "22222222-2222-4222-8222-222222222222", resume_file_name: "synthetic.pdf", schema_version: "1.0", extraction_version: "synthetic-v1", entry_id: null, created_at: "2026-10-11T00:00:00Z", reviewed_at: null, ...overrides };
 }
@@ -97,7 +97,7 @@ it("rejects a supported candidate without adding it to the formal profile, and p
 
 it("confirmed candidates become formal facts with server-authored resume evidence", async () => {
   const item = candidate({ evidence_status: "supported", value: { name: "Python", level: null }, evidence: [{ field: "name", source_text: "Python" }] });
-  const review = vi.spyOn(api, "reviewCandidate").mockResolvedValue({ ...blank, revision: 2, candidates: [{ ...item, status: "confirmed" }], skills: [{ id: "formal", name: "Python", level: null, source: { kind: "resume_confirmed", resume_id: item.resume_id, resume_file_name: item.resume_file_name, field_sources: { name: "resume" }, evidence: [{ field: "name", source_text: "Python", supports_current_value: true }] } }] });
+  const review = vi.spyOn(api, "reviewCandidate").mockResolvedValue({ ...blank, revision: 2, candidates: [{ ...item, status: "confirmed" }], skills: [{ id: "formal", name: "Python", level: null, source: { test_result: false, kind: "resume_confirmed", resume_id: item.resume_id, resume_file_name: item.resume_file_name, field_sources: { name: "resume" }, evidence: [{ field: "name", source_text: "Python", supports_current_value: true }] } }] });
   const user = userEvent.setup(); await open({ ...blank, revision: 1, candidates: [item] });
   await user.click(screen.getByRole("button", { name: "确认事实" }));
   await screen.findByText("事实已确认并加入正式资料。");
@@ -171,4 +171,26 @@ it("explicitly abandoning navigation discards the in-memory draft", async () => 
   await user.click(screen.getAllByRole("link", { name: "我的简历" })[0]);
   await user.click(screen.getByRole("button", { name: "放弃修改并离开" }));
   expect(mocks.push).toHaveBeenCalledWith("/resumes"); expect(readProfileDraft("synthetic-user")).toBeNull();
+});
+
+it("labels Mock candidates and displays server locations, original fields and conservative review reasons", async () => {
+  const item = candidate({ evidence_status: "needs_review", extraction_metadata: {
+    schema_version: "2.0", prompt_version: "resume_extract_v2", provider: "mock", test_result: true,
+    source_text_sha256: "a".repeat(64), source_layout_sha256: "b".repeat(64), text_layout_version: "1.0",
+    category: "skill", item_path: "skills[0]", evidence_status: "needs_review", duplicate_proposals_removed: 0, confidence_interpretation: "model_reported_not_truth_probability",
+    review_reasons: ["negative_planned_or_uncertain_context"], fields: [{ path: "skills[0].name", mapped_field: "name", raw_value: "Java", source_text: "尚未掌握 Java。", reported_confidence: 0.99, assertion: "negated", normalized_value: "Java", locations: [{ start: 10, end: 20, page: 2, paragraph: 3 }], review_reasons: ["model_assertion_negated"] }],
+  } });
+  const user = userEvent.setup(); await open({ ...blank, candidates: [item] });
+  expect(screen.getByText(/Mock 测试候选/)).toBeVisible(); expect(screen.getByRole("button", { name: "确认事实" })).toBeDisabled();
+  await user.click(screen.getByText("查看抽取字段、归属与原文位置"));
+  expect(screen.getByText(/服务器原文定位：第 2 页 \/ 第 3 段 \/ 字符 10–20/)).toBeVisible();
+  expect(screen.getByText(/否定描述，不能当作已掌握/)).toBeVisible();
+  expect(screen.getByText(/模型自报 confidence.*不代表真实性概率/)).toBeVisible();
+});
+
+it("preserves the Mock source label after a user confirms and reloads a formal fact", async () => {
+  const user = userEvent.setup(); await open({ ...blank, updated_at: "2026-10-12T00:00:00Z", skills: [{ id: "mock-confirmed", name: "Python", level: null, source: { ...manual, kind: "resume_confirmed", test_result: true, provider: "mock", field_sources: { name: "resume" } } }] });
+  expect(screen.getByLabelText("技能名称")).toHaveAccessibleDescription("来源：Mock 测试结果经用户确认");
+  await user.click(screen.getByText("查看来源与证据"));
+  expect(screen.getByText(/来源为 Mock 测试结果，经用户主动确认或修订/)).toBeVisible();
 });

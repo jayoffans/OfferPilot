@@ -17,6 +17,7 @@ from sqlalchemy.orm import Session
 
 from offerpilot_api.db.models import Profile, ResumeDocument, ResumeFileOperation
 from offerpilot_api.profile.services import remove_resume_profile_evidence
+from offerpilot_api.agent_runtime.extraction_runs import cancel_resume_extraction_runs
 from offerpilot_api.resume_ingestion.storage import ResumeStorage, StorageError
 
 
@@ -92,7 +93,7 @@ def lock_active_upload(db: Session, *, resume_id: UUID, user_id: UUID) -> None:
 
 def complete_resume_upload(
     db: Session, *, resume_id: UUID, user_id: UUID, raw_text: str,
-    byte_size: int, sha256: str,
+    byte_size: int, sha256: str, text_layout: dict | None = None,
 ) -> None:
     """A late processor cannot recreate or update a hidden/deleted resource.
 
@@ -107,7 +108,7 @@ The caller owns the transaction and must commit once with its other work.
             ResumeDocument.processing_status.in_(("uploading", "uploaded")),
             ResumeDocument.object_key.is_not(None),
         )
-        .values(raw_text=raw_text, byte_size=byte_size, sha256=sha256, processing_status="parsed")
+        .values(raw_text=raw_text, text_layout=text_layout, byte_size=byte_size, sha256=sha256, processing_status="parsed")
         .execution_options(synchronize_session=False)
     )
     if changed.rowcount != 1:
@@ -201,10 +202,11 @@ def _mark_delete_intent(db: Session, *, resume_id: UUID, user_id: UUID) -> bool:
             operation.error_code = None
         operation.updated_at = _now()
     db.execute(update(ResumeDocument).where(ResumeDocument.id == resume_id).values(
-        lifecycle_status="deleting", raw_text=None,
+        lifecycle_status="deleting", raw_text=None, text_layout=None,
         processing_status="failed" if document.processing_status in ("uploading", "uploaded") else document.processing_status,
     ))
     # Core DELETE uses the real database FK cascade for profile facts.
+    cancel_resume_extraction_runs(db, user_id=user_id, resume_id=resume_id)
     remove_resume_profile_evidence(db, user_id=user_id, resume_id=resume_id)
     db.execute(delete(Profile).where(Profile.resume_id == resume_id))
     db.commit()

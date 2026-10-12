@@ -1,6 +1,14 @@
 # Phase 1-3：Resume Extraction Agent 设计
 
-**状态：** 设计稿；第一阶段已实现 Provider、四字段 Schema、Prompt 与内存抽取校验，尚未接入 API、数据库或真实用户调用。
+**状态：** 历史设计及当前实施边界。V1/DeepSeek Adapter 保留；S2-2A 已新增独立严格 V2、服务端证据映射、Mock 持久运行与 S2-1 候选池。真实 DeepSeek 尚未接入产品流程，未调用付费 API。验收见 [S2-2A](S2-2A-acceptance.md)。
+
+**S2-2A 当前边界（2026-10-12）：** `extractor_v2.py` → `evidence.py` → `ingest_profile_candidates(commit=False)` → pending 候选与运行 succeeded 原子提交，用户仍调用 S2-1 review 才更新唯一正式画像。V2 覆盖教育/技能/项目/实习工作，保留叶子原值、引用、断言、字段归属、归一值与服务端位置；自报 confidence 不控制确认。Mock 只匹配登记合成材料，默认关闭，结果及审核后的来源显示测试标记。0005 增加页段、任务/预算及追溯元数据，旧迁移、旧 V1 和供应商 Adapter 不改。
+
+本批不将 V1 的不透明教育/项目字符串强行转换为结构化事实，也不提取姓名/联系方式。V2 显式毕业时间才映射 S2-1 end_date；就读结束/毕业状态原叶子保留，不推断毕业。职责、成果、技术栈经有界连续原文映射 description，不生成改写成果。无法映射的非空输出安全失败，不静默丢掉后报成功；真正空数组可得到零候选。
+
+服务器按保存的文本重新查引用、唯一经历 scope 与页段，不信模型页码/偏移。否定/计划、冲突、scope外/重复/重叠、截断/过多命中和指令式内容阻止原值确认；共享引用可在可靠唯一 scope 中定位。字面检查不是完整语义核验。候选入库和审核都重验来源版本；取消/删除/旧版本迟到写回由持久运行 CAS 拦截。
+
+以下 Phase 1-3 和 S2-1 段落保留当时设计与判断。其旧表映射、联系方式抽取、长期环境 Key 等目标不作为 S2-2A 实现指令；当前表/来源、API、生命周期以 architecture/database 和本批验收为准。S2-2B 仍须独立授权、数据处理配置、最小发送预览、会话 BYOK 和真实质量评测。
 
 **S2-1 当前边界（2026-10-11）：** 已新增 `profile/schemas.py` 的 `CandidateBatchV1` 与内部 `ingest_profile_candidates`，供受信任服务端调用者将结构化教育/技能/项目/实习工作候选落入独立 `profile_candidates`；正式画像仅写 `career_profiles/career_profile_entries`。旧 `profiles/profile_facts` 不再规划为正式用户画像，不自动迁移或确认；下文旧映射表是历史设计参考，实施以 [database](database.md) 与 [architecture](architecture.md) 的 S2-1 节为准。没有把四字段 `StudentProfileExtractionV1` 自动转换为新结构，没有上传触发或 Provider 调用。
 

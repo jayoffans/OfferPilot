@@ -24,6 +24,17 @@ class Settings(BaseSettings):
     auth_login_attempt_limit: int = Field(default=5, ge=1, le=100)
     auth_ip_attempt_limit: int = Field(default=30, ge=1, le=1000)
     auth_registration_attempt_limit: int = Field(default=10, ge=1, le=100)
+    # Test-only, opt-in; never resolves or calls a paid provider.
+    mock_extraction_enabled: bool = False
+    extraction_timeout_seconds: int = Field(default=30, ge=1, le=60)
+    extraction_max_attempts: int = Field(default=2, ge=1, le=2)
+    extraction_max_calls: int = Field(default=4, ge=1, le=4)
+    extraction_max_active_per_user: int = Field(default=3, ge=1, le=10)
+    extraction_max_active_total: int = Field(default=20, ge=1, le=100)
+
+    @property
+    def mock_extraction_available(self) -> bool:
+        return self.environment == "development" and self.mock_extraction_enabled
 
     @property
     def secure_session_cookie(self) -> bool:

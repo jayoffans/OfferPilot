@@ -1,8 +1,8 @@
 # OfferPilot 数据库设计
 
-**版本：** 0.7（S2-1 独立正式画像与候选审核）
+**版本：** 0.8（S2-2A 持久运行及证据追溯）
 
-**日期：** 2026-10-11
+**日期：** 2026-10-12
 
 ## 当前实现：S1 文件与身份、S2-1 正式画像及候选
 
@@ -67,6 +67,22 @@ SQLite 使用原生 nullable `ALTER TABLE ... ADD COLUMN ... REFERENCES users`�
 保存/审核采用同一画像 CAS revision，成功事务才增加版本。来源删除也推进 revision，使旧快照无法恢复被删除证据。候选入库先锁定/校验简历 active/parsed，再更新画像，遵循简历生命周期一致锁序；数据库唯一/外键约束补充服务授权而不替代授权。
 
 0004 向前升级与空库、旧 0003 合成快照验证见 S2-1 验收记录。存在新画像/候选数据时拒绝有损 downgrade，需向前修复或备份恢复；PostgreSQL 行锁及迁移行为仍待独立环境验证。资料删除不代表 SQLite 空闲页、备份或磁盘安全擦除，完整账户导出/删除与备份保留仍为上线前条件。
+
+### S2-2A 新持久化结构（0005）
+
+0005 保留 0001～0004 的原文件及旧表语义，向前加列、新建运行表，不重建简历父表。旧行页信息留 NULL，新元数据默认 `{}`；不重新抽取、认领或确认任何旧数据。实际验证与限制见 [S2-2A 验收](S2-2A-acceptance.md)。
+
+| 新表/字段 | 用途、必要性与约束 | 保留/删除及日志 |
+|---|---|---|
+| resume_documents.text_layout | 原文 SHA-256、版本化页/段字符范围；回指恰好保存的 raw_text；旧页码未知 | 无额外正文副本，来源删除同事务清空；不进日志 |
+| resume_extraction_runs | user_id FK RESTRICT，resume_id 为硬删后可查的资源 ID；queued/running/succeeded/failed/cancelled、revision、执行 token/租约、版本、尝试/调用/候选计数、安全 error_code 和时间 | 不保存文件名、Prompt、模型 JSON、Key、异常正文；删除简历取消 active 并清候选计数，保留 owner 可查最小终态；TTL/账户注销另行决定 |
+| 运行幂等与额度 | UNIQUE(user_id,idempotency_key)，UNIQUE(resume_id,source_version,extraction_version)；状态、Mock-only、尝试/调用/时长/非负 CHECK | 不通过换请求键绕过同版本去重，retry 不清账本；版本重算包含当前文本、文件摘要和布局 |
+| profile_candidates.extraction_run_id、extraction_metadata | 可空运行 FK SET NULL；严格 V2 字段归属、原值/必要引用、服务端定位、断言、归一值、自报 confidence、风险、测试标记 | 初始全部 pending，仍走 S2-1 review；删除来源清候选，原文/元数据不记日志、不作真实质量指标 |
+| career_profile_entries.extraction_metadata | 用户确认后保留 Mock 来源身份，不另建正式画像 | 用户修订/删除按 S2-1 规则；来源删除清原文及定位，仅保留必要版本/测试标记，不恢复证据 |
+
+候选与运行 succeeded 共用一个数据库事务。Provider 调用不持写锁，最终提交再次验证 owner、生命周期、资源版本、令牌与租约；取消/删除/旧版本迟到不能复活候选。已落库的 V2 候选审核亦检查当前文本及布局版本，旧证据不可原值确认。
+
+新结构被使用后拒绝有损 downgrade，offline 降级也拒绝绕过数据安全检查。只有空运行、NULL 布局和空追溯元数据可降回 0004。SQLite 临时库迁移与 ORM metadata 一致性实测，不宣称 PostgreSQL 已验收。完整账户导出/注销、备份期限与删除重放仍需覆盖这些新实体；硬删不等于安全擦除。
 
 ## 1. 设计原则
 

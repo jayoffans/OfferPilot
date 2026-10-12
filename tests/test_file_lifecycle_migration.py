@@ -119,6 +119,13 @@ class FileLifecycleMigrationTests(unittest.TestCase):
                     for key in keys:
                         if key["constrained_columns"] == ["user_id"]:
                             key["options"] = {**key["options"], "ondelete": owner["on_delete"]}
+                if table_name == "profile_candidates":
+                    actual = connection.execute(text("PRAGMA foreign_key_list(profile_candidates)")).mappings().all()
+                    run_key = next(row for row in actual if row["from"] == "extraction_run_id")
+                    self.assertEqual(run_key["on_delete"], "SET NULL")
+                    for key in keys:
+                        if key["constrained_columns"] == ["extraction_run_id"]:
+                            key["options"] = {**key["options"], "ondelete": run_key["on_delete"]}
                 return keys
 
             context = MigrationContext.configure(connection, opts={"compare_type": True, "compare_server_default": True})
@@ -139,7 +146,7 @@ class FileLifecycleMigrationTests(unittest.TestCase):
         self.assert_metadata_matches()
         with self.engine.connect() as connection:
             self.assertEqual(connection.scalar(text("PRAGMA foreign_keys")), 1)
-            self.assertEqual(connection.scalar(text("SELECT version_num FROM alembic_version")), "0004_trusted_career_profile")
+            self.assertEqual(connection.scalar(text("SELECT version_num FROM alembic_version")), "0005_resume_extraction_runs")
             self.assertEqual(connection.execute(text("PRAGMA foreign_key_check")).all(), [])
         keys = inspect(self.engine).get_foreign_keys("resume_file_operations")
         self.assertEqual(len(keys), 1)
@@ -318,11 +325,16 @@ class FileLifecycleMigrationTests(unittest.TestCase):
                     session.commit()
                 with self.assertRaisesRegex(RuntimeError, "File lifecycle data exists"):
                     command.downgrade(self.config, "0002_identity_ownership")
+                # Empty newer migrations can downgrade before 0003 refuses.
+                # Use the current ORM only after restoring the current head.
+                with self.engine.connect() as connection:
+                    self.assertEqual(connection.scalar(text("SELECT version_num FROM alembic_version")), "0003_resume_file_lifecycle")
+                self.upgrade()
                 with Session(self.engine) as session:
                     document = session.get(ResumeDocument, resume_id)
                     for field, value in values.items():
                         self.assertEqual(getattr(document, field), value)
-                    self.assertEqual(session.scalar(text("SELECT version_num FROM alembic_version")), "0003_resume_file_lifecycle")
+                    self.assertEqual(session.scalar(text("SELECT version_num FROM alembic_version")), "0005_resume_extraction_runs")
                     document.object_key = document.byte_size = document.sha256 = None
                     document.processing_status, document.lifecycle_status = "parsed", "active"
                     session.commit()

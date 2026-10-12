@@ -14,6 +14,10 @@ describe('same-origin API boundary', () => {
     expect(allowedRoute('POST', `profile/candidates/${id}/review`)).toBe(true);
     for (const target of ['profile/other-user', 'profile/candidates/not-a-uuid/review', `profile/candidates/${id}`, 'profile/ingest']) expect(allowedRoute('POST', target)).toBe(false);
     expect(allowedRoute('DELETE', 'profile')).toBe(false);
+    for (const target of [`resumes/${id}/extraction`, `extraction-runs/${id}`, `extraction-runs/${id}/candidates`]) expect(allowedRoute('GET', target)).toBe(true);
+    for (const target of [`resumes/${id}/extraction-runs`, `extraction-runs/${id}/cancel`, `extraction-runs/${id}/retry`]) expect(allowedRoute('POST', target)).toBe(true);
+    for (const target of ['extraction-runs', 'extraction-runs/not-a-uuid/cancel', `extraction-runs/${id}/execute`, `resumes/${id}/extraction`]) expect(allowedRoute('POST', target)).toBe(false);
+    expect(allowedRoute('DELETE', `extraction-runs/${id}`)).toBe(false);
   });
   it('rejects hostile origins before contacting the backend', async () => {
     const fetcher = vi.fn(); vi.stubGlobal('fetch', fetcher);

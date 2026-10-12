@@ -16,11 +16,12 @@ from sqlalchemy import delete, func, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from offerpilot_api.db.models import CareerProfile, CareerProfileEntry, ProfileCandidate, ResumeDocument
+from offerpilot_api.db.models import CareerProfile, CareerProfileEntry, ProfileCandidate, ResumeDocument, ResumeExtractionRun
 from offerpilot_api.profile.schemas import (
     CandidateBatchV1, CareerProfileResponse, EducationEntry, ExperienceEntry,
     MAX_PROFILE_REVISION, ProfileCandidateReviewRequest, ProfileSaveRequest, ProjectEntry, SkillEntry, VALUE_MODELS,
 )
+from offerpilot_api.resume_ingestion.evidence import CandidateExtractionMetadata, evaluate_metadata, layout_fingerprint, text_fingerprint
 
 MAX_CANDIDATES = 500
 GROUPS = {"education": "education", "skills": "skill", "projects": "project", "experiences": "experience"}
@@ -51,7 +52,7 @@ def _conflict() -> ProfileError:
     return ProfileError("profile_revision_conflict", "资料已在其他页面更新，请保留当前修改并重新加载最新资料", 409)
 
 
-def _claim_revision(db: Session, *, user_id: UUID, revision: int | None) -> CareerProfile:
+def _claim_revision(db: Session, *, user_id: UUID, revision: int | None, rollback_on_error: bool = True) -> CareerProfile:
     """CAS locks the sole profile before any child mutation, including initial insert."""
     filters = [CareerProfile.user_id == user_id, CareerProfile.revision <= MAX_PROFILE_REVISION]
     if revision is not None:
@@ -69,7 +70,8 @@ def _claim_revision(db: Session, *, user_id: UUID, revision: int | None) -> Care
         db.flush()
     except IntegrityError:
         # Another writer initialized the UNIQUE(user_id) row first.
-        db.rollback()
+        if rollback_on_error:
+            db.rollback()
         raise _conflict() from None
     return profile
 
@@ -104,7 +106,9 @@ def get_profile(db: Session, *, user_id: UUID) -> CareerProfileResponse:
                 **entry.value, "id": entry.id,
                 "source": {"kind": source_kind, "resume_id": entry.resume_id if source_visible else None,
                            "resume_file_name": file_name, "field_sources": sources,
-                           "evidence": entry.evidence if source_visible else []},
+                           "evidence": entry.evidence if source_visible else [],
+                           "test_result": bool(entry.extraction_metadata.get("test_result")),
+                           "provider": entry.extraction_metadata.get("provider")},
             })
             groups[category_groups[entry.category]].append(rendered)
         candidate_rows = db.execute(select(ProfileCandidate, ResumeDocument.file_name).join(
@@ -114,14 +118,24 @@ def get_profile(db: Session, *, user_id: UUID) -> CareerProfileResponse:
             ResumeDocument.lifecycle_status == "active", ResumeDocument.processing_status == "parsed",
         ).order_by(ProfileCandidate.created_at, ProfileCandidate.item_index, ProfileCandidate.id).limit(MAX_CANDIDATES)).all()
         for candidate, file_name in candidate_rows:
+            metadata = candidate.extraction_metadata or None
+            evidence_status = candidate.evidence_status
+            if metadata:
+                source = db.get(ResumeDocument, candidate.resume_id)
+                if (metadata.get("source_text_sha256") != text_fingerprint(source.raw_text or "")
+                    or metadata.get("source_layout_sha256") != layout_fingerprint(source.raw_text or "", source.text_layout)
+                    or metadata.get("source_file_sha256") != source.sha256):
+                    metadata = {**metadata, "evidence_status": "needs_review", "review_reasons": list(dict.fromkeys([*metadata.get("review_reasons", []), "source_version_changed"]))[:20]}
+                    evidence_status = "needs_review"
             candidates.append({
                 "id": candidate.id, "category": candidate.category,
                 "value": VALUE_MODELS[candidate.category].model_validate(candidate.value),
-                "status": candidate.status, "evidence_status": candidate.evidence_status,
+                "status": candidate.status, "evidence_status": evidence_status,
                 "evidence": candidate.evidence, "resume_id": candidate.resume_id,
                 "resume_file_name": file_name, "schema_version": candidate.schema_version,
                 "extraction_version": candidate.extraction_version, "entry_id": candidate.entry_id,
                 "created_at": candidate.created_at, "reviewed_at": candidate.reviewed_at,
+                "extraction_run_id": candidate.extraction_run_id, "extraction_metadata": metadata,
             })
     missing = []
     for field in ("school", "degree", "major", "end_date"):
@@ -295,7 +309,8 @@ def _evidence_status(value: dict, evidence: list[dict], raw_text: str) -> str:
 
 def ingest_profile_candidates(
     db: Session, *, user_id: UUID, resume_id: UUID, batch_key: str,
-    payload: dict | CandidateBatchV1,
+    payload: dict | CandidateBatchV1, commit: bool = True,
+    candidate_metadata: list[dict] | None = None, run_id: UUID | None = None,
 ) -> CareerProfileResponse:
     """Trusted server-only boundary for future extraction; never auto-confirms.
 
@@ -313,7 +328,17 @@ def ingest_profile_candidates(
         batch = CandidateBatchV1.model_validate(payload.model_dump(warnings=False) if isinstance(payload, CandidateBatchV1) else payload)
     except ValidationError:
         raise ProfileError("invalid_candidate_batch", "候选内容未通过结构校验", 422) from None
+    metadata_items = None
+    if candidate_metadata is not None:
+        try:
+            if len(candidate_metadata) != len(batch.candidates):
+                raise ValueError("Candidate metadata length mismatch")
+            metadata_items = [CandidateExtractionMetadata.model_validate(item) for item in candidate_metadata]
+        except (ValidationError, ValueError, TypeError):
+            raise ProfileError("invalid_candidate_metadata", "候选来源信息未通过结构校验", 422) from None
     normalized = batch.model_dump(mode="json")
+    if metadata_items is not None:
+        normalized["extraction_metadata"] = [item.model_dump(mode="json") for item in metadata_items]
     digest = hashlib.sha256(json.dumps(normalized, sort_keys=True, ensure_ascii=False, separators=(",", ":")).encode()).hexdigest()
     try:
         # All flows touching both resume and profile use this order. Deletion
@@ -325,32 +350,70 @@ def ingest_profile_candidates(
         if locked.rowcount != 1:
             raise _not_found()
         document = db.get(ResumeDocument, resume_id, populate_existing=True)
+        if run_id is not None:
+            if metadata_items is None or not isinstance(run_id, UUID):
+                raise ProfileError("invalid_candidate_run", "抽取运行关联无效", 422)
+            run = db.scalar(select(ResumeExtractionRun).where(
+                ResumeExtractionRun.id == run_id, ResumeExtractionRun.user_id == user_id,
+                ResumeExtractionRun.resume_id == resume_id,
+            ))
+            if run is None:
+                raise _not_found()
+            if batch_key != str(run_id):
+                raise ProfileError("invalid_candidate_run", "候选批次与抽取运行不一致", 422)
+            if run.status not in ("running", "succeeded") or not run.test_result or run.mode != "mock":
+                raise ProfileError("invalid_candidate_run", "抽取运行当前不能接收候选", 409)
+            if run.status == "running":
+                deadline = run.lease_deadline.replace(tzinfo=timezone.utc) if run.lease_deadline and run.lease_deadline.tzinfo is None else run.lease_deadline
+                if deadline is None or deadline <= _now():
+                    raise ProfileError("invalid_candidate_run", "抽取运行已超时，不能接收候选", 409)
+            from offerpilot_api.agent_runtime.extraction_runs import source_version
+            if run.source_version != source_version(document):
+                raise ProfileError("candidate_source_version_conflict", "简历版本已变化，请重新抽取", 409)
         prior = db.scalars(select(ProfileCandidate).join(CareerProfile).where(
             ProfileCandidate.resume_id == resume_id, ProfileCandidate.batch_key == batch_key,
             CareerProfile.user_id == user_id,
         ).order_by(ProfileCandidate.item_index)).all()
         if prior:
-            if len(prior) != len(batch.candidates) or any(item.batch_digest != digest for item in prior):
+            if len(prior) != len(batch.candidates) or any(item.batch_digest != digest or (run_id is not None and item.extraction_run_id != run_id) for item in prior):
                 raise ProfileError("candidate_batch_conflict", "该候选批次已存在且内容不同", 409)
-            db.commit()
+            if commit:
+                db.commit()
             return get_profile(db, user_id=user_id)
-        profile = _claim_revision(db, user_id=user_id, revision=None)
+        if run_id is not None and run.status == "succeeded":
+            raise ProfileError("invalid_candidate_run", "已成功运行不能追加新的候选", 409)
+        profile = _claim_revision(db, user_id=user_id, revision=None, rollback_on_error=commit)
         count = db.scalar(select(func.count()).select_from(ProfileCandidate).where(ProfileCandidate.profile_id == profile.id)) or 0
         if count + len(batch.candidates) > MAX_CANDIDATES:
             raise ProfileError("candidate_limit_reached", "待管理候选数量已达到上限，请先清理相关简历", 422)
         for index, item in enumerate(batch.candidates):
             value = item.value.model_dump()
             evidence = [source.model_dump() for source in item.evidence]
+            metadata = None
+            if metadata_items is not None:
+                proposal = metadata_items[index]
+                if proposal.category != item.category or proposal.source_text_sha256 != text_fingerprint(document.raw_text or ""):
+                    raise ProfileError("candidate_source_version_conflict", "简历版本已变化，请重新抽取", 409)
+                mapped, mapped_evidence, metadata = evaluate_metadata(proposal, document.raw_text or "", document.text_layout)
+                if proposal.source_layout_sha256 != layout_fingerprint(document.raw_text or "", document.text_layout):
+                    raise ProfileError("candidate_source_version_conflict", "简历定位版本已变化，请重新抽取", 409)
+                metadata.source_file_sha256 = document.sha256
+                if VALUE_MODELS[item.category].model_validate(mapped).model_dump() != value or mapped_evidence != evidence:
+                    raise ProfileError("invalid_candidate_mapping", "候选字段映射与来源不一致", 422)
             db.add(ProfileCandidate(
                 profile_id=profile.id, resume_id=resume_id, batch_key=batch_key, item_index=index, batch_digest=digest,
                 category=item.category, value=value, evidence=evidence,
-                evidence_status=_evidence_status(value, evidence, document.raw_text or ""), status="pending",
-                schema_version=batch.schema_version, extraction_version=batch.extraction_version,
+                evidence_status=metadata.evidence_status if metadata else _evidence_status(value, evidence, document.raw_text or ""), status="pending",
+                schema_version=metadata.schema_version if metadata else batch.schema_version, extraction_version=batch.extraction_version,
+                extraction_metadata=metadata.model_dump(mode="json") if metadata else {}, extraction_run_id=run_id,
             ))
-        db.commit()
+        db.flush()
+        if commit:
+            db.commit()
         return get_profile(db, user_id=user_id)
     except Exception:
-        db.rollback()
+        if commit:
+            db.rollback()
         raise
 
 
@@ -376,6 +439,15 @@ def review_profile_candidate(
             raise _not_found()
         if candidate.status != "pending":
             raise ProfileError("candidate_already_reviewed", "该候选已处理，请在正式资料中继续编辑", 409)
+        if payload.action == "confirm" and candidate.extraction_metadata:
+            document = db.get(ResumeDocument, candidate.resume_id, populate_existing=True)
+            if (candidate.extraction_metadata.get("source_text_sha256") != text_fingerprint(document.raw_text or "")
+                or candidate.extraction_metadata.get("source_layout_sha256") != layout_fingerprint(document.raw_text or "", document.text_layout)
+                or candidate.extraction_metadata.get("source_file_sha256") != document.sha256):
+                raise ProfileError("candidate_source_version_conflict", "来源简历已变化，请重新抽取或核对后自行修订", 409)
+            _, _, checked_metadata = evaluate_metadata(CandidateExtractionMetadata.model_validate(candidate.extraction_metadata), document.raw_text or "", document.text_layout)
+            if checked_metadata.evidence_status != "supported":
+                raise ProfileError("candidate_evidence_requires_user_input", "证据需核实，请修改为本人提供的资料或拒绝", 422)
         if payload.action == "confirm" and candidate.evidence_status != "supported":
             raise ProfileError("candidate_evidence_requires_user_input", "证据不足或含否定、未知信息，请修改为本人提供的资料或拒绝", 422)
         if payload.action != "reject":
@@ -396,6 +468,7 @@ def review_profile_candidate(
                 source_kind="user_modified" if modified else "resume_confirmed", resume_id=candidate.resume_id,
                 field_sources=_manual_fields(value) if modified else {field: "resume" for field, provided in value.items() if provided is not None},
                 evidence=[{**source, "supports_current_value": not modified} for source in candidate.evidence], updated_at=_now(),
+                extraction_metadata={"test_result": True, "provider": "mock"} if candidate.extraction_metadata else {},
             )
             db.add(entry)
             db.flush()

@@ -1,0 +1,406 @@
+{
+  "schema_version": "2.0",
+  "provider": "fixed_synthetic_response",
+  "paid_calls": 0,
+  "interpretation": "This measures deterministic fixture mapping, evidence location and conservative guards; it does not establish real model semantic accuracy.",
+  "field_count_interpretation": "Total comparisons include nulls; cases reuse synthetic variants and are not an independent real-resume distribution.",
+  "case_count": 11,
+  "field_correct": 187,
+  "field_wrong": 1,
+  "field_missing": 2,
+  "field_extra": 4,
+  "located_fields": 161,
+  "proposed_fields": 163,
+  "evidence_location_coverage": 0.9877300613496932,
+  "nonnull_expected_correct": 146,
+  "nonnull_expected_wrong": 1,
+  "nonnull_expected_missing": 1,
+  "null_expected_correct": 41,
+  "expected_supported_but_blocked": 1,
+  "healthy_case_supported_but_blocked": 0,
+  "adversarial_supported_truth_but_faulty_output_blocked": 1,
+  "guard_failures": 0,
+  "cases": [
+    {
+      "case_id": "normal_chinese",
+      "attempt_count": 1,
+      "failure_reason": null,
+      "field_correct": 27,
+      "field_wrong": 0,
+      "field_missing": 0,
+      "field_extra": 0,
+      "field_errors": [],
+      "guard_failures": [],
+      "blocked_candidates": [
+        {
+          "candidate": "skill:Java",
+          "status": "needs_review",
+          "reasons": [
+            "model_assertion_negated",
+            "negative_planned_or_uncertain_context"
+          ]
+        },
+        {
+          "candidate": "skill:Go",
+          "status": "needs_review",
+          "reasons": [
+            "model_assertion_planned",
+            "negative_planned_or_uncertain_context"
+          ]
+        }
+      ],
+      "located_fields": 23,
+      "proposed_fields": 23,
+      "nonnull_expected_correct": 21,
+      "nonnull_expected_wrong": 0,
+      "nonnull_expected_missing": 0,
+      "null_expected_correct": 6,
+      "expected_supported_but_blocked": []
+    },
+    {
+      "case_id": "missing_graduation",
+      "attempt_count": 1,
+      "failure_reason": null,
+      "field_correct": 27,
+      "field_wrong": 0,
+      "field_missing": 0,
+      "field_extra": 0,
+      "field_errors": [],
+      "guard_failures": [],
+      "blocked_candidates": [
+        {
+          "candidate": "skill:Java",
+          "status": "needs_review",
+          "reasons": [
+            "model_assertion_negated",
+            "negative_planned_or_uncertain_context"
+          ]
+        },
+        {
+          "candidate": "skill:Go",
+          "status": "needs_review",
+          "reasons": [
+            "model_assertion_planned",
+            "negative_planned_or_uncertain_context"
+          ]
+        }
+      ],
+      "located_fields": 21,
+      "proposed_fields": 21,
+      "nonnull_expected_correct": 19,
+      "nonnull_expected_wrong": 0,
+      "nonnull_expected_missing": 0,
+      "null_expected_correct": 8,
+      "expected_supported_but_blocked": []
+    },
+    {
+      "case_id": "multiple_entries_dates",
+      "attempt_count": 1,
+      "failure_reason": null,
+      "field_correct": 39,
+      "field_wrong": 0,
+      "field_missing": 0,
+      "field_extra": 0,
+      "field_errors": [],
+      "guard_failures": [],
+      "blocked_candidates": [
+        {
+          "candidate": "skill:Java",
+          "status": "needs_review",
+          "reasons": [
+            "model_assertion_negated",
+            "negative_planned_or_uncertain_context"
+          ]
+        },
+        {
+          "candidate": "skill:Go",
+          "status": "needs_review",
+          "reasons": [
+            "model_assertion_planned",
+            "negative_planned_or_uncertain_context"
+          ]
+        }
+      ],
+      "located_fields": 35,
+      "proposed_fields": 35,
+      "nonnull_expected_correct": 32,
+      "nonnull_expected_wrong": 0,
+      "nonnull_expected_missing": 0,
+      "null_expected_correct": 7,
+      "expected_supported_but_blocked": []
+    },
+    {
+      "case_id": "similar_skill_alias",
+      "attempt_count": 1,
+      "failure_reason": null,
+      "field_correct": 2,
+      "field_wrong": 0,
+      "field_missing": 0,
+      "field_extra": 2,
+      "field_errors": [
+        {
+          "path": "skill:Java.level",
+          "kind": "extra"
+        },
+        {
+          "path": "skill:Java.name",
+          "kind": "extra"
+        }
+      ],
+      "guard_failures": [],
+      "blocked_candidates": [
+        {
+          "candidate": "skill:Java",
+          "status": "unsupported",
+          "reasons": [
+            "value_not_supported_by_quote"
+          ]
+        }
+      ],
+      "located_fields": 2,
+      "proposed_fields": 2,
+      "nonnull_expected_correct": 1,
+      "nonnull_expected_wrong": 0,
+      "nonnull_expected_missing": 0,
+      "null_expected_correct": 1,
+      "expected_supported_but_blocked": []
+    },
+    {
+      "case_id": "cross_entry_attribution",
+      "attempt_count": 1,
+      "failure_reason": null,
+      "field_correct": 38,
+      "field_wrong": 1,
+      "field_missing": 0,
+      "field_extra": 0,
+      "field_errors": [
+        {
+          "path": "project:课程选课系统.description",
+          "kind": "wrong",
+          "expected": "技术栈：Python；工作：编写课程查询接口",
+          "actual": null
+        }
+      ],
+      "guard_failures": [],
+      "blocked_candidates": [
+        {
+          "candidate": "skill:Java",
+          "status": "needs_review",
+          "reasons": [
+            "model_assertion_negated",
+            "negative_planned_or_uncertain_context"
+          ]
+        },
+        {
+          "candidate": "skill:Go",
+          "status": "needs_review",
+          "reasons": [
+            "model_assertion_planned",
+            "negative_planned_or_uncertain_context"
+          ]
+        },
+        {
+          "candidate": "project:课程选课系统",
+          "status": "unsupported",
+          "reasons": [
+            "source_text_not_found",
+            "evidence_outside_entry_scope",
+            "description_requires_user_edit"
+          ]
+        }
+      ],
+      "located_fields": 34,
+      "proposed_fields": 35,
+      "nonnull_expected_correct": 31,
+      "nonnull_expected_wrong": 1,
+      "nonnull_expected_missing": 0,
+      "null_expected_correct": 7,
+      "expected_supported_but_blocked": [
+        {
+          "candidate": "project:课程选课系统",
+          "actual": "unsupported"
+        }
+      ]
+    },
+    {
+      "case_id": "nonexistent_evidence_high_confidence",
+      "attempt_count": 1,
+      "failure_reason": null,
+      "field_correct": 25,
+      "field_wrong": 0,
+      "field_missing": 2,
+      "field_extra": 2,
+      "field_errors": [
+        {
+          "path": "skill:Python.name",
+          "kind": "missing"
+        },
+        {
+          "path": "skill:Python.level",
+          "kind": "missing"
+        },
+        {
+          "path": "skill:Rust.level",
+          "kind": "extra"
+        },
+        {
+          "path": "skill:Rust.name",
+          "kind": "extra"
+        }
+      ],
+      "guard_failures": [],
+      "blocked_candidates": [
+        {
+          "candidate": "skill:Rust",
+          "status": "unsupported",
+          "reasons": [
+            "source_text_not_found"
+          ]
+        },
+        {
+          "candidate": "skill:Java",
+          "status": "needs_review",
+          "reasons": [
+            "model_assertion_negated",
+            "negative_planned_or_uncertain_context"
+          ]
+        },
+        {
+          "candidate": "skill:Go",
+          "status": "needs_review",
+          "reasons": [
+            "model_assertion_planned",
+            "negative_planned_or_uncertain_context"
+          ]
+        }
+      ],
+      "located_fields": 22,
+      "proposed_fields": 23,
+      "nonnull_expected_correct": 20,
+      "nonnull_expected_wrong": 0,
+      "nonnull_expected_missing": 1,
+      "null_expected_correct": 5,
+      "expected_supported_but_blocked": []
+    },
+    {
+      "case_id": "prompt_injection",
+      "attempt_count": 1,
+      "failure_reason": null,
+      "field_correct": 2,
+      "field_wrong": 0,
+      "field_missing": 0,
+      "field_extra": 0,
+      "field_errors": [],
+      "guard_failures": [],
+      "blocked_candidates": [
+        {
+          "candidate": "skill:Rust",
+          "status": "needs_review",
+          "reasons": [
+            "instruction_like_source"
+          ]
+        }
+      ],
+      "located_fields": 1,
+      "proposed_fields": 1,
+      "nonnull_expected_correct": 1,
+      "nonnull_expected_wrong": 0,
+      "nonnull_expected_missing": 0,
+      "null_expected_correct": 1,
+      "expected_supported_but_blocked": []
+    },
+    {
+      "case_id": "duplicate_model_items",
+      "attempt_count": 1,
+      "failure_reason": null,
+      "field_correct": 27,
+      "field_wrong": 0,
+      "field_missing": 0,
+      "field_extra": 0,
+      "field_errors": [],
+      "guard_failures": [],
+      "blocked_candidates": [
+        {
+          "candidate": "skill:Java",
+          "status": "needs_review",
+          "reasons": [
+            "model_assertion_negated",
+            "negative_planned_or_uncertain_context"
+          ]
+        },
+        {
+          "candidate": "skill:Go",
+          "status": "needs_review",
+          "reasons": [
+            "model_assertion_planned",
+            "negative_planned_or_uncertain_context"
+          ]
+        }
+      ],
+      "located_fields": 23,
+      "proposed_fields": 23,
+      "nonnull_expected_correct": 21,
+      "nonnull_expected_wrong": 0,
+      "nonnull_expected_missing": 0,
+      "null_expected_correct": 6,
+      "expected_supported_but_blocked": []
+    },
+    {
+      "case_id": "missing_required_fields",
+      "attempt_count": 2,
+      "failure_reason": "schema_validation_failed",
+      "field_correct": 0,
+      "field_wrong": 0,
+      "field_missing": 0,
+      "field_extra": 0,
+      "field_errors": [],
+      "guard_failures": [],
+      "blocked_candidates": [],
+      "located_fields": 0,
+      "proposed_fields": 0,
+      "nonnull_expected_correct": 0,
+      "nonnull_expected_wrong": 0,
+      "nonnull_expected_missing": 0,
+      "null_expected_correct": 0,
+      "expected_supported_but_blocked": []
+    },
+    {
+      "case_id": "invalid_schema",
+      "attempt_count": 2,
+      "failure_reason": "schema_validation_failed",
+      "field_correct": 0,
+      "field_wrong": 0,
+      "field_missing": 0,
+      "field_extra": 0,
+      "field_errors": [],
+      "guard_failures": [],
+      "blocked_candidates": [],
+      "located_fields": 0,
+      "proposed_fields": 0,
+      "nonnull_expected_correct": 0,
+      "nonnull_expected_wrong": 0,
+      "nonnull_expected_missing": 0,
+      "null_expected_correct": 0,
+      "expected_supported_but_blocked": []
+    },
+    {
+      "case_id": "invalid_json",
+      "attempt_count": 2,
+      "failure_reason": "schema_validation_failed",
+      "field_correct": 0,
+      "field_wrong": 0,
+      "field_missing": 0,
+      "field_extra": 0,
+      "field_errors": [],
+      "guard_failures": [],
+      "blocked_candidates": [],
+      "located_fields": 0,
+      "proposed_fields": 0,
+      "nonnull_expected_correct": 0,
+      "nonnull_expected_wrong": 0,
+      "nonnull_expected_missing": 0,
+      "null_expected_correct": 0,
+      "expected_supported_but_blocked": []
+    }
+  ]
+}

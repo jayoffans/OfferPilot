@@ -6,6 +6,8 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
+from offerpilot_api.resume_ingestion.evidence import CandidateExtractionMetadata
+
 Category = Literal["education", "skill", "project", "experience"]
 # SQLAlchemy Integer is a signed 32-bit column on PostgreSQL; leave one step
 # for the transactional increment and reject oversized SQLite bindings safely.
@@ -120,6 +122,8 @@ class EntrySource(BaseModel):
     resume_file_name: str | None
     field_sources: dict[str, Literal["manual", "resume", "resume_deleted"]]
     evidence: list[CurrentEvidence]
+    test_result: bool = False
+    provider: Literal["mock"] | None = None
 
 
 class EducationEntry(EducationValue):
@@ -223,6 +227,8 @@ class ProfileCandidateResponse(BaseModel):
     entry_id: UUID | None
     created_at: datetime
     reviewed_at: datetime | None
+    extraction_run_id: UUID | None = None
+    extraction_metadata: CandidateExtractionMetadata | None = None
 
 
 class ProfileCompletion(BaseModel):

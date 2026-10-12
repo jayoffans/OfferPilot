@@ -52,3 +52,25 @@ it('profile writes use the generated contract, current revision and server sessi
   expect(fetcher).toHaveBeenCalledTimes(2);
   expect(fetcher.mock.calls[1][0]).toBe('/api/v1/profile');
 });
+
+it('extraction mutations preserve idempotency, resource version and run revision with session CSRF', async () => {
+  const id = '11111111-1111-4111-8111-111111111111';
+  const sourceVersion = 'a'.repeat(64);
+  const requests: { url: string; body: unknown }[] = [];
+  const fetcher = vi.fn((url: string, init?: RequestInit) => {
+    if (url.endsWith('/auth/csrf')) return Promise.resolve(Response.json({ csrf_token: 'synthetic-csrf' }));
+    expect(init?.method).toBe('POST'); expect(init?.credentials).toBe('same-origin');
+    expect(new Headers(init?.headers).get('X-CSRF-Token')).toBe('synthetic-csrf');
+    requests.push({ url, body: JSON.parse(String(init?.body)) });
+    return Promise.resolve(Response.json({ id, mode: 'mock', test_result: true }));
+  });
+  vi.stubGlobal('fetch', fetcher);
+  await api.createExtraction(id, { idempotency_key: 'synthetic-request', source_version: sourceVersion, mode: 'mock' });
+  await api.cancelExtraction(id, 3); await api.retryExtraction(id, 4);
+  expect(requests).toEqual([
+    { url: `/api/v1/resumes/${id}/extraction-runs`, body: { idempotency_key: 'synthetic-request', source_version: sourceVersion, mode: 'mock' } },
+    { url: `/api/v1/extraction-runs/${id}/cancel`, body: { revision: 3 } },
+    { url: `/api/v1/extraction-runs/${id}/retry`, body: { revision: 4 } },
+  ]);
+  expect(fetcher).toHaveBeenCalledTimes(4);
+});

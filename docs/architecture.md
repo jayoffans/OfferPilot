@@ -1,9 +1,9 @@
 # OfferPilot 系统架构与技术方案
 
-**版本：** 0.5（S2-1 用户画像与候选审核边界）
-**日期：** 2026-10-11
+**版本：** 0.6（S2-2A Mock 持久抽取流水线）
+**日期：** 2026-10-12
 
-> **当前实施范围：** S1-1/S1-2/S1-3 提供真实邀请身份、私有 PDF 生命周期和中文工作台。S2-1 扩展用户唯一的正式画像、候选审核与 revision，代码与验收结果见 PLAN 和 S2-1 验收记录。四字段内存抽取核心与 Provider 仍未接入 API；上传仅解析 PDF 文本，不生成候选。尚无 PostgreSQL、Redis、云对象存储、Worker、岗位匹配或 Browser Agent。下文保留后续目标设计，优先级以 PLAN/PRD/Roadmap 为准。
+> **当前实施范围：** S1 提供真实邀请身份、私有 PDF 生命周期和中文工作台；S2-1 提供唯一正式画像及候选审核。S2-2A 追加严格 V2、服务端定位、数据库持久运行及合成样本 Mock 流程，结果见 [本批验收](S2-2A-acceptance.md)。上传本身只解析文本；Mock 需 development 显式开启并主动创建任务。真实 DeepSeek/付费调用、BYOK、PostgreSQL、Redis、云对象存储、生产 Worker、岗位匹配和 Browser Agent 均未启用。下文保留后续目标设计。
 
 Phase 1-2 上传接口仅在 `development` 环境可用，默认上传目录为本地 `backend/uploads/`；仅接收不超过 10 MiB、50 页且有可选中文本的 PDF。PyMuPDF 采用 AGPL 或商业许可，正式发布前需确定适用许可方案。
 
@@ -27,6 +27,20 @@ Phase 1-2 上传接口仅在 `development` 环境可用，默认上传目录为�
 内部 `ingest_profile_candidates` 是 S2-2 的接入边界：受信任调用者仍需传入服务端身份、校验同 owner 的 active/parsed 简历、重验版本化 Schema、限制数量并按批次键去重。精确原文存在和值片段校验仅证明文字引用；否定或学习计划风险保守标记待核实，不能声称完整语义理解。缺少依据只能经用户修订为自行提供的资料，不能原值确认。该入口本批只由合成测试调用，无 Provider 调用、Key 或任务系统。
 
 删除简历在原删除意图事务中调用画像领域清理：删除该简历候选与批次记录，清除正式条目的简历引用、文件名和原文证据，保留用户已提供/确认的当前值并标记来源简历已删除；独立手工资料保留。相关画像 revision 同事务递增，旧快照无法恢复已删证据。物理删除失败仍不重新开放候选或证据；S1 的 journal、重试及下载边界继续复用。
+
+### S2-2A 持久抽取边界
+
+`resume_ingestion/extraction_schema.py` 保留 V1 并追加严格 `StudentProfileExtractionV2`；`extractor_v2.py` 使用同一 `LLMProvider` 契约、固定 Prompt、输入/输出上限和有限 Schema 重试。`providers/mock.py` 仅匹配登记合成简历，未匹配材料失败，不访问网络或读取 Key。`evidence.py` 负责服务端页段定位、有限别名/日期归一化、原文及经历范围重验与风险标记；它是词法护栏，不是语义或履历真实性证明。
+
+`agent_runtime/extraction_runs.py` 管理数据库状态机、领取令牌/租约、调用账本、revision、资源版本、幂等及最终提交。任务表是工作来源，API 只持久 queued；Mock 模式的 lifespan 执行器每轮最多三条、逐条运行。`process_extractions.py` 提供有限批次处理/租约恢复 CLI，重启不依赖内存队列。默认每次运行租约 30 秒（配置 1～60），最多两次执行、合计四次 Provider 调用；每次调用先落计数，重试不重置预算。默认每用户三个 active、全局二十个，SQLite 写事务串行化本机准入。
+
+调用期间不持数据库写锁。最终按简历 → 运行 → 画像锁序重验 owner、active/parsed、文本/文件/布局版本、状态、令牌和时间；`ingest_profile_candidates(commit=False)` 将 V2 映射、追溯元数据及 pending 候选与 succeeded 一次提交。原入口默认自行提交，保留 S2-1 兼容。重复请求返回原任务，同简历/版本/抽取版本不能另建重复任务；failed 的显式有限 retry 复用同一任务。
+
+取消/删除失效令牌，迟到结果丢弃；过期 running 在状态查询、执行器及 CLI 恢复中失败，用户可查询并按剩余额度重试。删除意图同事务取消运行、清页段/候选及正式来源原文，保留用户确认值与 Mock 来源标记。任务最小终态可在简历硬删后按 owner 查询，不保存正文、原模型 JSON 或 Key。
+
+前端使用生成 OpenAPI，新增明确代理白名单。`OFFERPILOT_MOCK_EXTRACTION_UI=true` 只显示隔离测试面板，后端仍必须 `development + OFFERPILOT_MOCK_EXTRACTION_ENABLED=true` 才准创建；默认界面没有 AI 触发按钮。候选及审核后的来源持续显示测试身份。生产队列、跨数据库并发、真实网络请求隔离及费用策略需后续单独验证。
+
+租约限制运行状态和迟到写入；当前固定 Mock 计算有界且无网络，不代表已实现强制终止任意供应商阻塞线程的生产 runner。S2-2B 需扩展 Mock-only 的数据库/来源契约，并验证真实传输超时、执行隔离与会话/费用边界。
 
 ## 1. 架构决策摘要
 

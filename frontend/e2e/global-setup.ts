@@ -68,6 +68,7 @@ export default async function globalSetup() {
     OFFERPILOT_API_URL: apiOrigin,
     OFFERPILOT_WEB_ORIGINS: JSON.stringify([webOrigin]),
     NEXT_TELEMETRY_DISABLED: "1",
+    OFFERPILOT_MOCK_EXTRACTION_UI: "true",
     HTTP_PROXY: "", HTTPS_PROXY: "", ALL_PROXY: "",
   };
   const venv = path.join(root, "backend", ".venv");

@@ -16,6 +16,7 @@ from offerpilot_api.resume_ingestion.lifecycle import (
     ResumeLifecycleError, abort_resume_upload, complete_resume_upload, lock_active_upload,
 )
 from offerpilot_api.resume_ingestion.storage import LocalResumeStorage, ResumeStorage, StorageError
+from offerpilot_api.resume_ingestion.evidence import build_text_layout
 
 MAX_PDF_BYTES = 10 * 1024 * 1024
 MAX_PDF_PAGES = 50
@@ -64,7 +65,7 @@ def _validated_filename(file: UploadFile) -> str:
     return file_name
 
 
-def _extract_pdf_text(content: bytes) -> str:
+def _extract_pdf_text_with_layout(content: bytes) -> tuple[str, dict]:
     if not content.startswith(b"%PDF-"):
         raise ResumeUploadError("File content is not a PDF", 422)
     try:
@@ -89,7 +90,23 @@ def _extract_pdf_text(content: bytes) -> str:
     raw_text = "\n".join(pages).strip()
     if not raw_text:
         raise ResumeUploadError("PDF contains no selectable text")
-    return raw_text
+    # Convert parser page ranges into offsets of the exact saved, stripped
+    # string. Model-provided page numbers/offsets are never consumed.
+    combined = "\n".join(pages)
+    leading = len(combined) - len(combined.lstrip())
+    offset = 0
+    page_spans = []
+    for page_number, page_text in enumerate(pages, start=1):
+        start, end = max(0, offset - leading), min(len(raw_text), offset + len(page_text) - leading)
+        if start < end:
+            page_spans.append({"page": page_number, "start": start, "end": end})
+        offset += len(page_text) + 1
+    return raw_text, build_text_layout(raw_text, page_spans)
+
+
+def _extract_pdf_text(content: bytes) -> str:
+    """Backward-compatible validation helper; uploaded documents retain layout."""
+    return _extract_pdf_text_with_layout(content)[0]
 
 
 def save_resume_document(
@@ -135,10 +152,10 @@ def save_resume_document(
         lock_active_upload(db, resume_id=resume_id, user_id=user_id)
         stored = storage.save(object_key, file.file, claim_token=resume_id.hex)
         db.execute(update(ResumeDocument).where(ResumeDocument.id == resume_id).values(processing_status="uploaded"))
-        raw_text = _extract_pdf_text(storage.read(object_key, claim_token=resume_id.hex))
+        raw_text, text_layout = _extract_pdf_text_with_layout(storage.read(object_key, claim_token=resume_id.hex))
         complete_resume_upload(
             db, resume_id=resume_id, user_id=user_id, raw_text=raw_text,
-            byte_size=stored.byte_size, sha256=stored.sha256,
+            byte_size=stored.byte_size, sha256=stored.sha256, text_layout=text_layout,
         )
         db.refresh(document)
         result = StoredResume(

@@ -21,7 +21,7 @@ from offerpilot_api.db.models import CareerProfile, CareerProfileEntry, ProfileC
 from offerpilot_api.db.session import build_engine
 
 
-HEAD_REVISION = "0004_trusted_career_profile"
+HEAD_REVISION = "0005_resume_extraction_runs"
 
 
 class TrustedProfileMigrationTests(unittest.TestCase):
@@ -248,7 +248,7 @@ class TrustedProfileMigrationTests(unittest.TestCase):
             stored = session.get(CareerProfile, profile_id)
             self.assertEqual(stored.user_id, owner_id)
             self.assertEqual(stored.revision, 3)
-            self.assertEqual(session.scalar(text("SELECT version_num FROM alembic_version")), HEAD_REVISION)
+            self.assertEqual(session.scalar(text("SELECT version_num FROM alembic_version")), "0004_trusted_career_profile")
 
     def test_offline_downgrade_cannot_skip_live_data_safety_check(self) -> None:
         with self.assertRaises(RuntimeError):

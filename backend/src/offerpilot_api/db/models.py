@@ -87,6 +87,8 @@ class ResumeDocument(Base):
     file_path: Mapped[str] = mapped_column(String(2048), nullable=False)
     file_type: Mapped[str] = mapped_column(String(100), nullable=False)
     raw_text: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # Server parser offsets into raw_text; no model-authored page coordinates.
+    text_layout: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
     object_key: Mapped[str | None] = mapped_column(String(64), nullable=True)
     byte_size: Mapped[int | None] = mapped_column(Integer, nullable=True)
     sha256: Mapped[str | None] = mapped_column(String(64), nullable=True)
@@ -215,6 +217,7 @@ class CareerProfileEntry(Base):
     resume_id: Mapped[uuid.UUID | None] = mapped_column(Uuid(as_uuid=True), ForeignKey("resume_documents.id", ondelete="SET NULL"), nullable=True, index=True)
     field_sources: Mapped[dict[str, str]] = mapped_column(JSON, default=dict, nullable=False)
     evidence: Mapped[list[dict[str, Any]]] = mapped_column(JSON, default=list, nullable=False)
+    extraction_metadata: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict, server_default=text("'{}'"), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.current_timestamp(), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.current_timestamp(), nullable=False)
 
@@ -244,6 +247,54 @@ class ProfileCandidate(Base):
     status: Mapped[str] = mapped_column(String(24), default="pending", server_default=text("'pending'"), nullable=False)
     schema_version: Mapped[str] = mapped_column(String(20), nullable=False)
     extraction_version: Mapped[str] = mapped_column(String(100), nullable=False)
+    extraction_metadata: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict, server_default=text("'{}'"), nullable=False)
+    extraction_run_id: Mapped[uuid.UUID | None] = mapped_column(Uuid(as_uuid=True), ForeignKey("resume_extraction_runs.id", name="fk_profile_candidates_extraction_run_id_runs", ondelete="SET NULL"), nullable=True, index=True)
     entry_id: Mapped[uuid.UUID | None] = mapped_column(Uuid(as_uuid=True), ForeignKey("career_profile_entries.id", ondelete="SET NULL"), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.current_timestamp(), nullable=False)
     reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class ResumeExtractionRun(Base):
+    """Durable, bounded Mock extraction; a minimal tombstone survives deletion.
+
+    No resume FK deliberately: deleting a resume cancels active runs, clears
+    derived evidence, and leaves only an owner-scoped terminal status.
+    """
+
+    __tablename__ = "resume_extraction_runs"
+    __table_args__ = (
+        UniqueConstraint("user_id", "idempotency_key", name="uq_resume_extraction_runs_request"),
+        UniqueConstraint("resume_id", "source_version", "extraction_version", name="uq_resume_extraction_runs_source"),
+        CheckConstraint("status IN ('queued', 'running', 'succeeded', 'failed', 'cancelled')", name="ck_resume_extraction_runs_status"),
+        CheckConstraint("mode = 'mock' AND test_result = true", name="ck_resume_extraction_runs_mock_only"),
+        CheckConstraint("revision >= 0 AND attempt_count >= 0 AND attempt_count <= max_attempts", name="ck_resume_extraction_runs_attempts"),
+        CheckConstraint("call_count >= 0 AND call_count <= max_calls AND max_attempts BETWEEN 1 AND 2 AND max_calls BETWEEN 1 AND 4", name="ck_resume_extraction_runs_calls"),
+        CheckConstraint("candidate_count >= 0 AND timeout_seconds BETWEEN 1 AND 60", name="ck_resume_extraction_runs_limits"),
+        CheckConstraint("(status = 'running' AND execution_token IS NOT NULL AND lease_deadline IS NOT NULL) OR (status <> 'running' AND execution_token IS NULL AND lease_deadline IS NULL)", name="ck_resume_extraction_runs_lease"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), ForeignKey("users.id", ondelete="RESTRICT"), nullable=False, index=True)
+    resume_id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), nullable=False, index=True)
+    idempotency_key: Mapped[str] = mapped_column(String(100), nullable=False)
+    source_version: Mapped[str] = mapped_column(String(64), nullable=False)
+    status: Mapped[str] = mapped_column(String(24), default="queued", server_default=text("'queued'"), nullable=False, index=True)
+    mode: Mapped[str] = mapped_column(String(20), default="mock", server_default=text("'mock'"), nullable=False)
+    test_result: Mapped[bool] = mapped_column(Boolean, default=True, server_default=true(), nullable=False)
+    revision: Mapped[int] = mapped_column(Integer, default=0, server_default=text("0"), nullable=False)
+    attempt_count: Mapped[int] = mapped_column(Integer, default=0, server_default=text("0"), nullable=False)
+    max_attempts: Mapped[int] = mapped_column(Integer, nullable=False)
+    call_count: Mapped[int] = mapped_column(Integer, default=0, server_default=text("0"), nullable=False)
+    max_calls: Mapped[int] = mapped_column(Integer, nullable=False)
+    timeout_seconds: Mapped[int] = mapped_column(Integer, nullable=False)
+    candidate_count: Mapped[int] = mapped_column(Integer, default=0, server_default=text("0"), nullable=False)
+    execution_token: Mapped[uuid.UUID | None] = mapped_column(Uuid(as_uuid=True), nullable=True)
+    lease_deadline: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    schema_version: Mapped[str] = mapped_column(String(20), nullable=False)
+    extraction_version: Mapped[str] = mapped_column(String(100), nullable=False)
+    prompt_version: Mapped[str] = mapped_column(String(100), nullable=False)
+    provider_version: Mapped[str] = mapped_column(String(100), nullable=False)
+    error_code: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.current_timestamp(), nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.current_timestamp(), nullable=False)
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

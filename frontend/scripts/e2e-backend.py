@@ -45,6 +45,7 @@ def run() -> None:
             "OFFERPILOT_TRUSTED_ORIGINS": json.dumps([f"http://127.0.0.1:{web_port}"]),
             "OFFERPILOT_AUTH_IP_ATTEMPT_LIMIT": "1000",
             "OFFERPILOT_AUTH_REGISTRATION_ATTEMPT_LIMIT": "100",
+            "OFFERPILOT_MOCK_EXTRACTION_ENABLED": "true",
         })
         sys.path.insert(0, str(BACKEND / "src"))
         import pymupdf
@@ -67,10 +68,44 @@ def run() -> None:
             command.upgrade(Config(str(BACKEND / "alembic.ini")), "head")
         with engine.connect() as connection:
             revision = connection.exec_driver_sql("SELECT version_num FROM alembic_version").scalar()
-        if revision != "0004_trusted_career_profile":
+        if revision != "0005_resume_extraction_runs":
             raise RuntimeError("E2E migration baseline changed; review the harness")
 
         app = create_app()
+        from offerpilot_api.agent_runtime.providers.mock import MockResumeProvider
+        from offerpilot_api.agent_runtime import extraction_runs
+        from offerpilot_api.resume_ingestion.synthetic_fixtures import SYNTHETIC_RESUME_TEXT
+        blocked_release = threading.Event()
+        blocked_started = threading.Event()
+        blocked_returned = threading.Event()
+        blocked_batch_completed = threading.Event()
+        original_process_batch = extraction_runs.process_extraction_batch
+
+        def observed_process_batch(*args, **kwargs):
+            # Observe completion of the real finalization transaction; do not
+            # change execution, results, or the application's business checks.
+            result = original_process_batch(*args, **kwargs)
+            if blocked_returned.is_set():
+                blocked_batch_completed.set()
+            return result
+
+        extraction_runs.process_extraction_batch = observed_process_batch
+
+        class FaultProvider:
+            def __init__(self, mode: str):
+                self.mode = mode
+
+            def generate_json(self, *, system_prompt: str, user_prompt: str) -> str:
+                if self.mode == "blocked":
+                    blocked_started.set()
+                    if not blocked_release.wait(15):
+                        raise RuntimeError("Isolated provider gate timed out")
+                if self.mode == "invalid":
+                    return "{not valid JSON"
+                result = MockResumeProvider().generate_json(system_prompt=system_prompt, user_prompt=user_prompt)
+                if self.mode == "blocked":
+                    blocked_returned.set()
+                return result
         control_secret = secrets.token_urlsafe(32)
         objects: dict[UUID, Path] = {}
         fault_backups: dict[UUID, tuple[Path, str]] = {}
@@ -115,6 +150,38 @@ def run() -> None:
                 page.insert_text((72, 94), "Not proficient in Java.")
                 content = document.tobytes()
             return Response(content=content, media_type="application/pdf")
+
+        @app.post("/__e2e/extraction-pdf", include_in_schema=False)
+        async def extraction_pdf(request: Request):
+            controlled(request)
+            with pymupdf.open() as document:
+                page = document.new_page(width=1190, height=842)
+                for index, line in enumerate(SYNTHETIC_RESUME_TEXT.splitlines()):
+                    page.insert_text((72, 72 + index * 24), line, fontname="china-s", fontsize=11)
+                content = document.tobytes()
+            return Response(content=content, media_type="application/pdf")
+
+        @app.post("/__e2e/extraction-mode", include_in_schema=False)
+        async def extraction_mode(request: Request):
+            controlled(request)
+            mode = (await request.json()).get("mode")
+            if mode not in {"default", "paused", "invalid", "blocked"}:
+                raise HTTPException(status_code=400)
+            if mode != "blocked":
+                blocked_release.set()
+            else:
+                blocked_release.clear()
+                blocked_started.clear()
+                blocked_returned.clear()
+                blocked_batch_completed.clear()
+            app.state.extraction_dispatcher_enabled = mode != "paused"
+            app.state.extraction_provider_factory = lambda: FaultProvider(mode)
+            return {"ok": True, "provider_blocked": blocked_started.is_set()}
+
+        @app.post("/__e2e/extraction-state", include_in_schema=False)
+        async def extraction_state(request: Request):
+            controlled(request)
+            return {"provider_started": blocked_started.is_set(), "batch_completed": blocked_batch_completed.is_set()}
 
         @app.post("/__e2e/reset-throttle", include_in_schema=False)
         async def reset_throttle(request: Request):
@@ -279,6 +346,7 @@ def run() -> None:
 
         def stop_on_stdin_eof():
             sys.stdin.buffer.read()
+            blocked_release.set()
             stop_event.set()
             with server_lock:
                 if server:

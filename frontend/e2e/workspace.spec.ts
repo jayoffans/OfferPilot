@@ -23,7 +23,7 @@ test("真实闭环：邀请注册、刷新重登录、改名、原件下载、�
   await page.goto(`/resumes/${uploaded.id}`);
   await expect(page.getByRole("heading", { name: uploaded.file_name, exact: true })).toBeVisible();
   await expect(page.getByText("文本解析完成", { exact: true }).first()).toBeVisible();
-  await expect(page.getByText("尚未开放，未生成画像", { exact: true })).toBeVisible();
+  await expect(page.getByText("尚未启用，可手动确认资料", { exact: true })).toBeVisible();
   await page.reload();
   await expect(page.getByRole("heading", { name: uploaded.file_name, exact: true })).toBeVisible();
   await logoutUI(page);

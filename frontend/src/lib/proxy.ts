@@ -1,7 +1,8 @@
 const UUID = '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}';
-const READ = new RegExp(`^(me|auth/csrf|profile|resumes|resumes/${UUID}(/(lifecycle|download))?)$`, 'i');
+const READ = new RegExp(`^(me|auth/csrf|profile|resumes|resumes/${UUID}(/(lifecycle|download|extraction))?|extraction-runs/${UUID}(/candidates)?)$`, 'i');
 const RESOURCE = new RegExp(`^resumes/${UUID}$`, 'i');
 const REVIEW = new RegExp(`^profile/candidates/${UUID}/review$`, 'i');
+const EXTRACTION_WRITE = new RegExp(`^(resumes/${UUID}/extraction-runs|extraction-runs/${UUID}/(cancel|retry))$`, 'i');
 const MAX_BODY_BYTES = 11 * 1024 * 1024;
 
 function error(status: number, code: string, message: string) {
@@ -9,7 +10,7 @@ function error(status: number, code: string, message: string) {
 }
 export function allowedRoute(method: string, path: string): boolean {
   if (method === 'GET') return READ.test(path);
-  if (method === 'POST') return ['auth/register', 'auth/login', 'auth/logout', 'resumes'].includes(path) || REVIEW.test(path);
+  if (method === 'POST') return ['auth/register', 'auth/login', 'auth/logout', 'resumes'].includes(path) || REVIEW.test(path) || EXTRACTION_WRITE.test(path);
   if (method === 'PUT') return path === 'profile';
   return (method === 'DELETE' || method === 'PATCH') && RESOURCE.test(path);
 }

@@ -58,7 +58,7 @@ class IdentityMigrationTests(unittest.TestCase):
         self.assertTrue(expected <= set(inspect(self.engine).get_table_names()))
         with self.engine.connect() as connection:
             self.assertEqual(connection.scalar(text("PRAGMA foreign_keys")), 1)
-            self.assertEqual(connection.scalar(text("SELECT version_num FROM alembic_version")), "0004_trusted_career_profile")
+            self.assertEqual(connection.scalar(text("SELECT version_num FROM alembic_version")), "0005_resume_extraction_runs")
             context = MigrationContext.configure(
                 connection, opts={"compare_type": True, "compare_server_default": True}
             )
@@ -76,6 +76,13 @@ class IdentityMigrationTests(unittest.TestCase):
                     for foreign_key in foreign_keys:
                         if foreign_key["constrained_columns"] == ["user_id"]:
                             foreign_key["options"] = {**foreign_key["options"], "ondelete": owner["on_delete"]}
+                if table_name == "profile_candidates":
+                    actual = connection.execute(text("PRAGMA foreign_key_list(profile_candidates)")).mappings().all()
+                    run_key = next(row for row in actual if row["from"] == "extraction_run_id")
+                    self.assertEqual(run_key["on_delete"], "SET NULL")
+                    for foreign_key in foreign_keys:
+                        if foreign_key["constrained_columns"] == ["extraction_run_id"]:
+                            foreign_key["options"] = {**foreign_key["options"], "ondelete": run_key["on_delete"]}
                 return foreign_keys
 
             with patch.object(self.engine.dialect, "get_foreign_keys", reflect_foreign_keys):
