@@ -179,3 +179,71 @@ class ProfileFact(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.current_timestamp(), nullable=False)
 
     profile: Mapped[Profile] = relationship(back_populates="facts")
+
+
+class CareerProfile(Base):
+    """The sole current, user-reviewed career profile; legacy Profile is a candidate snapshot."""
+
+    __tablename__ = "career_profiles"
+    __table_args__ = (
+        UniqueConstraint("user_id", name="uq_career_profiles_user_id"),
+        CheckConstraint("revision >= 0", name="ck_career_profiles_revision"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), ForeignKey("users.id", ondelete="RESTRICT"), nullable=False)
+    revision: Mapped[int] = mapped_column(Integer, default=0, server_default=text("0"), nullable=False)
+    schema_version: Mapped[str] = mapped_column(String(20), default="1.0", server_default=text("'1.0'"), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.current_timestamp(), nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.current_timestamp(), nullable=False)
+
+
+class CareerProfileEntry(Base):
+    __tablename__ = "career_profile_entries"
+    __table_args__ = (
+        CheckConstraint("category IN ('education', 'skill', 'project', 'experience')", name="ck_career_profile_entries_category"),
+        CheckConstraint("source_kind IN ('manual', 'resume_confirmed', 'user_modified', 'resume_deleted')", name="ck_career_profile_entries_source_kind"),
+        CheckConstraint("position >= 0", name="ck_career_profile_entries_position"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    profile_id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), ForeignKey("career_profiles.id", ondelete="CASCADE"), nullable=False, index=True)
+    category: Mapped[str] = mapped_column(String(24), nullable=False)
+    value: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
+    position: Mapped[int] = mapped_column(Integer, nullable=False)
+    source_kind: Mapped[str] = mapped_column(String(24), nullable=False)
+    resume_id: Mapped[uuid.UUID | None] = mapped_column(Uuid(as_uuid=True), ForeignKey("resume_documents.id", ondelete="SET NULL"), nullable=True, index=True)
+    field_sources: Mapped[dict[str, str]] = mapped_column(JSON, default=dict, nullable=False)
+    evidence: Mapped[list[dict[str, Any]]] = mapped_column(JSON, default=list, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.current_timestamp(), nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.current_timestamp(), nullable=False)
+
+
+class ProfileCandidate(Base):
+    """Untrusted extraction proposals never queried as formal profile entries."""
+
+    __tablename__ = "profile_candidates"
+    __table_args__ = (
+        UniqueConstraint("resume_id", "batch_key", "item_index", name="uq_profile_candidates_batch_item"),
+        CheckConstraint("category IN ('education', 'skill', 'project', 'experience')", name="ck_profile_candidates_category"),
+        CheckConstraint("status IN ('pending', 'confirmed', 'modified', 'rejected')", name="ck_profile_candidates_status"),
+        CheckConstraint("evidence_status IN ('supported', 'unsupported', 'needs_review')", name="ck_profile_candidates_evidence_status"),
+        CheckConstraint("item_index >= 0", name="ck_profile_candidates_item_index"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    profile_id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), ForeignKey("career_profiles.id", ondelete="CASCADE"), nullable=False, index=True)
+    resume_id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), ForeignKey("resume_documents.id", ondelete="CASCADE"), nullable=False, index=True)
+    batch_key: Mapped[str] = mapped_column(String(100), nullable=False)
+    item_index: Mapped[int] = mapped_column(Integer, nullable=False)
+    batch_digest: Mapped[str] = mapped_column(String(64), nullable=False)
+    category: Mapped[str] = mapped_column(String(24), nullable=False)
+    value: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
+    evidence: Mapped[list[dict[str, Any]]] = mapped_column(JSON, default=list, nullable=False)
+    evidence_status: Mapped[str] = mapped_column(String(24), nullable=False)
+    status: Mapped[str] = mapped_column(String(24), default="pending", server_default=text("'pending'"), nullable=False)
+    schema_version: Mapped[str] = mapped_column(String(20), nullable=False)
+    extraction_version: Mapped[str] = mapped_column(String(100), nullable=False)
+    entry_id: Mapped[uuid.UUID | None] = mapped_column(Uuid(as_uuid=True), ForeignKey("career_profile_entries.id", ondelete="SET NULL"), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.current_timestamp(), nullable=False)
+    reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

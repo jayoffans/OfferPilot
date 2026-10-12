@@ -231,6 +231,41 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/profile": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read Current Profile */
+        get: operations["read_current_profile_api_v1_profile_get"];
+        /** Write Current Profile */
+        put: operations["write_current_profile_api_v1_profile_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/profile/candidates/{candidate_id}/review": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Review Current Candidate */
+        post: operations["review_current_candidate_api_v1_profile_candidates__candidate_id__review_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -245,10 +280,121 @@ export interface components {
             /** File */
             file: string;
         };
+        /** CandidateEvidence */
+        CandidateEvidence: {
+            /** Field */
+            field: string;
+            /** Source Text */
+            source_text: string;
+        };
+        /** CareerProfileResponse */
+        CareerProfileResponse: {
+            /**
+             * Schema Version
+             * @default 1.0
+             * @constant
+             */
+            schema_version: "1.0";
+            /** Revision */
+            revision: number;
+            /** Updated At */
+            updated_at: string | null;
+            /** Education */
+            education: components["schemas"]["EducationEntry"][];
+            /** Skills */
+            skills: components["schemas"]["SkillEntry"][];
+            /** Projects */
+            projects: components["schemas"]["ProjectEntry"][];
+            /** Experiences */
+            experiences: components["schemas"]["ExperienceEntry"][];
+            /** Candidates */
+            candidates: components["schemas"]["ProfileCandidateResponse"][];
+            completion: components["schemas"]["ProfileCompletion"];
+        };
         /** CsrfResponse */
         CsrfResponse: {
             /** Csrf Token */
             csrf_token: string;
+        };
+        /** CurrentEvidence */
+        CurrentEvidence: {
+            /** Field */
+            field: string;
+            /** Source Text */
+            source_text: string;
+            /** Supports Current Value */
+            supports_current_value: boolean;
+        };
+        /** EducationEntry */
+        EducationEntry: {
+            /** School */
+            school?: string | null;
+            /** Degree */
+            degree?: string | null;
+            /** Major */
+            major?: string | null;
+            /** Start Date */
+            start_date?: string | null;
+            /** End Date */
+            end_date?: string | null;
+            /** End Date Kind */
+            end_date_kind?: ("expected" | "actual") | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            source: components["schemas"]["EntrySource"];
+        };
+        /** EducationInput */
+        EducationInput: {
+            /** Id */
+            id?: string | null;
+            /** School */
+            school?: string | null;
+            /** Degree */
+            degree?: string | null;
+            /** Major */
+            major?: string | null;
+            /** Start Date */
+            start_date?: string | null;
+            /** End Date */
+            end_date?: string | null;
+            /** End Date Kind */
+            end_date_kind?: ("expected" | "actual") | null;
+        };
+        /** EducationValue */
+        EducationValue: {
+            /** School */
+            school?: string | null;
+            /** Degree */
+            degree?: string | null;
+            /** Major */
+            major?: string | null;
+            /** Start Date */
+            start_date?: string | null;
+            /** End Date */
+            end_date?: string | null;
+            /** End Date Kind */
+            end_date_kind?: ("expected" | "actual") | null;
+        };
+        /** EntrySource */
+        EntrySource: {
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "manual" | "resume_confirmed" | "user_modified" | "resume_deleted";
+            /** Resume Id */
+            resume_id: string | null;
+            /** Resume File Name */
+            resume_file_name: string | null;
+            /** Field Sources */
+            field_sources: {
+                [key: string]: "manual" | "resume" | "resume_deleted";
+            };
+            /** Evidence */
+            evidence: components["schemas"]["CurrentEvidence"][];
         };
         /** ErrorDetail */
         ErrorDetail: {
@@ -263,6 +409,65 @@ export interface components {
         ErrorResponse: {
             /** Detail */
             detail: components["schemas"]["ErrorDetail"] | string;
+        };
+        /** ExperienceEntry */
+        ExperienceEntry: {
+            /** Organization */
+            organization?: string | null;
+            /** Role */
+            role?: string | null;
+            /** Experience Type */
+            experience_type?: ("internship" | "work") | null;
+            /** Description */
+            description?: string | null;
+            /** Start Date */
+            start_date?: string | null;
+            /** End Date */
+            end_date?: string | null;
+            /** Is Current */
+            is_current?: boolean | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            source: components["schemas"]["EntrySource"];
+        };
+        /** ExperienceInput */
+        ExperienceInput: {
+            /** Id */
+            id?: string | null;
+            /** Organization */
+            organization?: string | null;
+            /** Role */
+            role?: string | null;
+            /** Experience Type */
+            experience_type?: ("internship" | "work") | null;
+            /** Description */
+            description?: string | null;
+            /** Start Date */
+            start_date?: string | null;
+            /** End Date */
+            end_date?: string | null;
+            /** Is Current */
+            is_current?: boolean | null;
+        };
+        /** ExperienceValue */
+        ExperienceValue: {
+            /** Organization */
+            organization?: string | null;
+            /** Role */
+            role?: string | null;
+            /** Experience Type */
+            experience_type?: ("internship" | "work") | null;
+            /** Description */
+            description?: string | null;
+            /** Start Date */
+            start_date?: string | null;
+            /** End Date */
+            end_date?: string | null;
+            /** Is Current */
+            is_current?: boolean | null;
         };
         /** HealthResponse */
         HealthResponse: {
@@ -296,6 +501,140 @@ export interface components {
             user: components["schemas"]["UserResponse"];
             /** Csrf Token */
             csrf_token: string;
+        };
+        /** ProfileCandidateResponse */
+        ProfileCandidateResponse: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Category
+             * @enum {string}
+             */
+            category: "education" | "skill" | "project" | "experience";
+            /** Value */
+            value: components["schemas"]["EducationValue"] | components["schemas"]["SkillValue"] | components["schemas"]["ProjectValue"] | components["schemas"]["ExperienceValue"];
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "pending" | "confirmed" | "modified" | "rejected";
+            /**
+             * Evidence Status
+             * @enum {string}
+             */
+            evidence_status: "supported" | "unsupported" | "needs_review";
+            /** Evidence */
+            evidence: components["schemas"]["CandidateEvidence"][];
+            /**
+             * Resume Id
+             * Format: uuid
+             */
+            resume_id: string;
+            /** Resume File Name */
+            resume_file_name: string;
+            /** Schema Version */
+            schema_version: string;
+            /** Extraction Version */
+            extraction_version: string;
+            /** Entry Id */
+            entry_id: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Reviewed At */
+            reviewed_at: string | null;
+        };
+        /** ProfileCandidateReviewRequest */
+        ProfileCandidateReviewRequest: {
+            /** Revision */
+            revision: number;
+            /**
+             * Action
+             * @enum {string}
+             */
+            action: "confirm" | "modify" | "reject";
+            /** Value */
+            value?: components["schemas"]["EducationValue"] | components["schemas"]["SkillValue"] | components["schemas"]["ProjectValue"] | components["schemas"]["ExperienceValue"] | null;
+        };
+        /** ProfileCompletion */
+        ProfileCompletion: {
+            /** Populated Groups */
+            populated_groups: string[];
+            /** Missing Fields */
+            missing_fields: string[];
+            /** Pending Count */
+            pending_count: number;
+        };
+        /** ProfileSaveRequest */
+        ProfileSaveRequest: {
+            /** Revision */
+            revision: number;
+            /** Education */
+            education: components["schemas"]["EducationInput"][];
+            /** Skills */
+            skills: components["schemas"]["SkillInput"][];
+            /** Projects */
+            projects: components["schemas"]["ProjectInput"][];
+            /** Experiences */
+            experiences: components["schemas"]["ExperienceInput"][];
+        };
+        /** ProjectEntry */
+        ProjectEntry: {
+            /** Name */
+            name?: string | null;
+            /** Role */
+            role?: string | null;
+            /** Description */
+            description?: string | null;
+            /** Start Date */
+            start_date?: string | null;
+            /** End Date */
+            end_date?: string | null;
+            /** Is Current */
+            is_current?: boolean | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            source: components["schemas"]["EntrySource"];
+        };
+        /** ProjectInput */
+        ProjectInput: {
+            /** Id */
+            id?: string | null;
+            /** Name */
+            name?: string | null;
+            /** Role */
+            role?: string | null;
+            /** Description */
+            description?: string | null;
+            /** Start Date */
+            start_date?: string | null;
+            /** End Date */
+            end_date?: string | null;
+            /** Is Current */
+            is_current?: boolean | null;
+        };
+        /** ProjectValue */
+        ProjectValue: {
+            /** Name */
+            name?: string | null;
+            /** Role */
+            role?: string | null;
+            /** Description */
+            description?: string | null;
+            /** Start Date */
+            start_date?: string | null;
+            /** End Date */
+            end_date?: string | null;
+            /** Is Current */
+            is_current?: boolean | null;
         };
         /** RegisterRequest */
         RegisterRequest: {
@@ -420,6 +759,35 @@ export interface components {
              * Format: date-time
              */
             created_at: string;
+        };
+        /** SkillEntry */
+        SkillEntry: {
+            /** Name */
+            name?: string | null;
+            /** Level */
+            level?: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            source: components["schemas"]["EntrySource"];
+        };
+        /** SkillInput */
+        SkillInput: {
+            /** Id */
+            id?: string | null;
+            /** Name */
+            name?: string | null;
+            /** Level */
+            level?: string | null;
+        };
+        /** SkillValue */
+        SkillValue: {
+            /** Name */
+            name?: string | null;
+            /** Level */
+            level?: string | null;
         };
         /** UserResponse */
         UserResponse: {
@@ -1758,6 +2126,238 @@ export interface operations {
             };
             /** @description Internal Server Error */
             500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    read_current_profile_api_v1_profile_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CareerProfileResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    write_current_profile_api_v1_profile_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProfileSaveRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CareerProfileResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    review_current_candidate_api_v1_profile_candidates__candidate_id__review_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                candidate_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProfileCandidateReviewRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CareerProfileResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };

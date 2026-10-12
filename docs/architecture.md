@@ -1,9 +1,9 @@
 # OfferPilot 系统架构与技术方案
 
-**版本：** 0.4（保留目标设计，补充 S1-3 Web 边界）
+**版本：** 0.5（S2-1 用户画像与候选审核边界）
 **日期：** 2026-10-11
 
-> **当前实施范围：** Phase 0～1-3 已有 FastAPI、配置、SQLAlchemy/SQLite、健康检查、三表与初始迁移、本机 PDF 上传/文本提取、四字段内存抽取核心与 Provider。S1-1 新增邀请注册、Argon2id、数据库会话、当前用户和简历父链对象授权；S1-2 新增私有本地 Storage Adapter、原件下载、文件/派生删除、清理记录与有限恢复 CLI。AI 抽取仍未接入 API/持久化。S1-3 已增加 Next.js 中文工作台与同源 API 代理。尚无 PostgreSQL、Redis、云对象存储、Worker、画像确认、岗位匹配或业务 Agent。下文保留后续目标设计，优先级以 PLAN/PRD/Roadmap 为准。
+> **当前实施范围：** S1-1/S1-2/S1-3 提供真实邀请身份、私有 PDF 生命周期和中文工作台。S2-1 扩展用户唯一的正式画像、候选审核与 revision，代码与验收结果见 PLAN 和 S2-1 验收记录。四字段内存抽取核心与 Provider 仍未接入 API；上传仅解析 PDF 文本，不生成候选。尚无 PostgreSQL、Redis、云对象存储、Worker、岗位匹配或 Browser Agent。下文保留后续目标设计，优先级以 PLAN/PRD/Roadmap 为准。
 
 Phase 1-2 上传接口仅在 `development` 环境可用，默认上传目录为本地 `backend/uploads/`；仅接收不超过 10 MiB、50 页且有可选中文本的 PDF。PyMuPDF 采用 AGPL 或商业许可，正式发布前需确定适用许可方案。
 
@@ -16,9 +16,21 @@ Phase 1-2 上传接口仅在 `development` 环境可用，默认上传目录为�
 
 当前是客户端确认会话后显示工作台，API 由后端强制授权，页面不包含服务端预渲染的个人资料。文件状态和清理通过真实 lifecycle 接口读取；自动查询有次数/间隔上限，页面卸载终止请求。详见 [前端设计](../frontend/DESIGN.md) 与 [S1-3 验收](S1-3-acceptance.md)。本批没有 Worker、队列、AI 或新数据表；账户导出/注销仍单独后续验收。
 
+### S2-1 画像领域边界
+
+`profile/schemas.py` 定义正式条目、保存请求、审核请求及版本化候选批次；`profile/services.py` 负责用户授权、结构约束、字段来源、审核状态、幂等入库及 revision 条件更新。`api/routes/profile.py` 只装配已登录身份和 HTTP Schema；前端沿用生成 OpenAPI 类型，不直接写数据库。
+
+`career_profiles` 每用户最多一个当前画像，`career_profile_entries` 是用户手工提供或明确审核的正式条目，`profile_candidates` 是简历候选审核池。旧 `profiles/profile_facts` 保留按简历的历史派生容器，不作为正式画像、不自动迁移或确认。候选和正式集合在 API 中分开；候选的模型置信度不用于确认。
+
+画像全量保存和单候选审核共享 `revision`：服务端 CAS 成功才写条目/状态并递增版本，过期请求返回 409，客户端保留本地编辑供核对。所有 entry/candidate ID 均校验当前用户，不允许来源元数据或客户端 `user_id` 控制授权。没有公开候选创建/批量导入接口。
+
+内部 `ingest_profile_candidates` 是 S2-2 的接入边界：受信任调用者仍需传入服务端身份、校验同 owner 的 active/parsed 简历、重验版本化 Schema、限制数量并按批次键去重。精确原文存在和值片段校验仅证明文字引用；否定或学习计划风险保守标记待核实，不能声称完整语义理解。缺少依据只能经用户修订为自行提供的资料，不能原值确认。该入口本批只由合成测试调用，无 Provider 调用、Key 或任务系统。
+
+删除简历在原删除意图事务中调用画像领域清理：删除该简历候选与批次记录，清除正式条目的简历引用、文件名和原文证据，保留用户已提供/确认的当前值并标记来源简历已删除；独立手工资料保留。相关画像 revision 同事务递增，旧快照无法恢复已删证据。物理删除失败仍不重新开放候选或证据；S1 的 journal、重试及下载边界继续复用。
+
 ## 1. 架构决策摘要
 
-**待决策说明：** 下列 Next.js、PostgreSQL 具体版本、Celery/Redis、对象存储、部署容器和观测供应商均为原设计候选，未由本轮验证或安装。保持模块化单体；Worker 在 S2 长任务需要时再决定，Browser 独立 S7，DOCX/OCR 和通知首发后评估。MVP 岗位来源为粘贴/手动输入，不访问保存的 URL。具体容量、价格、数据期限与部署许可需相应批次验证。
+**待决策说明：** Next.js 前端已由 S1-3 实施并由 S2-1 延续验证；PostgreSQL 具体版本、Celery/Redis、对象存储、容器和观测供应商仍为候选。保持模块化单体，Worker 在后续真实长任务需要时再决定，Browser 独立 S7，DOCX/OCR 和通知首发后评估。MVP 岗位来源为粘贴/手动输入，不访问保存的 URL。具体容量、数据期限与部署许可需相应批次验证。
 
 - 采用**模块化单体**；独立异步 Worker 为后续有持久任务时的候选，早期不拆微服务，降低部署与调试成本。
 - Web 使用 Next.js/TypeScript；API、解析、Agent 编排使用 Python/FastAPI，共享明确的 OpenAPI 契约。

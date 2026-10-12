@@ -5,10 +5,15 @@ import { allowedRoute, proxyApi } from './proxy';
 const id = '9e9bff19-a61d-4857-b128-e6225e2832cc';
 afterEach(() => { vi.unstubAllGlobals(); vi.unstubAllEnvs(); });
 describe('same-origin API boundary', () => {
-  it('exposes only the implemented auth and file API', () => {
+  it('exposes only the implemented auth, file and profile API', () => {
     expect(allowedRoute('GET', `resumes/${id}/download`)).toBe(true);
     for (const target of ['../health', 'auth/invite', '__e2e/ready', `resumes/${id}/profile`, 'https://example.com']) expect(allowedRoute('GET', target)).toBe(false);
     expect(allowedRoute('POST', `resumes/${id}/download`)).toBe(false);
+    expect(allowedRoute('GET', 'profile')).toBe(true);
+    expect(allowedRoute('PUT', 'profile')).toBe(true);
+    expect(allowedRoute('POST', `profile/candidates/${id}/review`)).toBe(true);
+    for (const target of ['profile/other-user', 'profile/candidates/not-a-uuid/review', `profile/candidates/${id}`, 'profile/ingest']) expect(allowedRoute('POST', target)).toBe(false);
+    expect(allowedRoute('DELETE', 'profile')).toBe(false);
   });
   it('rejects hostile origins before contacting the backend', async () => {
     const fetcher = vi.fn(); vi.stubGlobal('fetch', fetcher);

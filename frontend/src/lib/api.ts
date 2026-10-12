@@ -4,13 +4,25 @@ type Schemas = components['schemas'];
 export type User = Schemas['UserResponse'];
 export type Resume = Schemas['ResumeUploadResponse'];
 export type ResumeLifecycle = Schemas['ResumeLifecycleResponse'];
+export type CareerProfile = Schemas['CareerProfileResponse'];
+export type ProfileSave = Schemas['ProfileSaveRequest'];
+export type ProfileCandidate = Schemas['ProfileCandidateResponse'];
+export type ProfileReview = Schemas['ProfileCandidateReviewRequest'];
+export type EducationInput = Schemas['EducationInput'];
+export type SkillInput = Schemas['SkillInput'];
+export type ProjectInput = Schemas['ProjectInput'];
+export type ExperienceInput = Schemas['ExperienceInput'];
 type LoginResponse = Schemas['LoginResponse'];
 
 let csrfToken: string | null = null;
 let csrfPending: { controller: AbortController; promise: Promise<string> } | null = null;
 let sessionGeneration = 0;
 export const SESSION_EXPIRED_EVENT = 'offerpilot:session-expired';
-export function clearSession() { sessionGeneration++; csrfToken = null; csrfPending?.controller.abort(); csrfPending = null; }
+export const SESSION_RESET_EVENT = 'offerpilot:session-reset';
+export function clearSession() {
+  sessionGeneration++; csrfToken = null; csrfPending?.controller.abort(); csrfPending = null;
+  if (typeof window !== 'undefined') window.dispatchEvent(new Event(SESSION_RESET_EVENT));
+}
 function expireSession(generation: number) {
   if (generation !== sessionGeneration) return;
   clearSession();
@@ -132,6 +144,9 @@ export const api = {
     return result;
   },
   logout: async (signal?: AbortSignal) => { await write<void>('/auth/logout', 'POST', undefined, signal); clearSession(); },
+  profile: (signal?: AbortSignal) => request<CareerProfile>('/profile', { signal }),
+  saveProfile: (data: ProfileSave, signal?: AbortSignal) => write<CareerProfile>('/profile', 'PUT', data, signal),
+  reviewCandidate: (id: string, data: ProfileReview, signal?: AbortSignal) => write<CareerProfile>(`/profile/candidates/${encodeURIComponent(id)}/review`, 'POST', data, signal),
   resumes: (signal?: AbortSignal) => request<Resume[]>('/resumes', { signal }),
   resume: (id: string, signal?: AbortSignal) => request<Resume>(`/resumes/${encodeURIComponent(id)}`, { signal }),
   lifecycle: (id: string, signal?: AbortSignal) => request<ResumeLifecycle>(`/resumes/${encodeURIComponent(id)}/lifecycle`, { signal }),

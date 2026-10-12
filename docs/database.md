@@ -1,12 +1,12 @@
 # OfferPilot 数据库设计
 
-**版本：** 0.6（保留目标模型，说明 S1-3 不改变持久化结构）
+**版本：** 0.7（S2-1 独立正式画像与候选审核）
 
 **日期：** 2026-10-11
 
-## 当前实现：Phase 1-1 ～ Phase 1-3、S1-1/S1-2 持久化与 S1-3 展示
+## 当前实现：S1 文件与身份、S2-1 正式画像及候选
 
-初始迁移建立三张业务表；S1-1 用新迁移 `0002_identity_ownership` 增加四张身份表和 nullable owner；S1-2 仅追加 `0003_resume_file_lifecycle` 的文件元信息/状态与清理记录。0001、0002 未修改。S1-3 复用上述表和 0003，不新增或变更持久化字段、迁移或用户数据保留策略；前端不访问数据库。下文第 1～4 节保留后续目标逻辑设计，不表示已实现；例如目标 `users.auth_subject` 与当前本地密码账户不同，目标 `profiles` 偏好实体也不同于现有按简历的画像。后续通过向前迁移整合，不直接改旧表含义。
+初始迁移建立三张业务表；S1-1 用 `0002_identity_ownership` 增加身份与 owner，S1-2 用 `0003_resume_file_lifecycle` 增加文件状态与清理记录；S1-3 仅复用这些结构。S2-1 追加 `0004_trusted_career_profile` 的三张画像/候选表，0001～0003 文件不修改，前端不访问数据库。下文第 1～4 节保留后续目标逻辑设计；例如目标 `users.auth_subject` 与当前密码账户不同，目标 `profiles` 偏好实体也不同于当前按简历的历史容器。以本节实际表及迁移为准，不直接改旧表含义。
 
 | 已实现表 | 核心字段 | 关系 |
 |---|---|---|
@@ -50,6 +50,23 @@
 SQLite 使用原生 nullable `ALTER TABLE ... ADD COLUMN ... REFERENCES users`，避免重建父表触发已有画像/事实级联丢失；其他数据库使用标准 add/FK 路径，但本批仅实测 SQLite。迁移不回填旧记录，不修改 raw_text、画像或事实。用户删除被已有简历 RESTRICT，账户删除应先完成明确生命周期清理，不把资源变成无人所有。
 
 测试覆盖临时空库、含旧三表数据的 0001 快照、唯一约束、外键/级联、元数据一致与安全降级。SQLite 内联新增 FK 的 SQLAlchemy 反射不显示 ON DELETE，测试直接核实 PRAGMA，再补反射比较；未来 autogenerate 须人工审查，不能把反射差异当作需重建表。只有身份四表均无数据才允许 downgrade；存在任何身份/限流/邀请记录时拒绝降级，以避免丢失认证/所有权，应向前修复或恢复已验证备份。没有在既有实际数据库执行本轮迁移。
+
+### S2-1 新持久化结构（0004，历史三表不改含义）
+
+正式画像独立于简历；不存在两个互相竞争的正式画像。0004 只增加新表，不重建旧父表，不自动认领 NULL-owner 简历、不将历史 `profiles/profile_facts` 升级为确认事实。旧按简历容器继续由 S1 生命周期清理；旧读取 API 返回历史派生数据，后续匹配只能使用新正式画像。
+
+| 新实体 | 用途及约束 | 保留、删除和日志规则 |
+|---|---|---|
+| `career_profiles` | `user_id` 唯一、revision 非负、Schema/更新时间；用户当前画像版本权威 | 随用户资料保存，空用户 GET 可返回 revision 0 而不制造经历；无正式账户注销实现，不擅自新增 TTL；不记字段值日志 |
+| `career_profile_entries` | 四类正式经历，UUID 稳定条目、严格结构值与逐字段来源；教育 school/degree/major/start/end/end kind，技能 name/level，项目 name/role/description/start/end/current，经历 organization/role/type/description/start/end/current | 只收匹配基础所需经历，不新增姓名/电话等收集；用户全量保存时删除缺席条目。已确认原值、修订及手工来源区别显示；删除简历清所有引用/文件名/证据，但保留用户当前值并标记来源已删除；值和证据不进日志 |
+| `profile_candidates` | 同用户同简历的版本化候选与 evidence；pending/confirmed/modified/rejected，支持性为 supported/unsupported/needs_review；引用正式 entry 仅用于审核关联 | 初始全部 pending，无自动确认；确认只允许 supported，修订是用户提供内容。随来源简历删除；未设正式保留期限，不用于分析日志/训练样本 |
+| `profile_candidates` 内的批次字段 | `resume_id/batch_key/item_index` 唯一，batch_digest 比对规范化内容、Schema 与抽取版本；每批 1～100 条、每用户最多 500 个候选 | 无独立批次表；相同键同内容复投不改变 revision，不同内容/版本为 409；随来源删除，不保存 Key、完整 prompt 或额外简历副本 |
+
+年月字段为 `YYYY-MM`，不补不存在的日期；结束月份缺失与 is_current 未知可同时为 NULL，预计/实际毕业需用户明确给出。时间先后、进行中与结束时间冲突、空条目、重复 ID、非法类别均在显式 Schema/服务中拒绝；服务端派生 user_id，UUID 本身不代替授权。
+
+保存/审核采用同一画像 CAS revision，成功事务才增加版本。来源删除也推进 revision，使旧快照无法恢复被删除证据。候选入库先锁定/校验简历 active/parsed，再更新画像，遵循简历生命周期一致锁序；数据库唯一/外键约束补充服务授权而不替代授权。
+
+0004 向前升级与空库、旧 0003 合成快照验证见 S2-1 验收记录。存在新画像/候选数据时拒绝有损 downgrade，需向前修复或备份恢复；PostgreSQL 行锁及迁移行为仍待独立环境验证。资料删除不代表 SQLite 空闲页、备份或磁盘安全擦除，完整账户导出/删除与备份保留仍为上线前条件。
 
 ## 1. 设计原则
 

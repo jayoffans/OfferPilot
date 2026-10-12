@@ -139,7 +139,7 @@ class FileLifecycleMigrationTests(unittest.TestCase):
         self.assert_metadata_matches()
         with self.engine.connect() as connection:
             self.assertEqual(connection.scalar(text("PRAGMA foreign_keys")), 1)
-            self.assertEqual(connection.scalar(text("SELECT version_num FROM alembic_version")), "0003_resume_file_lifecycle")
+            self.assertEqual(connection.scalar(text("SELECT version_num FROM alembic_version")), "0004_trusted_career_profile")
             self.assertEqual(connection.execute(text("PRAGMA foreign_key_check")).all(), [])
         keys = inspect(self.engine).get_foreign_keys("resume_file_operations")
         self.assertEqual(len(keys), 1)
@@ -293,6 +293,9 @@ class FileLifecycleMigrationTests(unittest.TestCase):
             self.assertIsNotNone(session.get(ResumeFileOperation, resume_id))
             self.assertIsNotNone(session.get(User, owner_id))
             self.assertEqual(session.scalar(text("SELECT version_num FROM alembic_version")), "0003_resume_file_lifecycle")
+        # The empty 0004 tables may downgrade successfully before 0003 refuses
+        # to discard the operation. Return to head for current-model comparison.
+        self.upgrade()
         self.assert_metadata_matches()
 
     def test_downgrade_refuses_managed_metadata_and_nondefault_states(self) -> None:

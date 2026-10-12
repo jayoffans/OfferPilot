@@ -67,7 +67,7 @@ def run() -> None:
             command.upgrade(Config(str(BACKEND / "alembic.ini")), "head")
         with engine.connect() as connection:
             revision = connection.exec_driver_sql("SELECT version_num FROM alembic_version").scalar()
-        if revision != "0003_resume_file_lifecycle":
+        if revision != "0004_trusted_career_profile":
             raise RuntimeError("E2E migration baseline changed; review the harness")
 
         app = create_app()
@@ -110,7 +110,9 @@ def run() -> None:
         async def pdf(request: Request):
             controlled(request)
             with pymupdf.open() as document:
-                document.new_page().insert_text((72, 72), "Synthetic OfferPilot E2E resume. Python project evidence.")
+                page = document.new_page()
+                page.insert_text((72, 72), "Synthetic OfferPilot E2E resume. Python project evidence.")
+                page.insert_text((72, 94), "Not proficient in Java.")
                 content = document.tobytes()
             return Response(content=content, media_type="application/pdf")
 
@@ -148,6 +150,34 @@ def run() -> None:
                 db.add(profile)
                 db.commit()
             return {"ok": True}
+
+        @app.post("/__e2e/resume/{resume_id}/candidates", include_in_schema=False)
+        async def candidates(resume_id: UUID, request: Request):
+            controlled(request)
+            # Exercise the same validated domain entry point intended for S2-2.
+            # Fixed synthetic data only; this is not a public extraction API.
+            from offerpilot_api.profile.services import ingest_profile_candidates
+
+            with Session(engine) as db:
+                document = db.get(ResumeDocument, resume_id)
+                if document is None or document.user_id is None:
+                    raise HTTPException(status_code=404)
+                profile = ingest_profile_candidates(
+                    db, user_id=document.user_id, resume_id=resume_id,
+                    batch_key="synthetic-e2e-v1",
+                    payload={
+                        "schema_version": "1.0", "extraction_version": "synthetic-e2e-v1",
+                        "candidates": [
+                            {"category": "skill", "value": {"name": "Python", "level": None},
+                             "evidence": [{"field": "name", "source_text": "Python project evidence."}]},
+                            {"category": "skill", "value": {"name": "Java", "level": "proficient"},
+                             "evidence": [{"field": "name", "source_text": "Java"},
+                                          {"field": "level", "source_text": "proficient"}]},
+                            {"category": "skill", "value": {"name": "Go", "level": None}, "evidence": []},
+                        ],
+                    },
+                )
+                return profile.model_dump(mode="json")
 
         @app.post("/__e2e/resume/{resume_id}/inspect", include_in_schema=False)
         async def inspect(resume_id: UUID, request: Request):

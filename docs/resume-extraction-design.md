@@ -2,6 +2,12 @@
 
 **状态：** 设计稿；第一阶段已实现 Provider、四字段 Schema、Prompt 与内存抽取校验，尚未接入 API、数据库或真实用户调用。
 
+**S2-1 当前边界（2026-10-11）：** 已新增 `profile/schemas.py` 的 `CandidateBatchV1` 与内部 `ingest_profile_candidates`，供受信任服务端调用者将结构化教育/技能/项目/实习工作候选落入独立 `profile_candidates`；正式画像仅写 `career_profiles/career_profile_entries`。旧 `profiles/profile_facts` 不再规划为正式用户画像，不自动迁移或确认；下文旧映射表是历史设计参考，实施以 [database](database.md) 与 [architecture](architecture.md) 的 S2-1 节为准。没有把四字段 `StudentProfileExtractionV1` 自动转换为新结构，没有上传触发或 Provider 调用。
+
+新入库边界重验 Schema、同用户 active/parsed 简历、批次幂等、数量和证据；始终 pending。源片段必须来自服务端原文，逐字段字面支持不足标 unsupported；否定/未知、引文周围歧义、词边界或超过有界检查标 needs_review，不能直接确认。引文周围句/行上下文由服务器查找，不信模型偏移；每引文最多20个命中、每侧500字符，超界保守要求用户修订。瞬时 Unicode 归一化只用于风险检查，不重写原文证据、不落额外正文副本。字面支持也不是履历真实性或完整语义证明，最终仍由用户审核。confidence 不被新候选批次接受，也不影响状态。
+
+S2-2 前还需：明确结构化抽取/旧V1转换策略、服务端页段位置映射、语义和冲突金标准、会话BYOK与发送预览/授权、供应商数据处理配置，以及持久运行/调用预算/重试/取消/迟到删除边界。不得用开发者 Key 回退或把本批合成夹具描述为真实抽取。
+
 ## 1. 范围与边界
 
 输入是已有 `resume_documents.raw_text`，输出是带证据的 Student Profile 候选事实，覆盖 `name`、`phone`、`email`、`education`、`skills`、`projects`、`internships`。模型只做文本抽取，不推断未写明的能力、经历、日期或成果；用户确认前不更新 `profiles` 中的正式字段。

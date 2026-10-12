@@ -38,3 +38,17 @@ it('rate limit errors are actionable and never retried automatically', async () 
   await expect(api.resumes()).rejects.toMatchObject({ status: 429, message: expect.stringContaining('稍后') });
   expect(fetcher).toHaveBeenCalledTimes(1);
 });
+it('profile writes use the generated contract, current revision and server session CSRF', async () => {
+  const fetcher = vi.fn((url: string, init?: RequestInit) => {
+    if (url.endsWith('/auth/csrf')) return Promise.resolve(Response.json({ csrf_token: 'synthetic-csrf' }));
+    expect(new Headers(init?.headers).get('X-CSRF-Token')).toBe('synthetic-csrf');
+    expect(init?.credentials).toBe('same-origin');
+    expect(init?.method).toBe('PUT');
+    expect(JSON.parse(String(init?.body))).toEqual({ revision: 3, education: [], skills: [{ name: 'Python', level: null }], projects: [], experiences: [] });
+    return Promise.resolve(Response.json({ revision: 4 }));
+  });
+  vi.stubGlobal('fetch', fetcher);
+  await api.saveProfile({ revision: 3, education: [], skills: [{ name: 'Python', level: null }], projects: [], experiences: [] });
+  expect(fetcher).toHaveBeenCalledTimes(2);
+  expect(fetcher.mock.calls[1][0]).toBe('/api/v1/profile');
+});

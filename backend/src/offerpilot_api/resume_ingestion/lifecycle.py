@@ -16,6 +16,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from offerpilot_api.db.models import Profile, ResumeDocument, ResumeFileOperation
+from offerpilot_api.profile.services import remove_resume_profile_evidence
 from offerpilot_api.resume_ingestion.storage import ResumeStorage, StorageError
 
 
@@ -204,6 +205,7 @@ def _mark_delete_intent(db: Session, *, resume_id: UUID, user_id: UUID) -> bool:
         processing_status="failed" if document.processing_status in ("uploading", "uploaded") else document.processing_status,
     ))
     # Core DELETE uses the real database FK cascade for profile facts.
+    remove_resume_profile_evidence(db, user_id=user_id, resume_id=resume_id)
     db.execute(delete(Profile).where(Profile.resume_id == resume_id))
     db.commit()
     return True
@@ -308,6 +310,7 @@ def abort_resume_upload(
         db.rollback()
         return False
     db.execute(update(ResumeFileOperation).where(*filters).values(status="deleting", updated_at=_now()))
+    remove_resume_profile_evidence(db, user_id=user_id, resume_id=resume_id)
     db.execute(delete(Profile).where(Profile.resume_id == resume_id))
     db.commit()
     return _finish_cleanup(db, resume_id=resume_id, user_id=user_id, storage=storage)
