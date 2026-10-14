@@ -1,5 +1,5 @@
 const UUID = '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}';
-const READ = new RegExp(`^(me|auth/csrf|profile|resumes|resumes/${UUID}(/(lifecycle|download|extraction))?|extraction-runs/${UUID}(/candidates)?)$`, 'i');
+const READ = new RegExp(`^(me|auth/csrf|profile|ai/deepseek-key|resumes|resumes/${UUID}(/(lifecycle|download|extraction|extraction-preview))?|extraction-runs/${UUID}(/candidates)?)$`, 'i');
 const RESOURCE = new RegExp(`^resumes/${UUID}$`, 'i');
 const REVIEW = new RegExp(`^profile/candidates/${UUID}/review$`, 'i');
 const EXTRACTION_WRITE = new RegExp(`^(resumes/${UUID}/extraction-runs|extraction-runs/${UUID}/(cancel|retry))$`, 'i');
@@ -11,7 +11,8 @@ function error(status: number, code: string, message: string) {
 export function allowedRoute(method: string, path: string): boolean {
   if (method === 'GET') return READ.test(path);
   if (method === 'POST') return ['auth/register', 'auth/login', 'auth/logout', 'resumes'].includes(path) || REVIEW.test(path) || EXTRACTION_WRITE.test(path);
-  if (method === 'PUT') return path === 'profile';
+  if (method === 'PUT') return path === 'profile' || path === 'ai/deepseek-key';
+  if (method === 'DELETE' && path === 'ai/deepseek-key') return true;
   return (method === 'DELETE' || method === 'PATCH') && RESOURCE.test(path);
 }
 export function allowedOrigin(request: Request): boolean {

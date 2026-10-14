@@ -1,6 +1,6 @@
 # S1-3 中文工作台设计与前端约定
 
-S1-3 提供账户与 PDF 文件管理；S2-1 在同一设计系统扩展“我的资料”；S2-2A 增加隔离 Mock 测试任务与可追溯候选。可以手动建立画像，或审核已有候选；真实 AI 抽取、职位管理和投递进度仍属后续，不创建虚假指标。
+S1-3 提供账户与 PDF 文件管理；S2-1 在同一设计系统扩展“我的资料”；S2-2A 增加隔离 Mock 测试任务与可追溯候选。可以手动建立画像，或审核已有候选；S2-2B追加本地BYOK/独立授权/真实任务UI，模型调用与质量待验收、生产关闭；职位和投递后续，不创建虚假指标。
 
 ## 信息架构
 
@@ -74,3 +74,12 @@ S2-1 的 `profile-page/profile-editor/profile-candidates` 复用现有 Token、N
 实现遵循随已安装 Next 包提供的 Route Handler / Server and Client Components / cookies 文档；公开参考为 [Next.js 安装](https://nextjs.org/docs/app/getting-started/installation) 与 [Tailwind Next.js 集成](https://tailwindcss.com/docs/installation/framework-guides/nextjs)。
 
 ESLint 9 已停止维护（[官方支持周期](https://eslint.org/version-support/)），因此保留 ESLint 10 而不为消除安装告警退回已终止维护版本。Next 传递的 import/react/jsx-a11y 插件 peer 元数据更新列为开发工具技术债；不影响本批 lint 命令实际运行结果。
+
+
+### S2-2B 中文真实解析入口
+
+“我的资料”追加局部AiResumePanel，复用panel/Notice/Radix/设计Token。Key密码输入即发送清空、会话reset清临时状态；配置/免费预览/主动勾选收费提交分开。预览可完整滚动核对、显示外传风险/脱敏残留/模型/最多一次与token/账单不确定性；无Key或后端关闭时禁用。不会轮询POST，状态读取有70次上限及手动刷新，Key失效有重新配置入口。
+
+成功只提示pending并由用户载入候选；画像dirty、候选编辑或冲突时禁覆盖。原S2-1四类逐项确认/编辑/拒绝不变；source显示DeepSeek/model/run或Mock测试及手工来源。刷新/重新登录恢复持久任务和候选，但Key不恢复。没有总分或不可信准确率。
+
+新增十个组件测试与两个免费Provider注入Chromium场景，沿用真实API/临时0006库；无网络调用DeepSeek，不能用截图或通过数证明真实模型质量。1440/768/390授权窗口查看后修宽度/链接换行；手机有可滚动内容，无横向溢出。详见 [S2-2B验收](../docs/S2-2B-acceptance.md)。

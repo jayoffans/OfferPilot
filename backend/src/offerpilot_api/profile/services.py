@@ -108,7 +108,8 @@ def get_profile(db: Session, *, user_id: UUID) -> CareerProfileResponse:
                            "resume_file_name": file_name, "field_sources": sources,
                            "evidence": entry.evidence if source_visible else [],
                            "test_result": bool(entry.extraction_metadata.get("test_result")),
-                           "provider": entry.extraction_metadata.get("provider")},
+                           "provider": entry.extraction_metadata.get("provider"),
+                           "model": entry.extraction_metadata.get("model"), "run_id": entry.extraction_metadata.get("run_id")},
             })
             groups[category_groups[entry.category]].append(rendered)
         candidate_rows = db.execute(select(ProfileCandidate, ResumeDocument.file_name).join(
@@ -361,7 +362,9 @@ def ingest_profile_candidates(
                 raise _not_found()
             if batch_key != str(run_id):
                 raise ProfileError("invalid_candidate_run", "候选批次与抽取运行不一致", 422)
-            if run.status not in ("running", "succeeded") or not run.test_result or run.mode != "mock":
+            if (run.status not in ("running", "succeeded") or run.test_result != (run.mode == "mock")
+                or any(item.provider != run.mode or item.test_result != run.test_result
+                       or (run.mode == "deepseek" and (item.model != run.model or item.run_id != str(run.id))) for item in metadata_items)):
                 raise ProfileError("invalid_candidate_run", "抽取运行当前不能接收候选", 409)
             if run.status == "running":
                 deadline = run.lease_deadline.replace(tzinfo=timezone.utc) if run.lease_deadline and run.lease_deadline.tzinfo is None else run.lease_deadline
@@ -468,7 +471,7 @@ def review_profile_candidate(
                 source_kind="user_modified" if modified else "resume_confirmed", resume_id=candidate.resume_id,
                 field_sources=_manual_fields(value) if modified else {field: "resume" for field, provided in value.items() if provided is not None},
                 evidence=[{**source, "supports_current_value": not modified} for source in candidate.evidence], updated_at=_now(),
-                extraction_metadata={"test_result": True, "provider": "mock"} if candidate.extraction_metadata else {},
+                extraction_metadata={key: candidate.extraction_metadata.get(key) for key in ("test_result", "provider", "model", "run_id")} if candidate.extraction_metadata else {},
             )
             db.add(entry)
             db.flush()

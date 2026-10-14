@@ -16,6 +16,8 @@ export type ExtractionRun = Schemas['ExtractionRunResponse'];
 export type ExtractionCapability = Schemas['ExtractionCapabilityResponse'];
 export type ExtractionCreate = Schemas['ExtractionRunCreateRequest'];
 export type ExtractionCandidates = Schemas['ExtractionRunCandidatesResponse'];
+export type KeyStatus = Schemas['KeyStatus'];
+export type ExtractionPreview = Schemas['ExtractionPreview'];
 type LoginResponse = Schemas['LoginResponse'];
 
 let csrfToken: string | null = null;
@@ -132,6 +134,10 @@ async function write<T>(path: string, method: string, data?: unknown, signal?: A
 }
 
 export const api = {
+  deepseekKey: (signal?: AbortSignal) => request<KeyStatus>('/ai/deepseek-key', { signal }),
+  configureDeepseekKey: (api_key: string, signal?: AbortSignal) => write<KeyStatus>('/ai/deepseek-key', 'PUT', { api_key }, signal),
+  revokeDeepseekKey: (signal?: AbortSignal) => write<KeyStatus>('/ai/deepseek-key', 'DELETE', undefined, signal),
+  extractionPreview: (id: string, signal?: AbortSignal) => request<ExtractionPreview>(`/resumes/${encodeURIComponent(id)}/extraction-preview`, { signal }),
   me: (signal?: AbortSignal) => request<User>('/me', { signal }, false),
   csrf: async (signal?: AbortSignal) => {
     const generation = sessionGeneration;

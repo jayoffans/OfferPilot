@@ -58,7 +58,7 @@ class IdentityMigrationTests(unittest.TestCase):
         self.assertTrue(expected <= set(inspect(self.engine).get_table_names()))
         with self.engine.connect() as connection:
             self.assertEqual(connection.scalar(text("PRAGMA foreign_keys")), 1)
-            self.assertEqual(connection.scalar(text("SELECT version_num FROM alembic_version")), "0005_resume_extraction_runs")
+            self.assertEqual(connection.scalar(text("SELECT version_num FROM alembic_version")), "0006_deepseek_byok")
             context = MigrationContext.configure(
                 connection, opts={"compare_type": True, "compare_server_default": True}
             )

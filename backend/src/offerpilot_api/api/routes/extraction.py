@@ -1,9 +1,9 @@
-"""Authenticated, opt-in synthetic extraction API; no provider/key input."""
+"""Authenticated extraction API with consent; credentials use a separate API."""
 
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 from sqlalchemy.orm import Session
 
 from offerpilot_api.agent_runtime.extraction_runs import (
@@ -16,27 +16,32 @@ from offerpilot_api.agent_runtime.extraction_schemas import (
 )
 from offerpilot_api.core.api_errors import error_responses
 from offerpilot_api.core.config import Settings, get_settings
-from offerpilot_api.db.models import User
+from offerpilot_api.db.models import User, AuthSession
 from offerpilot_api.db.session import get_db
-from offerpilot_api.identity.dependencies import get_current_user
+from offerpilot_api.identity.dependencies import get_current_user, get_current_session
+from offerpilot_api.agent_runtime.byok import stop_unavailable_runs
 
 router = APIRouter(prefix="/api/v1", tags=["resume-extraction"], responses=error_responses(401, 403, 404, 409, 422, 429, 503))
 
 
 @router.get("/resumes/{resume_id}/extraction", response_model=ExtractionCapabilityResponse)
-def capability(resume_id: UUID, db: Annotated[Session, Depends(get_db)],
+def capability(resume_id: UUID, request: Request, db: Annotated[Session, Depends(get_db)],
                current_user: Annotated[User, Depends(get_current_user)], settings: Annotated[Settings, Depends(get_settings)]) -> ExtractionCapabilityResponse:
+    stop_unavailable_runs(db, user_id=current_user.id, vault=request.app.state.byok_vault)
     return get_extraction_capability(db, user_id=current_user.id, resume_id=resume_id, settings=settings)
 
 
 @router.post("/resumes/{resume_id}/extraction-runs", response_model=ExtractionRunResponse, status_code=202)
-def create_run(resume_id: UUID, payload: ExtractionRunCreateRequest, db: Annotated[Session, Depends(get_db)],
+def create_run(resume_id: UUID, payload: ExtractionRunCreateRequest, request: Request, db: Annotated[Session, Depends(get_db)],
+               session: Annotated[AuthSession, Depends(get_current_session)],
                current_user: Annotated[User, Depends(get_current_user)], settings: Annotated[Settings, Depends(get_settings)]) -> ExtractionRunResponse:
-    return create_extraction_run(db, user_id=current_user.id, resume_id=resume_id, payload=payload, settings=settings)
+    return create_extraction_run(db, user_id=current_user.id, resume_id=resume_id, payload=payload, settings=settings,
+                                 session_id=session.id, byok_vault=request.app.state.byok_vault)
 
 
 @router.get("/extraction-runs/{run_id}", response_model=ExtractionRunResponse)
-def read_run(run_id: UUID, db: Annotated[Session, Depends(get_db)], current_user: Annotated[User, Depends(get_current_user)]) -> ExtractionRunResponse:
+def read_run(run_id: UUID, request: Request, db: Annotated[Session, Depends(get_db)], current_user: Annotated[User, Depends(get_current_user)]) -> ExtractionRunResponse:
+    stop_unavailable_runs(db, user_id=current_user.id, vault=request.app.state.byok_vault)
     return get_extraction_run(db, user_id=current_user.id, run_id=run_id)
 
 

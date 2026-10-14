@@ -1,6 +1,15 @@
 # Phase 1-3：Resume Extraction Agent 设计
 
-**状态：** 历史设计及当前实施边界。V1/DeepSeek Adapter 保留；S2-2A 已新增独立严格 V2、服务端证据映射、Mock 持久运行与 S2-1 候选池。真实 DeepSeek 尚未接入产品流程，未调用付费 API。验收见 [S2-2A](S2-2A-acceptance.md)。
+## S2-2B 当前集成边界
+
+复用下文V2/证据/运行/审核。真实调用固定官方deepseek-flash、非思考、JSON、输出4096，SDK/HTTP零重试，单run最多一次；旧Mock两次执行/四次调用仅属于测试模式。会话Key和免费预览独立于收费授权；模型只看脱敏数据，证据对原件定位。无效/空/截断/超预算输出不重试、不入正式画像；无usage或网络结果未知保守显示费用未知。候选永久pending直到用户审核。
+
+单进程Fernet内存Vault、会话/引用/版本/令牌围栏与0006真实计量见 [S2-2B验收](S2-2B-acceptance.md)。真实模型评测入口默认dry-run，真正收费须负责人再次明确授权和预算；本轮0调用。供应商与生产配置未批准，下文历史Mock成绩不证明真实AI质量。
+
+正式模型准备（2026-10-14 收尾）使用同一 V2 Schema 2.0 和版本 `resume_extract_v2.1` 的完整四组 JSON 示例；旧 V2 来源继续兼容，旧模板 queued 任务不调用新 Provider。SDK 原始 usage 的类型/总数先验证，响应形状、空/截断、压缩及超上限均一次安全失败。五份固定合成评测及收费门槛见 [执行手册](S2-2B-real-evaluation.md)，免费结果与官方依据见 [准备报告](S2-2B-readiness-review.md)。不增加真实调用、架构重构或新的模型框架。
+
+
+**状态：** 历史设计及当前实施边界。V1 保留；S2-2A 已新增独立严格 V2、服务端证据映射、Mock 持久运行与 S2-1 候选池；S2-2B 已追加本机 DeepSeek Adapter/BYOK/独立授权流程代码。实际供应商调用及模型质量仍未验收，付费调用为 0。历史验收见 [S2-2A](S2-2A-acceptance.md)，当前结论见上述 S2-2B 报告。
 
 **S2-2A 当前边界（2026-10-12）：** `extractor_v2.py` → `evidence.py` → `ingest_profile_candidates(commit=False)` → pending 候选与运行 succeeded 原子提交，用户仍调用 S2-1 review 才更新唯一正式画像。V2 覆盖教育/技能/项目/实习工作，保留叶子原值、引用、断言、字段归属、归一值与服务端位置；自报 confidence 不控制确认。Mock 只匹配登记合成材料，默认关闭，结果及审核后的来源显示测试标记。0005 增加页段、任务/预算及追溯元数据，旧迁移、旧 V1 和供应商 Adapter 不改。
 

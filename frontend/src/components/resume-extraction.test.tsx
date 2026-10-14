@@ -5,7 +5,7 @@ import { api, ApiError, type ExtractionCapability, type ExtractionRun } from "@/
 import { ResumeExtraction } from "./resume-extraction";
 
 const id = "22222222-2222-4222-8222-222222222222";
-const run: ExtractionRun = { id: "11111111-1111-4111-8111-111111111111", resume_id: id, status: "queued", mode: "mock", test_result: true, revision: 2, attempt_count: 0, max_attempts: 2, call_count: 0, max_calls: 4, candidate_count: 0, error_code: null, created_at: "2026-10-12T00:00:00Z", updated_at: "2026-10-12T00:00:00Z", finished_at: null, source_version: "a".repeat(64), schema_version: "2.0", extraction_version: "mock-v2", prompt_version: "resume_extract_v2", provider_version: "mock-v2" };
+const run: ExtractionRun = { id: "11111111-1111-4111-8111-111111111111", resume_id: id, status: "queued", mode: "mock", test_result: true, billing_status: "not_sent", revision: 2, attempt_count: 0, max_attempts: 2, call_count: 0, max_calls: 4, candidate_count: 0, error_code: null, created_at: "2026-10-12T00:00:00Z", updated_at: "2026-10-12T00:00:00Z", finished_at: null, source_version: "a".repeat(64), schema_version: "2.0", extraction_version: "mock-v2", prompt_version: "resume_extract_v2", provider_version: "mock-v2" };
 const capability: ExtractionCapability = { enabled: true, mode: "mock", test_result: true, source_version: run.source_version, recent_runs: [] };
 beforeEach(() => vi.restoreAllMocks());
 

@@ -205,77 +205,18 @@ class ResumeExtractionTests(unittest.TestCase):
         self.assertNotIn(private_resume_marker, error.provider_error_message)
         self.assertNotIn(private_key_marker, error.provider_error_message)
 
-    def test_evaluation_cli_reports_sanitized_llm_error_details(self) -> None:
-        private_resume_marker = "PRIVATE_RESUME_MARKER"
-        private_key_marker = "synthetic-test-key"
-        provider = FailingProvider(f"{private_resume_marker} {private_key_marker}")
-        stdout = StringIO()
+    def test_legacy_evaluation_cli_cannot_charge_with_environment_key(self):
         stderr = StringIO()
+        with patch.dict(os.environ, {"DEEPSEEK_API_KEY": "synthetic-no-charge"}), patch.object(evaluate_resume_extraction, "DeepSeekProvider") as provider, redirect_stderr(stderr):
+            self.assertEqual(evaluate_resume_extraction.main(), 2)
+        provider.assert_not_called()
+        self.assertNotIn("synthetic-no-charge", stderr.getvalue())
 
-        with tempfile.TemporaryDirectory() as temp_dir:
-            pdf_path = Path(temp_dir) / "resume.pdf"
-            pdf_path.write_bytes(b"synthetic pdf placeholder")
-            with (
-                patch.object(sys, "argv", ["evaluate_resume_extraction.py", str(pdf_path)]),
-                patch.dict(os.environ, {"DEEPSEEK_API_KEY": private_key_marker}),
-                patch.object(
-                    evaluate_resume_extraction,
-                    "_extract_pdf_text",
-                    return_value=private_resume_marker,
-                ),
-                patch.object(
-                    evaluate_resume_extraction,
-                    "DeepSeekProvider",
-                    return_value=provider,
-                ),
-                redirect_stdout(stdout),
-                redirect_stderr(stderr),
-            ):
-                exit_code = evaluate_resume_extraction.main()
-
-        output = stderr.getvalue()
-        self.assertEqual(exit_code, 1)
-        self.assertIn('"http_status_code": 400', output)
-        self.assertIn('"provider_error_type": "BadRequestError"', output)
-        self.assertIn("request format", output)
-        self.assertNotIn(private_resume_marker, output)
-        self.assertNotIn(private_key_marker, output)
-        self.assertEqual(stdout.getvalue(), "")
-
-    def test_evaluation_cli_reports_redacted_schema_failure(self) -> None:
-        private_response_marker = "MODEL_PRIVATE_RESPONSE_MARKER"
-        provider = FakeProvider(json.dumps({"unexpected": private_response_marker}))
+    def test_legacy_evaluation_cli_does_not_read_or_print_private_pdf(self):
         stdout = StringIO()
-        stderr = StringIO()
-
-        with tempfile.TemporaryDirectory() as temp_dir:
-            pdf_path = Path(temp_dir) / "resume.pdf"
-            pdf_path.write_bytes(b"synthetic pdf placeholder")
-            with (
-                patch.object(sys, "argv", ["evaluate_resume_extraction.py", str(pdf_path)]),
-                patch.dict(os.environ, {"DEEPSEEK_API_KEY": "synthetic-test-key"}),
-                patch.object(
-                    evaluate_resume_extraction,
-                    "_extract_pdf_text",
-                    return_value=RESUME_TEXT,
-                ),
-                patch.object(
-                    evaluate_resume_extraction,
-                    "DeepSeekProvider",
-                    return_value=provider,
-                ),
-                redirect_stdout(stdout),
-                redirect_stderr(stderr),
-            ):
-                exit_code = evaluate_resume_extraction.main()
-
-        self.assertEqual(exit_code, 1)
-        self.assertIn("schema_validation_failed", stderr.getvalue())
-        self.assertIn("schema_version", stderr.getvalue())
-        self.assertIn('"retry_count": 1', stderr.getvalue())
-        self.assertNotIn("synthetic-test-key", stderr.getvalue())
-        self.assertNotIn(private_response_marker, stderr.getvalue())
-        self.assertNotIn(RESUME_TEXT, stderr.getvalue())
+        with patch.object(evaluate_resume_extraction, "_extract_pdf_text") as read, redirect_stdout(stdout), redirect_stderr(StringIO()):
+            self.assertEqual(evaluate_resume_extraction.main(), 2)
+        read.assert_not_called()
         self.assertEqual(stdout.getvalue(), "")
 
     def test_invalid_first_response_can_recover_once(self) -> None:
@@ -352,7 +293,7 @@ class ResumeExtractionTests(unittest.TestCase):
         self.assertEqual(len(captured.records), 1)
         self.assertEqual(
             captured.records[0].getMessage(),
-            "DeepSeek response choices_count=1 finish_reason=stop response_model=deepseek-chat",
+            "DeepSeek response received",
         )
         self.assertNotIn(private_marker, captured.output[0])
 
@@ -371,7 +312,7 @@ class ResumeExtractionTests(unittest.TestCase):
 
         self.assertEqual(
             captured.records[0].getMessage(),
-            "DeepSeek response choices_count=0 finish_reason=unknown response_model=deepseek-chat",
+            "DeepSeek response received",
         )
         self.assertNotIn("private", captured.output[0])
 

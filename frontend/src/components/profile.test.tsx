@@ -16,7 +16,10 @@ function candidate(overrides: Partial<ProfileCandidate> = {}): ProfileCandidate 
   return { id: "11111111-1111-4111-8111-111111111111", category: "skill", value: { name: "Java", level: "熟练" }, status: "pending", evidence_status: "unsupported", evidence: [{ field: "name", source_text: "Not proficient in Java" }], resume_id: "22222222-2222-4222-8222-222222222222", resume_file_name: "synthetic.pdf", schema_version: "1.0", extraction_version: "synthetic-v1", entry_id: null, created_at: "2026-10-11T00:00:00Z", reviewed_at: null, ...overrides };
 }
 async function open(profile: CareerProfile = blank) { vi.spyOn(api, "profile").mockResolvedValue(profile); render(<ProfilePage />); await screen.findByRole("heading", { name: profile.updated_at ? "资料已保存" : "从一项真实经历开始" }); }
-beforeEach(() => { vi.clearAllMocks(); clearSession(); });
+beforeEach(() => { vi.clearAllMocks(); clearSession();
+  vi.spyOn(api, "deepseekKey").mockResolvedValue({ configured: false, expires_at: null, ttl_seconds: 3600, provider: "deepseek", enabled: false, unavailable_reason: "真实解析未开启" });
+  vi.spyOn(api, "resumes").mockResolvedValue([]);
+});
 
 it("starts with an empty server profile and keeps all unprovided facts unknown", async () => {
   await open();

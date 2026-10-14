@@ -11,7 +11,8 @@ from offerpilot_api.db.models import AuthSession, User
 from offerpilot_api.db.session import get_db
 from offerpilot_api.identity.dependencies import check_origin, get_current_session, get_current_user
 from offerpilot_api.identity.schemas import CsrfResponse, LoginRequest, LoginResponse, RegisterRequest, UserResponse
-from offerpilot_api.identity.security import SESSION_COOKIE_NAME, csrf_token
+from offerpilot_api.identity.security import SESSION_COOKIE_NAME, csrf_token, token_hash
+from sqlalchemy import select
 from offerpilot_api.identity.services import IdentityError, login_user, register_user, revoke_session
 
 router = APIRouter(
@@ -59,6 +60,8 @@ def login(
     settings: Annotated[Settings, Depends(get_settings)],
 ) -> LoginResponse:
     _json_request(request, settings)
+    previous = request.cookies.get(SESSION_COOKIE_NAME)
+    previous_id = db.scalar(select(AuthSession.id).where(AuthSession.token_hash == token_hash(previous))) if previous else None
     user, token = login_user(
         db,
         email=str(payload.email),
@@ -67,6 +70,8 @@ def login(
         settings=settings,
         previous_token=request.cookies.get(SESSION_COOKIE_NAME),
     )
+    if previous_id is not None:
+        request.app.state.byok_vault.revoke(previous_id)
     response.set_cookie(
         SESSION_COOKIE_NAME,
         token,
@@ -82,11 +87,13 @@ def login(
 
 @router.post("/auth/logout", status_code=status.HTTP_204_NO_CONTENT)
 def logout(
+    request: Request,
     session: Annotated[AuthSession, Depends(get_current_session)],
     db: Annotated[Session, Depends(get_db)],
     settings: Annotated[Settings, Depends(get_settings)],
 ) -> Response:
     revoke_session(db, session)
+    request.app.state.byok_vault.revoke(session.id)
     response = Response(status_code=204, headers={"Cache-Control": "no-store"})
     response.delete_cookie(
         SESSION_COOKIE_NAME,

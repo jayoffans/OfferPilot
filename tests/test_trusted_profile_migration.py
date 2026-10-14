@@ -21,7 +21,7 @@ from offerpilot_api.db.models import CareerProfile, CareerProfileEntry, ProfileC
 from offerpilot_api.db.session import build_engine
 
 
-HEAD_REVISION = "0005_resume_extraction_runs"
+HEAD_REVISION = "0006_deepseek_byok"
 
 
 class TrustedProfileMigrationTests(unittest.TestCase):

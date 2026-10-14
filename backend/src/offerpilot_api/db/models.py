@@ -266,7 +266,9 @@ class ResumeExtractionRun(Base):
         UniqueConstraint("user_id", "idempotency_key", name="uq_resume_extraction_runs_request"),
         UniqueConstraint("resume_id", "source_version", "extraction_version", name="uq_resume_extraction_runs_source"),
         CheckConstraint("status IN ('queued', 'running', 'succeeded', 'failed', 'cancelled')", name="ck_resume_extraction_runs_status"),
-        CheckConstraint("mode = 'mock' AND test_result = true", name="ck_resume_extraction_runs_mock_only"),
+        CheckConstraint("(mode = 'mock' AND test_result = true) OR (mode = 'deepseek' AND test_result = false AND max_calls = 1 AND max_attempts = 1 AND session_id IS NOT NULL AND key_reference IS NOT NULL AND authorization_id IS NOT NULL AND sent_text_sha256 IS NOT NULL AND consent_version IS NOT NULL AND model = 'deepseek-flash')", name="ck_resume_extraction_runs_provider"),
+        CheckConstraint("billing_status IN ('not_sent', 'unknown', 'usage_reported')", name="ck_resume_extraction_runs_billing"),
+        CheckConstraint("(prompt_tokens IS NULL OR prompt_tokens >= 0) AND (completion_tokens IS NULL OR completion_tokens >= 0) AND (total_tokens IS NULL OR total_tokens >= 0)", name="ck_resume_extraction_runs_tokens"),
         CheckConstraint("revision >= 0 AND attempt_count >= 0 AND attempt_count <= max_attempts", name="ck_resume_extraction_runs_attempts"),
         CheckConstraint("call_count >= 0 AND call_count <= max_calls AND max_attempts BETWEEN 1 AND 2 AND max_calls BETWEEN 1 AND 4", name="ck_resume_extraction_runs_calls"),
         CheckConstraint("candidate_count >= 0 AND timeout_seconds BETWEEN 1 AND 60", name="ck_resume_extraction_runs_limits"),
@@ -294,6 +296,18 @@ class ResumeExtractionRun(Base):
     extraction_version: Mapped[str] = mapped_column(String(100), nullable=False)
     prompt_version: Mapped[str] = mapped_column(String(100), nullable=False)
     provider_version: Mapped[str] = mapped_column(String(100), nullable=False)
+    # Opaque references only. The credential and preview live in the API's
+    # bounded in-memory vault, never this business database or task messages.
+    session_id: Mapped[uuid.UUID | None] = mapped_column(Uuid(as_uuid=True), nullable=True)
+    key_reference: Mapped[uuid.UUID | None] = mapped_column(Uuid(as_uuid=True), nullable=True)
+    authorization_id: Mapped[uuid.UUID | None] = mapped_column(Uuid(as_uuid=True), nullable=True)
+    model: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    consent_version: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    sent_text_sha256: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    billing_status: Mapped[str] = mapped_column(String(24), default="not_sent", server_default=text("'not_sent'"), nullable=False)
+    prompt_tokens: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    completion_tokens: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    total_tokens: Mapped[int | None] = mapped_column(Integer, nullable=True)
     error_code: Mapped[str | None] = mapped_column(String(64), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.current_timestamp(), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.current_timestamp(), nullable=False)

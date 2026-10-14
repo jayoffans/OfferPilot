@@ -44,9 +44,13 @@ class ExtractedFieldTrace(TraceModel):
 
 class CandidateExtractionMetadata(TraceModel):
     schema_version: Literal["2.0"] = "2.0"
-    prompt_version: Literal["resume_extract_v2"] = "resume_extract_v2"
-    provider: Literal["mock"] = "mock"
-    test_result: Literal[True] = True
+    # Preserve already reviewed V2 provenance while identifying the complete
+    # JSON example introduced for the official provider compatibility audit.
+    prompt_version: Literal["resume_extract_v2", "resume_extract_v2.1"] = "resume_extract_v2.1"
+    provider: Literal["mock", "deepseek"] = "mock"
+    test_result: bool = True
+    model: str | None = None
+    run_id: str | None = None
     source_text_sha256: str = Field(pattern=r"^[a-f0-9]{64}$")
     source_layout_sha256: str = Field(pattern=r"^[a-f0-9]{64}$")
     source_file_sha256: str | None = Field(default=None, pattern=r"^[a-f0-9]{64}$")
@@ -63,6 +67,8 @@ class CandidateExtractionMetadata(TraceModel):
 
     @model_validator(mode="after")
     def field_ownership(self):
+        if self.test_result != (self.provider == "mock"):
+            raise ValueError("Provider provenance must match test identity")
         groups = {"education": "education", "skill": "skills", "project": "projects", "experience": "experiences"}
         if not re.fullmatch(re.escape(groups[self.category]) + r"\[\d{1,2}\]", self.item_path):
             raise ValueError("Extraction item path does not match category")

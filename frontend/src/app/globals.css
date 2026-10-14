@@ -493,3 +493,16 @@ svg { flex-shrink:0; }
   .review-history { padding:16px 18px; }
   .profile-review-dialog { max-height:calc(100dvh - 28px); }
 }
+/* S2-2B extends the existing profile panels and dialogs. */
+.ai-resume-panel { margin-bottom: 24px; padding: 24px; }
+.ai-resume-panel p { margin: 12px 0; overflow-wrap: anywhere; }
+.ai-key-form { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin: 16px 0; }
+.ai-key-form input, .ai-resume-panel select { border: 1px solid var(--line); border-radius: 8px; padding: 10px; max-width: 100%; background: white; color: inherit; }
+.ai-resume-panel select { display: block; width: 100%; margin: 10px 0; }
+.dialog-content.ai-consent-dialog { width: min(760px, calc(100vw - 32px)); max-height: 90dvh; overflow-y: auto; }
+.ai-consent-dialog .inline-link { display: inline-flex; margin-top: 0; }
+.ai-consent-dialog p { margin: 16px 0; }
+.ai-preview-text { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 260px; overflow: auto; background: #f5f7f8; border-radius: 8px; padding: 16px; font-size: 13px; }
+.ai-consent-check { display: flex; align-items: flex-start; gap: 10px; margin-top: 20px; }
+.ai-key-form input { min-width: 0; flex: 1; }
+@media (max-width: 600px) { .ai-key-form label { width: 100%; } .ai-resume-panel { padding: 16px; } .ai-key-form button { width: 100%; } }

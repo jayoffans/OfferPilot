@@ -39,7 +39,7 @@ class ExtractionMigrationTests(unittest.TestCase):
         self.upgrade()
         with self.engine.connect() as db:
             self.assertEqual(self.snapshot(db, tables), original)
-            self.assertEqual(db.scalar(text("SELECT version_num FROM alembic_version")), "0005_resume_extraction_runs")
+            self.assertEqual(db.scalar(text("SELECT version_num FROM alembic_version")), "0006_deepseek_byok")
             self.assertEqual(db.execute(text("PRAGMA foreign_key_check")).all(), [])
         with Session(self.engine) as db:
             self.assertIsNone(db.get(ResumeDocument, resume_id).text_layout)
@@ -93,6 +93,7 @@ class ExtractionMigrationTests(unittest.TestCase):
             run_id = run.id
         with self.assertRaisesRegex(RuntimeError, "Extraction data exists"):
             command.downgrade(self.config, "0004_trusted_career_profile")
+        self.upgrade()  # Restore head before using the current ORM.
         for changed in ({"mode": "deepseek"}, {"test_result": False}, {"status": "running"}, {"max_attempts": 3}, {"max_calls": 5}, {"timeout_seconds": 61}, {"attempt_count": -1}, {"call_count": 5}, {"user_id": uuid4()}):
             with self.subTest(changed=changed), Session(self.engine) as db:
                 db.add(ResumeExtractionRun(**{**values, "idempotency_key": uuid4().hex, "source_version": uuid4().hex * 2, **changed}))

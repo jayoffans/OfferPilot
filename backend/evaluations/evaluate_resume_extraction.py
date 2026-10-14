@@ -42,39 +42,8 @@ def _print_diagnostics(diagnostics: ExtractionDiagnostics) -> None:
 
 
 def main() -> int:
-    parser = build_parser()
-    args = parser.parse_args()
-
-    try:
-        pdf_path = args.pdf_path.expanduser().resolve(strict=True)
-    except OSError:
-        parser.error("PDF path does not exist or cannot be accessed")
-    if not pdf_path.is_file() or pdf_path.suffix.lower() != ".pdf":
-        parser.error("Input must be a local .pdf file")
-
-    api_key = os.environ.get("OFFERPILOT_DEEPSEEK_API_KEY") or os.environ.get("DEEPSEEK_API_KEY")
-    if not api_key:
-        parser.error("Set OFFERPILOT_DEEPSEEK_API_KEY or DEEPSEEK_API_KEY in the environment")
-
-    diagnostics = ExtractionDiagnostics()
-    try:
-        raw_text = _extract_pdf_text(pdf_path)
-        provider = DeepSeekProvider(api_key=api_key, model=args.model)
-        profile = extract_student_profile(raw_text, provider, diagnostics=diagnostics)
-    except ResumeUploadError as exc:
-        print(f"PDF extraction failed: {exc.detail}", file=sys.stderr)
-        return 1
-    except ExtractionError:
-        print(
-            f"Resume extraction failed: {diagnostics.failure_reason or 'extraction_failed'}",
-            file=sys.stderr,
-        )
-        _print_diagnostics(diagnostics)
-        return 1
-
-    _print_diagnostics(diagnostics)
-    print(profile.model_dump_json(indent=2))
-    return 0
+    print("Legacy V1 paid evaluation is disabled; use evaluate_deepseek_v2.py with explicit consent and budgets.", file=sys.stderr)
+    return 2
 
 
 if __name__ == "__main__":

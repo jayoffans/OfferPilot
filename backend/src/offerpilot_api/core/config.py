@@ -26,6 +26,14 @@ class Settings(BaseSettings):
     auth_registration_attempt_limit: int = Field(default=10, ge=1, le=100)
     # Test-only, opt-in; never resolves or calls a paid provider.
     mock_extraction_enabled: bool = False
+    deepseek_extraction_enabled: bool = False
+    byok_ttl_seconds: int = Field(default=3600, ge=60, le=3600)
+
+    @property
+    def deepseek_extraction_available(self) -> bool:
+        # Supplier BYOK permission / retention / training configuration is a
+        # release gate. This batch enables only explicit local development.
+        return self.environment == "development" and self.deepseek_extraction_enabled
     extraction_timeout_seconds: int = Field(default=30, ge=1, le=60)
     extraction_max_attempts: int = Field(default=2, ge=1, le=2)
     extraction_max_calls: int = Field(default=4, ge=1, le=4)

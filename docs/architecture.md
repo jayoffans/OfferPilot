@@ -1,9 +1,9 @@
 # OfferPilot 系统架构与技术方案
 
-**版本：** 0.6（S2-2A Mock 持久抽取流水线）
+**版本：** 0.7（S2-2B 本机集成与正式模型验收准备）
 **日期：** 2026-10-12
 
-> **当前实施范围：** S1 提供真实邀请身份、私有 PDF 生命周期和中文工作台；S2-1 提供唯一正式画像及候选审核。S2-2A 追加严格 V2、服务端定位、数据库持久运行及合成样本 Mock 流程，结果见 [本批验收](S2-2A-acceptance.md)。上传本身只解析文本；Mock 需 development 显式开启并主动创建任务。真实 DeepSeek/付费调用、BYOK、PostgreSQL、Redis、云对象存储、生产 Worker、岗位匹配和 Browser Agent 均未启用。下文保留后续目标设计。
+> **当前实施范围：** S1 提供真实邀请身份、私有 PDF 生命周期和中文工作台；S2-1 提供唯一正式画像及候选审核；S2-2A 提供 V2、证据和持久 Mock 运行；S2-2B 已实现本机 DeepSeek Adapter、会话 BYOK 和独立授权，并完成免费兼容性与评测准备。实际 DeepSeek 请求仍为 0，真实模型质量待负责人授权验收；生产真实模式关闭。PostgreSQL、Redis、云对象存储、生产 Worker、岗位匹配和 Browser Agent 未实施。当前证据见 [正式模型验收准备](S2-2B-readiness-review.md)，下文保留后续目标设计。
 
 Phase 1-2 上传接口仅在 `development` 环境可用，默认上传目录为本地 `backend/uploads/`；仅接收不超过 10 MiB、50 页且有可选中文本的 PDF。PyMuPDF 采用 AGPL 或商业许可，正式发布前需确定适用许可方案。
 
@@ -41,6 +41,16 @@ Phase 1-2 上传接口仅在 `development` 环境可用，默认上传目录为�
 前端使用生成 OpenAPI，新增明确代理白名单。`OFFERPILOT_MOCK_EXTRACTION_UI=true` 只显示隔离测试面板，后端仍必须 `development + OFFERPILOT_MOCK_EXTRACTION_ENABLED=true` 才准创建；默认界面没有 AI 触发按钮。候选及审核后的来源持续显示测试身份。生产队列、跨数据库并发、真实网络请求隔离及费用策略需后续单独验证。
 
 租约限制运行状态和迟到写入；当前固定 Mock 计算有界且无网络，不代表已实现强制终止任意供应商阻塞线程的生产 runner。S2-2B 需扩展 Mock-only 的数据库/来源契约，并验证真实传输超时、执行隔离与会话/费用边界。
+
+### S2-2B 本地真实 Provider 与会话边界
+
+复用 S2-2A 持久运行、调用预占、V2、证据和原子pending入库；`agent_runtime/byok.py`管理加锁、有界Fernet密文内存和十分钟授权快照，`api/routes/byok.py`提供独立Key/预览接口。固定官方Adapter、deepseek-flash/非思考/JSON、SDK和HTTP零重试；真实max_attempts=max_calls=1，旧run不允许retry。服务端预算及调用状态不依赖浏览器。用户审核仍只通过profile领域。
+
+同进程执行器按user/session/key_reference解析Key，每次调用/最终写入重验会话、密码/账户状态、Key引用与资源版本。删除/取消/退出/换Key/过期阻断迟到候选，usage可作为最小计量保留。先记调用和unknown再请求；无效/空/截断输出不修复收费，usage超授权上限安全失败。读取恢复也终止重启后的孤立队列，不能付费重放。
+
+默认最长1h、进程随机加密Key、不持久化Key/Prompt/原模型JSON；原件保留本机证据，只发送用户预览并授权的脱敏文本。这个最小方案不支持多API进程或独立真实Worker，CLI只处理Mock，没有Redis或开发者Key回退。生产真实开关持续关闭；跨进程密钥方案、供应商BYOK/保留/训练条件与实际网络/质量需后续验证。详见 [S2-2B验收](S2-2B-acceptance.md)。下文高级部署图继续是目标方案。
+
+正式模型准备保持同一 Adapter 与 V2 Schema。Prompt 升为 `resume_extract_v2.1`，补充完整 JSON 四组示例；新运行记录 `resume-extraction-v2.1`，旧候选 V2 来源继续可读取和审核，旧模板排队任务在构造 Provider 前安全失败，不以新模板重放旧授权。SDK 原始响应 usage 先验证类型和总数，再作为计量；畸形响应只返回安全错误，无收费修复。纯合成评测 CLI 与产品 API 开关分开，默认 0 调用，后续收费授权按批次重新提供。供应商许可和隐私条件见 [专项审查](S2-2B-provider-policy-review.md)。
 
 ## 1. 架构决策摘要
 

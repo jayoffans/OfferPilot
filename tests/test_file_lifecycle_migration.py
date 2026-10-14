@@ -146,7 +146,7 @@ class FileLifecycleMigrationTests(unittest.TestCase):
         self.assert_metadata_matches()
         with self.engine.connect() as connection:
             self.assertEqual(connection.scalar(text("PRAGMA foreign_keys")), 1)
-            self.assertEqual(connection.scalar(text("SELECT version_num FROM alembic_version")), "0005_resume_extraction_runs")
+            self.assertEqual(connection.scalar(text("SELECT version_num FROM alembic_version")), "0006_deepseek_byok")
             self.assertEqual(connection.execute(text("PRAGMA foreign_key_check")).all(), [])
         keys = inspect(self.engine).get_foreign_keys("resume_file_operations")
         self.assertEqual(len(keys), 1)
@@ -334,7 +334,7 @@ class FileLifecycleMigrationTests(unittest.TestCase):
                     document = session.get(ResumeDocument, resume_id)
                     for field, value in values.items():
                         self.assertEqual(getattr(document, field), value)
-                    self.assertEqual(session.scalar(text("SELECT version_num FROM alembic_version")), "0005_resume_extraction_runs")
+                    self.assertEqual(session.scalar(text("SELECT version_num FROM alembic_version")), "0006_deepseek_byok")
                     document.object_key = document.byte_size = document.sha256 = None
                     document.processing_status, document.lifecycle_status = "parsed", "active"
                     session.commit()

@@ -46,6 +46,7 @@ def run() -> None:
             "OFFERPILOT_AUTH_IP_ATTEMPT_LIMIT": "1000",
             "OFFERPILOT_AUTH_REGISTRATION_ATTEMPT_LIMIT": "100",
             "OFFERPILOT_MOCK_EXTRACTION_ENABLED": "true",
+            "OFFERPILOT_DEEPSEEK_EXTRACTION_ENABLED": "true",
         })
         sys.path.insert(0, str(BACKEND / "src"))
         import pymupdf
@@ -68,10 +69,25 @@ def run() -> None:
             command.upgrade(Config(str(BACKEND / "alembic.ini")), "head")
         with engine.connect() as connection:
             revision = connection.exec_driver_sql("SELECT version_num FROM alembic_version").scalar()
-        if revision != "0005_resume_extraction_runs":
+        if revision != "0006_deepseek_byok":
             raise RuntimeError("E2E migration baseline changed; review the harness")
 
         app = create_app()
+        # The paid-mode transport is replaced only inside this isolated test
+        # launcher. It cannot create a SDK client or access the provider network.
+        from offerpilot_api.agent_runtime.llm_provider import LLMProviderError, ProviderUsage
+        from offerpilot_api.resume_ingestion.synthetic_fixtures import fixture_cases, fixture_response
+        app.state.ai_e2e_mode = "default"
+
+        class FreeDeepSeekFaultProvider:
+            last_usage = None
+            def generate_json(self, **_kwargs):
+                if app.state.ai_e2e_mode == "timeout":
+                    raise LLMProviderError("Synthetic timeout", code="provider_timeout")
+                self.last_usage = ProviderUsage(100, 200, 300)
+                return fixture_response(fixture_cases()[0])
+
+        app.state.deepseek_provider_factory = lambda **_kwargs: FreeDeepSeekFaultProvider()
         from offerpilot_api.agent_runtime.providers.mock import MockResumeProvider
         from offerpilot_api.agent_runtime import extraction_runs
         from offerpilot_api.resume_ingestion.synthetic_fixtures import SYNTHETIC_RESUME_TEXT
@@ -128,6 +144,15 @@ def run() -> None:
             return value
 
         # These paths are absent from create_app() and from production OpenAPI.
+        @app.post("/__e2e/ai-mode", include_in_schema=False)
+        async def ai_mode(request: Request):
+            controlled(request)
+            mode = (await request.json()).get("mode")
+            if mode not in {"default", "timeout"}:
+                raise HTTPException(status_code=400)
+            app.state.ai_e2e_mode = mode
+            return {"mode": mode, "real_paid_calls": 0}
+
         @app.get("/__e2e/ready", include_in_schema=False)
         async def private_readiness(request: Request):
             controlled(request)

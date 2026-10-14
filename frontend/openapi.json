@@ -2475,6 +2475,388 @@
           }
         }
       }
+    },
+    "/api/v1/ai/deepseek-key": {
+      "get": {
+        "tags": [
+          "session-byok"
+        ],
+        "summary": "Key Status",
+        "operationId": "key_status_api_v1_ai_deepseek_key_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KeyStatus"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "session-byok"
+        ],
+        "summary": "Configure Key",
+        "operationId": "configure_key_api_v1_ai_deepseek_key_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/KeyRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KeyStatus"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "session-byok"
+        ],
+        "summary": "Revoke Key",
+        "operationId": "revoke_key_api_v1_ai_deepseek_key_delete",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KeyStatus"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/resumes/{resume_id}/extraction-preview": {
+      "get": {
+        "tags": [
+          "session-byok"
+        ],
+        "summary": "Preview",
+        "operationId": "preview_api_v1_resumes__resume_id__extraction_preview_get",
+        "parameters": [
+          {
+            "name": "resume_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Resume Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExtractionPreview"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        }
+      }
     }
   },
   "components": {
@@ -2541,21 +2923,48 @@
           },
           "prompt_version": {
             "type": "string",
-            "const": "resume_extract_v2",
+            "enum": [
+              "resume_extract_v2",
+              "resume_extract_v2.1"
+            ],
             "title": "Prompt Version",
-            "default": "resume_extract_v2"
+            "default": "resume_extract_v2.1"
           },
           "provider": {
             "type": "string",
-            "const": "mock",
+            "enum": [
+              "mock",
+              "deepseek"
+            ],
             "title": "Provider",
             "default": "mock"
           },
           "test_result": {
             "type": "boolean",
-            "const": true,
             "title": "Test Result",
             "default": true
+          },
+          "model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model"
+          },
+          "run_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Run Id"
           },
           "source_text_sha256": {
             "type": "string",
@@ -3125,13 +3534,39 @@
             "anyOf": [
               {
                 "type": "string",
-                "const": "mock"
+                "enum": [
+                  "mock",
+                  "deepseek"
+                ]
               },
               {
                 "type": "null"
               }
             ],
             "title": "Provider"
+          },
+          "model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model"
+          },
+          "run_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Run Id"
           }
         },
         "type": "object",
@@ -3637,6 +4072,33 @@
         ],
         "title": "ExtractedFieldTrace"
       },
+      "ExtractionAuthorization": {
+        "properties": {
+          "authorization_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Authorization Id"
+          },
+          "accepted": {
+            "type": "boolean",
+            "const": true,
+            "title": "Accepted"
+          },
+          "max_calls": {
+            "type": "integer",
+            "const": 1,
+            "title": "Max Calls"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "authorization_id",
+          "accepted",
+          "max_calls"
+        ],
+        "title": "ExtractionAuthorization"
+      },
       "ExtractionCapabilityResponse": {
         "properties": {
           "enabled": {
@@ -3647,6 +4109,7 @@
             "type": "string",
             "enum": [
               "mock",
+              "deepseek",
               "disabled"
             ],
             "title": "Mode"
@@ -3676,6 +4139,86 @@
           "recent_runs"
         ],
         "title": "ExtractionCapabilityResponse"
+      },
+      "ExtractionPreview": {
+        "properties": {
+          "authorization_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Authorization Id"
+          },
+          "source_version": {
+            "type": "string",
+            "title": "Source Version"
+          },
+          "preview_version": {
+            "type": "string",
+            "title": "Preview Version",
+            "default": "deepseek-consent-v1"
+          },
+          "provider": {
+            "type": "string",
+            "title": "Provider",
+            "default": "deepseek"
+          },
+          "model": {
+            "type": "string",
+            "title": "Model",
+            "default": "deepseek-flash"
+          },
+          "redacted_text": {
+            "type": "string",
+            "title": "Redacted Text"
+          },
+          "sent_text_sha256": {
+            "type": "string",
+            "title": "Sent Text Sha256"
+          },
+          "max_calls": {
+            "type": "integer",
+            "title": "Max Calls",
+            "default": 1
+          },
+          "max_input_tokens": {
+            "type": "integer",
+            "title": "Max Input Tokens"
+          },
+          "max_output_tokens": {
+            "type": "integer",
+            "title": "Max Output Tokens",
+            "default": 4096
+          },
+          "redaction_version": {
+            "type": "string",
+            "title": "Redaction Version",
+            "default": "resume-redaction-v1"
+          },
+          "privacy_notice": {
+            "type": "string",
+            "title": "Privacy Notice",
+            "default": "仅发送预览中的教育、技能、项目、实习/工作文本，不发送 PDF 文件。默认遮蔽联系信息和个人资料区。仍可能含个人信息，请检查预览。DeepSeek 可能保留数据、使用去标识内容训练；API 专门退出和确切保留期限尚未核实。"
+          },
+          "cost_notice": {
+            "type": "string",
+            "title": "Cost Notice",
+            "default": "本次最多调用 1 次，不自动修复或重试。输入 token 为保守上界估计，输出最多 4096 token。可能产生 API 费用，由您的 Key 账户承担；实际 token、缓存和时段价格以 DeepSeek 账单为准。超时、取消或断网仍可能收费。"
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Expires At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "authorization_id",
+          "source_version",
+          "redacted_text",
+          "sent_text_sha256",
+          "max_input_tokens",
+          "expires_at"
+        ],
+        "title": "ExtractionPreview"
       },
       "ExtractionRunCandidatesResponse": {
         "properties": {
@@ -3713,8 +4256,21 @@
           },
           "mode": {
             "type": "string",
-            "const": "mock",
+            "enum": [
+              "mock",
+              "deepseek"
+            ],
             "title": "Mode"
+          },
+          "authorization": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ExtractionAuthorization"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "additionalProperties": false,
@@ -3767,13 +4323,69 @@
           },
           "mode": {
             "type": "string",
-            "const": "mock",
+            "enum": [
+              "mock",
+              "deepseek"
+            ],
             "title": "Mode"
           },
           "test_result": {
             "type": "boolean",
-            "const": true,
             "title": "Test Result"
+          },
+          "model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model"
+          },
+          "billing_status": {
+            "type": "string",
+            "enum": [
+              "not_sent",
+              "unknown",
+              "usage_reported"
+            ],
+            "title": "Billing Status",
+            "default": "not_sent"
+          },
+          "prompt_tokens": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Prompt Tokens"
+          },
+          "completion_tokens": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completion Tokens"
+          },
+          "total_tokens": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Tokens"
           },
           "revision": {
             "type": "integer",
@@ -3899,6 +4511,76 @@
         "title": "HealthResponse"
       },
       "JsonValue": {},
+      "KeyRequest": {
+        "properties": {
+          "api_key": {
+            "type": "string",
+            "maxLength": 256,
+            "minLength": 12,
+            "format": "password",
+            "title": "Api Key",
+            "writeOnly": true
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "api_key"
+        ],
+        "title": "KeyRequest"
+      },
+      "KeyStatus": {
+        "properties": {
+          "configured": {
+            "type": "boolean",
+            "title": "Configured"
+          },
+          "expires_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expires At"
+          },
+          "ttl_seconds": {
+            "type": "integer",
+            "title": "Ttl Seconds"
+          },
+          "provider": {
+            "type": "string",
+            "title": "Provider",
+            "default": "deepseek"
+          },
+          "enabled": {
+            "type": "boolean",
+            "title": "Enabled"
+          },
+          "unavailable_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unavailable Reason"
+          }
+        },
+        "type": "object",
+        "required": [
+          "configured",
+          "expires_at",
+          "ttl_seconds",
+          "enabled"
+        ],
+        "title": "KeyStatus"
+      },
       "LoginRequest": {
         "properties": {
           "email": {

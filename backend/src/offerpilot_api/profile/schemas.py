@@ -123,7 +123,9 @@ class EntrySource(BaseModel):
     field_sources: dict[str, Literal["manual", "resume", "resume_deleted"]]
     evidence: list[CurrentEvidence]
     test_result: bool = False
-    provider: Literal["mock"] | None = None
+    provider: Literal["mock", "deepseek"] | None = None
+    model: str | None = None
+    run_id: UUID | None = None
 
 
 class EducationEntry(EducationValue):

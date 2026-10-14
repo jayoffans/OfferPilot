@@ -183,11 +183,15 @@ def login_user(
     if needs_rehash(user.password_hash):
         user.password_hash = hash_password(password)
     if previous_token and valid_token(previous_token):
+        from offerpilot_api.agent_runtime.byok import invalidate_session_runs
+        previous = db.scalar(select(AuthSession.id).where(AuthSession.token_hash == token_hash(previous_token)))
         db.execute(
             update(AuthSession)
             .where(AuthSession.token_hash == token_hash(previous_token))
             .values(revoked_at=utc_now())
         )
+        if previous is not None:
+            invalidate_session_runs(db, session_id=previous)
     token = new_token()
     db.add(
         AuthSession(
@@ -220,5 +224,8 @@ def authenticated_session(db: Session, token: str | None) -> AuthSession:
 
 
 def revoke_session(db: Session, session: AuthSession) -> None:
+    from offerpilot_api.agent_runtime.byok import invalidate_session_runs
     session.revoked_at = utc_now()
+    db.flush()
+    invalidate_session_runs(db, session_id=session.id)
     db.commit()

@@ -1,6 +1,6 @@
 # OfferPilot 数据库设计
 
-**版本：** 0.8（S2-2A 持久运行及证据追溯）
+**版本：** 0.9（S2-2B 授权引用与真实计量）
 
 **日期：** 2026-10-12
 
@@ -83,6 +83,16 @@ SQLite 使用原生 nullable `ALTER TABLE ... ADD COLUMN ... REFERENCES users`�
 候选与运行 succeeded 共用一个数据库事务。Provider 调用不持写锁，最终提交再次验证 owner、生命周期、资源版本、令牌与租约；取消/删除/旧版本迟到不能复活候选。已落库的 V2 候选审核亦检查当前文本及布局版本，旧证据不可原值确认。
 
 新结构被使用后拒绝有损 downgrade，offline 降级也拒绝绕过数据安全检查。只有空运行、NULL 布局和空追溯元数据可降回 0004。SQLite 临时库迁移与 ORM metadata 一致性实测，不宣称 PostgreSQL 已验收。完整账户导出/注销、备份期限与删除重放仍需覆盖这些新实体；硬删不等于安全擦除。
+
+### S2-2B / 0006 当前追加结构
+
+`resume_extraction_runs`新增 `session_id/key_reference/authorization_id`（opaque UUID）、`model/consent_version/sent_text_sha256`、`billing_status`（not_sent/unknown/usage_reported）、`prompt_tokens/completion_tokens/total_tokens`。真实deepseek记录要求非测试、授权/会话/Key引用非空以及max_attempts=max_calls=1；Mock原约束/记录兼容。没有APIKey列，Key及预览只在限时内存。候选和正式条目的JSON来源允许真实provider/model/run_id，与run归属和test_result重新校验。
+
+这些字段用于授权隔离、迟到围栏、版本追溯与供应商token计量；不记录确定账单或完整Prompt/JSON，不进生产日志。删除简历清正文/页段/候选和正式来源原文，保留已确认值及最小owner终态/计量。当前运行记录未配置按天自动删除，完整账户导出/注销及正式保留/备份/供应商删除仍是上线条件。
+
+0006不改0001～0005。SQLite batch重建run表前保存候选引用，完成后恢复；有真实记录禁止有损降级。空库和旧0005包含run+candidate关联的快照均在临时库验证，业务值、owner和FK保持。PostgreSQL与正式库未迁移/未验证。详见 [S2-2B验收](S2-2B-acceptance.md)。
+
+2026-10-12 正式模型准备没有新增持久化字段或迁移。新运行的 Prompt/抽取版本分别为 `resume_extract_v2.1` / `resume-extraction-v2.1`；来源 JSON 兼容已保存的 `resume_extract_v2`。旧模板 queued 任务不构造 Provider、不增加调用数；历史候选及正式值不改写。评测账本只记录合成样本 ID/hash、版本、错误路径和计量，不保存 Key、原文、完整 Prompt 或原始模型 JSON；实际账单保持未知，免费协议桩明确标测试。详见 [准备报告](S2-2B-readiness-review.md)。
 
 ## 1. 设计原则
 

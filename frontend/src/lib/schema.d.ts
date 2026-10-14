@@ -368,6 +368,42 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/ai/deepseek-key": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Key Status */
+        get: operations["key_status_api_v1_ai_deepseek_key_get"];
+        /** Configure Key */
+        put: operations["configure_key_api_v1_ai_deepseek_key_put"];
+        post?: never;
+        /** Revoke Key */
+        delete: operations["revoke_key_api_v1_ai_deepseek_key_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/resumes/{resume_id}/extraction-preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Preview */
+        get: operations["preview_api_v1_resumes__resume_id__extraction_preview_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -399,22 +435,25 @@ export interface components {
             schema_version: "2.0";
             /**
              * Prompt Version
-             * @default resume_extract_v2
-             * @constant
+             * @default resume_extract_v2.1
+             * @enum {string}
              */
-            prompt_version: "resume_extract_v2";
+            prompt_version: "resume_extract_v2" | "resume_extract_v2.1";
             /**
              * Provider
              * @default mock
-             * @constant
+             * @enum {string}
              */
-            provider: "mock";
+            provider: "mock" | "deepseek";
             /**
              * Test Result
              * @default true
-             * @constant
              */
-            test_result: true;
+            test_result: boolean;
+            /** Model */
+            model?: string | null;
+            /** Run Id */
+            run_id?: string | null;
             /** Source Text Sha256 */
             source_text_sha256: string;
             /** Source Layout Sha256 */
@@ -574,7 +613,11 @@ export interface components {
              */
             test_result: boolean;
             /** Provider */
-            provider?: "mock" | null;
+            provider?: ("mock" | "deepseek") | null;
+            /** Model */
+            model?: string | null;
+            /** Run Id */
+            run_id?: string | null;
         };
         /** ErrorDetail */
         ErrorDetail: {
@@ -684,6 +727,24 @@ export interface components {
             /** Review Reasons */
             review_reasons?: string[];
         };
+        /** ExtractionAuthorization */
+        ExtractionAuthorization: {
+            /**
+             * Authorization Id
+             * Format: uuid
+             */
+            authorization_id: string;
+            /**
+             * Accepted
+             * @constant
+             */
+            accepted: true;
+            /**
+             * Max Calls
+             * @constant
+             */
+            max_calls: 1;
+        };
         /** ExtractionCapabilityResponse */
         ExtractionCapabilityResponse: {
             /** Enabled */
@@ -692,13 +753,74 @@ export interface components {
              * Mode
              * @enum {string}
              */
-            mode: "mock" | "disabled";
+            mode: "mock" | "deepseek" | "disabled";
             /** Test Result */
             test_result: boolean;
             /** Source Version */
             source_version: string;
             /** Recent Runs */
             recent_runs: components["schemas"]["ExtractionRunResponse"][];
+        };
+        /** ExtractionPreview */
+        ExtractionPreview: {
+            /**
+             * Authorization Id
+             * Format: uuid
+             */
+            authorization_id: string;
+            /** Source Version */
+            source_version: string;
+            /**
+             * Preview Version
+             * @default deepseek-consent-v1
+             */
+            preview_version: string;
+            /**
+             * Provider
+             * @default deepseek
+             */
+            provider: string;
+            /**
+             * Model
+             * @default deepseek-flash
+             */
+            model: string;
+            /** Redacted Text */
+            redacted_text: string;
+            /** Sent Text Sha256 */
+            sent_text_sha256: string;
+            /**
+             * Max Calls
+             * @default 1
+             */
+            max_calls: number;
+            /** Max Input Tokens */
+            max_input_tokens: number;
+            /**
+             * Max Output Tokens
+             * @default 4096
+             */
+            max_output_tokens: number;
+            /**
+             * Redaction Version
+             * @default resume-redaction-v1
+             */
+            redaction_version: string;
+            /**
+             * Privacy Notice
+             * @default 仅发送预览中的教育、技能、项目、实习/工作文本，不发送 PDF 文件。默认遮蔽联系信息和个人资料区。仍可能含个人信息，请检查预览。DeepSeek 可能保留数据、使用去标识内容训练；API 专门退出和确切保留期限尚未核实。
+             */
+            privacy_notice: string;
+            /**
+             * Cost Notice
+             * @default 本次最多调用 1 次，不自动修复或重试。输入 token 为保守上界估计，输出最多 4096 token。可能产生 API 费用，由您的 Key 账户承担；实际 token、缓存和时段价格以 DeepSeek 账单为准。超时、取消或断网仍可能收费。
+             */
+            cost_notice: string;
+            /**
+             * Expires At
+             * Format: date-time
+             */
+            expires_at: string;
         };
         /** ExtractionRunCandidatesResponse */
         ExtractionRunCandidatesResponse: {
@@ -714,9 +836,10 @@ export interface components {
             source_version: string;
             /**
              * Mode
-             * @constant
+             * @enum {string}
              */
-            mode: "mock";
+            mode: "mock" | "deepseek";
+            authorization?: components["schemas"]["ExtractionAuthorization"] | null;
         };
         /** ExtractionRunMutationRequest */
         ExtractionRunMutationRequest: {
@@ -742,14 +865,25 @@ export interface components {
             status: "queued" | "running" | "succeeded" | "failed" | "cancelled";
             /**
              * Mode
-             * @constant
+             * @enum {string}
              */
-            mode: "mock";
+            mode: "mock" | "deepseek";
+            /** Test Result */
+            test_result: boolean;
+            /** Model */
+            model?: string | null;
             /**
-             * Test Result
-             * @constant
+             * Billing Status
+             * @default not_sent
+             * @enum {string}
              */
-            test_result: true;
+            billing_status: "not_sent" | "unknown" | "usage_reported";
+            /** Prompt Tokens */
+            prompt_tokens?: number | null;
+            /** Completion Tokens */
+            completion_tokens?: number | null;
+            /** Total Tokens */
+            total_tokens?: number | null;
             /** Revision */
             revision: number;
             /** Source Version */
@@ -801,6 +935,32 @@ export interface components {
             database: "ok";
         };
         JsonValue: unknown;
+        /** KeyRequest */
+        KeyRequest: {
+            /**
+             * Api Key
+             * Format: password
+             */
+            api_key: string;
+        };
+        /** KeyStatus */
+        KeyStatus: {
+            /** Configured */
+            configured: boolean;
+            /** Expires At */
+            expires_at: string | null;
+            /** Ttl Seconds */
+            ttl_seconds: number;
+            /**
+             * Provider
+             * @default deepseek
+             */
+            provider: string;
+            /** Enabled */
+            enabled: boolean;
+            /** Unavailable Reason */
+            unavailable_reason?: string | null;
+        };
         /** LoginRequest */
         LoginRequest: {
             /**
@@ -3152,6 +3312,344 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ExtractionRunResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    key_status_api_v1_ai_deepseek_key_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KeyStatus"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    configure_key_api_v1_ai_deepseek_key_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["KeyRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KeyStatus"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    revoke_key_api_v1_ai_deepseek_key_delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KeyStatus"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    preview_api_v1_resumes__resume_id__extraction_preview_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                resume_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExtractionPreview"];
                 };
             };
             /** @description Unauthorized */

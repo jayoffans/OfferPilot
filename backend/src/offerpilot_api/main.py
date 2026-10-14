@@ -3,6 +3,7 @@
 from contextlib import asynccontextmanager
 import asyncio
 from contextlib import suppress
+import os
 
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
@@ -14,6 +15,8 @@ from offerpilot_api.api.routes.health import router as health_router
 from offerpilot_api.api.routes.resume import router as resume_router
 from offerpilot_api.api.routes.profile import router as profile_router
 from offerpilot_api.api.routes.extraction import router as extraction_router
+from offerpilot_api.api.routes.byok import router as byok_router
+from offerpilot_api.agent_runtime.byok import SessionKeyVault
 from offerpilot_api.agent_runtime.extraction_runs import ExtractionRunError, extraction_dispatcher, mock_provider_factory
 from offerpilot_api.core.config import get_settings
 from offerpilot_api.identity.services import IdentityError
@@ -25,7 +28,7 @@ from offerpilot_api.profile.services import ProfileError
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
     dispatcher = None
-    if get_settings().mock_extraction_available:
+    if get_settings().mock_extraction_available or get_settings().deepseek_extraction_available:
         dispatcher = asyncio.create_task(extraction_dispatcher(_app, SessionLocal))
     try:
         yield
@@ -34,18 +37,25 @@ async def lifespan(_app: FastAPI):
             dispatcher.cancel()
             with suppress(asyncio.CancelledError):
                 await dispatcher
+        _app.state.byok_vault.clear()
         # Close pooled SQLite handles on graceful shutdown, especially Windows.
         engine.dispose()
 
 
 def create_app() -> FastAPI:
     settings = get_settings()
+    if settings.deepseek_extraction_available and any(os.environ.get(name, "1") != "1" for name in ("WEB_CONCURRENCY", "UVICORN_WORKERS")):
+        raise RuntimeError("Session BYOK requires one API process")
     app = FastAPI(title=settings.app_name, version="0.1.0", lifespan=lifespan)
     app.include_router(auth_router)
     app.include_router(health_router)
     app.include_router(resume_router)
     app.include_router(profile_router)
     app.include_router(extraction_router)
+    app.include_router(byok_router)
+    app.state.byok_vault = SessionKeyVault()
+    app.state.extraction_settings = settings
+    app.state.deepseek_provider_factory = None
     app.state.extraction_provider_factory = mock_provider_factory
     app.state.extraction_dispatcher_enabled = True
 

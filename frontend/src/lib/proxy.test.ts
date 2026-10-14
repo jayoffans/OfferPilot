@@ -18,6 +18,10 @@ describe('same-origin API boundary', () => {
     for (const target of [`resumes/${id}/extraction-runs`, `extraction-runs/${id}/cancel`, `extraction-runs/${id}/retry`]) expect(allowedRoute('POST', target)).toBe(true);
     for (const target of ['extraction-runs', 'extraction-runs/not-a-uuid/cancel', `extraction-runs/${id}/execute`, `resumes/${id}/extraction`]) expect(allowedRoute('POST', target)).toBe(false);
     expect(allowedRoute('DELETE', `extraction-runs/${id}`)).toBe(false);
+    for (const method of ['GET', 'PUT', 'DELETE']) expect(allowedRoute(method, 'ai/deepseek-key')).toBe(true);
+    expect(allowedRoute('POST', 'ai/deepseek-key')).toBe(false);
+    expect(allowedRoute('GET', `resumes/${id}/extraction-preview`)).toBe(true);
+    expect(allowedRoute('GET', 'ai/deepseek-key/other-user')).toBe(false);
   });
   it('rejects hostile origins before contacting the backend', async () => {
     const fetcher = vi.fn(); vi.stubGlobal('fetch', fetcher);
