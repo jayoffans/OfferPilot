@@ -1,0 +1,9 @@
+{
+  "status": "native_console_created_do_not_replay",
+  "authorization_record": "S2-2B-user-authorized-single-2026-10-14",
+  "prior_total_actual_calls": 0,
+  "max_total_real_calls": 1,
+  "key_input": "unmodified_native_getpass",
+  "secret_in_launch_arguments": false,
+  "process_id": 355132
+}

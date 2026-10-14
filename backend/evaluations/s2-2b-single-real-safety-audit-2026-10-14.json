@@ -1,0 +1,22 @@
+{
+  "fixture_path": "D:\\agent 项目\\OfferPilot\\backend\\evaluations\\fixtures\\normal_chinese.synthetic.pdf",
+  "fixture_bytes": 2081,
+  "fixture_sha256": "cd6e8940637829abaa911fd22689db0f43573a24328f50574300af2f36711567",
+  "fixture_equals_pipeline_bytes": true,
+  "fixture_equals_preflight_hash": true,
+  "redacted_text_unchanged": true,
+  "preview_hash_unchanged": true,
+  "source_version_unchanged": true,
+  "prompt_unchanged": true,
+  "sent_sha256": "1b4bb1d1f681092c0de6946913588d45c30bf543ed73994d0c40b64b2e025b0d",
+  "max_input_tokens": 16548,
+  "max_output_tokens": 4096,
+  "peak_input_price_cny_per_million": "2",
+  "peak_output_price_cny_per_million": "8",
+  "estimated_upper_cny": "0.065864",
+  "declared_budget_cny": "1",
+  "price_audit_date": "2026-10-14",
+  "price_source": "https://api-docs.deepseek.com/zh-cn/quick_start/pricing/",
+  "real_report_exists": false,
+  "real_requests_issued": 0
+}

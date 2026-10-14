@@ -1,0 +1,14 @@
+{
+  "price_audit_date": "2026-10-14",
+  "secure_input_tests": "14/14",
+  "process_id": 357404,
+  "report_path": "D:\\agent 项目\\OfferPilot\\backend\\evaluations\\s2-2b-single-real-report-2026-10-14.json",
+  "max_output_tokens": 4096,
+  "max_calls": 1,
+  "key_input": "native_getpass_only",
+  "status": "stopped_before_key_and_request_confirmation_not_matched",
+  "budget_cny": "1",
+  "authorization_record": "S2-2B-user-authorized-single-2026-10-14",
+  "observed_actual_calls": 0,
+  "observed_reserved_calls": 0
+}

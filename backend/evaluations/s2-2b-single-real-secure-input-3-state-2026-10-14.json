@@ -1,0 +1,8 @@
+{
+  "authorization_record": "S2-2B-user-authorized-single-2026-10-14",
+  "max_total_real_calls": 1,
+  "key_input": "unmodified_native_getpass",
+  "secure_terminal": true,
+  "nonsecret_confirmations": 2,
+  "status": "native_terminal_verified_waiting_user_hidden_key"
+}

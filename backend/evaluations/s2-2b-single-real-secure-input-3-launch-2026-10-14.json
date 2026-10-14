@@ -1,0 +1,11 @@
+{
+  "status": "native_input_console_opened_do_not_replay",
+  "authorization_record": "S2-2B-user-authorized-single-2026-10-14",
+  "prior_total_actual_calls": 0,
+  "max_total_real_calls": 1,
+  "key_input": "unmodified_native_getpass",
+  "previous_safe_error_code": "invalid_key",
+  "user_reported_input_method": "Ctrl+V",
+  "new_input_guidance": "right_click_paste_only",
+  "process_id": 362540
+}

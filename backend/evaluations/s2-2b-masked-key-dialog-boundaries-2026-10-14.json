@@ -1,0 +1,22 @@
+{
+  "success": {
+    "passed": true,
+    "no_output": true,
+    "no_provider_calls": true
+  },
+  "invalid_three": {
+    "passed": true,
+    "no_output": true,
+    "no_provider_calls": true
+  },
+  "timeout": {
+    "passed": true,
+    "no_output": true,
+    "no_provider_calls": true
+  },
+  "callback_failure": {
+    "passed": true,
+    "no_output": true,
+    "no_provider_calls": true
+  }
+}

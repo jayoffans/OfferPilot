@@ -1,0 +1,6 @@
+{
+  "masked_native_entry": true,
+  "cleared_entry": true,
+  "cancel_returns_no_key": true,
+  "provider_calls": 0
+}

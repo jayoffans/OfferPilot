@@ -3,6 +3,8 @@
 **版本：** 0.7（S2-2B 本机集成与正式模型验收准备）
 **日期：** 2026-10-12
 
+> **2026-10-14 后续单样本真实验收：** 已在用户受限授权下完成 `normal_chinese.synthetic.pdf` 唯一一次真实 DeepSeek 请求；5项候选全部 pending，正式画像四组为空，非空字段19/19、定位21/21、归属19/19，usage为1107/781 tokens。详见 [单样本质量报告](S2-2B-single-real-evaluation-2026-10-14.md)。下文准备阶段的“真实调用0次”为历史基线；否定/计划、多经历及其余四份未验收，生产和供应商阻塞不变，不进入S3。
+
 > **当前实施范围：** S1 提供真实邀请身份、私有 PDF 生命周期和中文工作台；S2-1 提供唯一正式画像及候选审核；S2-2A 提供 V2、证据和持久 Mock 运行；S2-2B 已实现本机 DeepSeek Adapter、会话 BYOK 和独立授权，并完成免费兼容性与评测准备。实际 DeepSeek 请求仍为 0，真实模型质量待负责人授权验收；生产真实模式关闭。PostgreSQL、Redis、云对象存储、生产 Worker、岗位匹配和 Browser Agent 未实施。当前证据见 [正式模型验收准备](S2-2B-readiness-review.md)，下文保留后续目标设计。
 
 Phase 1-2 上传接口仅在 `development` 环境可用，默认上传目录为本地 `backend/uploads/`；仅接收不超过 10 MiB、50 页且有可选中文本的 PDF。PyMuPDF 采用 AGPL 或商业许可，正式发布前需确定适用许可方案。

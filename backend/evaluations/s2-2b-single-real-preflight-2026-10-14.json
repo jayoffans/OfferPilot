@@ -1,0 +1,130 @@
+{
+  "provider": "none",
+  "mode": "plan",
+  "test_result": true,
+  "model": "deepseek-flash",
+  "request_model": "deepseek-flash",
+  "notice": "Mock 测试结果，不代表 DeepSeek 真实模型质量。",
+  "model_alias_audit_date": "2026-10-14",
+  "model_version_at_audit": "DeepSeek-V4.1-Flash",
+  "model_version_note": "Official alias snapshot; response model does not prove immutable weights.",
+  "openai_sdk_version": "2.54.0",
+  "provider_version": "deepseek-openai-json-v1.1",
+  "caseset_version": "s2-2b-five-synthetic-v1",
+  "prompt_version": "resume_extract_v2.1",
+  "prompt_sha256": "a4cdd80c216976470829dc2d109cfa129709a5a844b3484b0a61eb63e7456d87",
+  "schema_version": "2.0",
+  "redaction_version": "resume-redaction-v1",
+  "reserved_calls": 0,
+  "actual_calls": 0,
+  "paid_calls": 0,
+  "protocol_calls": 0,
+  "actual_cost_cny": "0",
+  "estimated_usage_cost_cny": null,
+  "status": "免费PDF预检准备完成；0 Provider/Key，真实调用待独立授权",
+  "cases": [],
+  "planned_cases": [
+    {
+      "case_id": "normal_chinese",
+      "coverage": "正常教育、技能、项目和实习",
+      "pdf": {
+        "file_id": "16426ba0-bfe5-4d38-9469-928186e73657",
+        "file_name": "合成评测-normal_chinese.pdf",
+        "sha256": "cd6e8940637829abaa911fd22689db0f43573a24328f50574300af2f36711567",
+        "byte_size": 2081,
+        "factory_version": "s2-2b-synthetic-pdf-v1",
+        "caseset_version": "s2-2b-five-synthetic-v1",
+        "page_count": 2,
+        "text_layout": {
+          "layout_version": "1.0",
+          "text_sha256": "7dd69e69b7e12693b837cb32b312fc65d6e115bf5a37737bd2e9485439962142",
+          "pages": [
+            {
+              "page": 1,
+              "start": 0,
+              "end": 92
+            },
+            {
+              "page": 2,
+              "start": 93,
+              "end": 273
+            }
+          ],
+          "segments": [
+            {
+              "paragraph": 1,
+              "page": 1,
+              "start": 0,
+              "end": 19
+            },
+            {
+              "paragraph": 2,
+              "page": 1,
+              "start": 20,
+              "end": 28
+            },
+            {
+              "paragraph": 3,
+              "page": 1,
+              "start": 29,
+              "end": 80
+            },
+            {
+              "paragraph": 4,
+              "page": 1,
+              "start": 81,
+              "end": 92
+            },
+            {
+              "paragraph": 5,
+              "page": 2,
+              "start": 93,
+              "end": 133
+            },
+            {
+              "paragraph": 6,
+              "page": 2,
+              "start": 134,
+              "end": 144
+            },
+            {
+              "paragraph": 7,
+              "page": 2,
+              "start": 145,
+              "end": 159
+            },
+            {
+              "paragraph": 8,
+              "page": 2,
+              "start": 160,
+              "end": 217
+            },
+            {
+              "paragraph": 9,
+              "page": 2,
+              "start": 218,
+              "end": 273
+            }
+          ]
+        },
+        "processing_status": "parsed",
+        "private_storage_byte_roundtrip": true,
+        "synthetic_whitelist_verified": true
+      },
+      "preview": {
+        "model": "deepseek-flash",
+        "source_version": "e314746e2e4295c4d60e0780ec1837af013c326822f05f910e983aef71573a0f",
+        "redacted_text": "*******************\n********\n***************************************************\n***********\n教育：示例大学；本科；计算机科学；2022年9月入学；预计毕业：2026年6月。\n技能：Python。\n技能：JavaScript。\n项目：课程选课系统；角色：后端开发；2024年3月至2024年6月；技术栈：Python；工作：编写课程查询接口。\n实习：示例科技；岗位：后端实习生；2025年7月至2025年9月；职责：维护测试脚本；成果：补充接口测试用例。",
+        "sent_text_sha256": "1b4bb1d1f681092c0de6946913588d45c30bf543ed73994d0c40b64b2e025b0d",
+        "redaction_version": "resume-redaction-v1",
+        "max_calls": 1,
+        "max_input_tokens": 16548,
+        "max_output_tokens": 4096,
+        "privacy_notice": "仅发送预览中的教育、技能、项目、实习/工作文本，不发送 PDF 文件。默认遮蔽联系信息和个人资料区。仍可能含个人信息，请检查预览。DeepSeek 可能保留数据、使用去标识内容训练；API 专门退出和确切保留期限尚未核实。",
+        "cost_notice": "本次最多调用 1 次，不自动修复或重试。输入 token 为保守上界估计，输出最多 4096 token。可能产生 API 费用，由您的 Key 账户承担；实际 token、缓存和时段价格以 DeepSeek 账单为准。超时、取消或断网仍可能收费。",
+        "input_scope": "仅最终脱敏 resume_text 与固定版本 Prompt；不发送 PDF 原件",
+        "synthetic_only": true
+      }
+    }
+  ]
+}
