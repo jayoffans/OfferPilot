@@ -52,6 +52,8 @@ Phase 1-2 上传接口仅在 `development` 环境可用，默认上传目录为�
 
 正式模型准备保持同一 Adapter 与 V2 Schema。Prompt 升为 `resume_extract_v2.1`，补充完整 JSON 四组示例；新运行记录 `resume-extraction-v2.1`，旧候选 V2 来源继续可读取和审核，旧模板排队任务在构造 Provider 前安全失败，不以新模板重放旧授权。SDK 原始响应 usage 先验证类型和总数，再作为计量；畸形响应只返回安全错误，无收费修复。纯合成评测 CLI 与产品 API 开关分开，默认 0 调用，后续收费授权按批次重新提供。供应商许可和隐私条件见 [专项审查](S2-2B-provider-policy-review.md)。
 
+S2-2B-Fix的独立评测CLI通过 `evaluations/pdf_evaluation.py`装配系统临时DB/Storage及真实身份/API，实际生成/读回合成PDF后调用同一上传/parser、create/execute/finish/ingest/review；不建第二套领域逻辑。Mock运行也复用正式脱敏，Spy验证实际Provider参数。真实评测仅未来明确授权的一次合成请求，复用会话Vault/正式预览，默认不审核；评测结束销毁临时DB和Key。仅固定合成报告可存公开正文/候选/证据，普通生产日志规则不变。见 [修复验收](S2-2B-first-real-preflight-fix.md)。原有限批处理Worker CLI仍仅处理Mock，生产真实配置不变。
+
 ## 1. 架构决策摘要
 
 **待决策说明：** Next.js 前端已由 S1-3 实施并由 S2-1 延续验证；PostgreSQL 具体版本、Celery/Redis、对象存储、容器和观测供应商仍为候选。保持模块化单体，Worker 在后续真实长任务需要时再决定，Browser 独立 S7，DOCX/OCR 和通知首发后评估。MVP 岗位来源为粘贴/手动输入，不访问保存的 URL。具体容量、数据期限与部署许可需相应批次验证。

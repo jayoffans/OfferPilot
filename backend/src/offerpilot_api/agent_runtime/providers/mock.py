@@ -3,6 +3,7 @@
 import json
 
 from offerpilot_api.agent_runtime.llm_provider import LLMProviderError
+from offerpilot_api.agent_runtime.byok import redact_resume
 from offerpilot_api.resume_ingestion.synthetic_fixtures import fixture_cases, fixture_response
 
 
@@ -22,7 +23,8 @@ class MockResumeProvider:
         normalized = "".join(text.split())
         # Only healthy, distinct-text fixtures are available through the API.
         for case in fixture_cases()[:5]:
-            if normalized == "".join(case["text"].split()):
+            approved = (case["text"], redact_resume(case["text"]))
+            if normalized in {"".join(value.split()) for value in approved}:
                 return fixture_response(case)
         error = LLMProviderError("No approved synthetic fixture matches this resume")
         error.code = "mock_fixture_not_found"

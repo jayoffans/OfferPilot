@@ -4,6 +4,8 @@
 
 2026-10-14 完成 S2-2B 正式模型验收准备收尾：最小修复 SDK 响应形状、原始 usage 类型与压缩边界，补全版本化 V2 Prompt；准备五份合成样本和免费协议/故障验证。兼容性结论、全部免费结果和剩余阻塞见 [准备报告](docs/S2-2B-readiness-review.md)、[供应商协议审查](docs/S2-2B-provider-policy-review.md)。本轮仍未执行真实请求或收费命令。
 
+S2-2B-Fix 已将评测入口接到实际合成 PDF、正式上传/私有存储/解析、脱敏预览、持久运行和候选审核。免费报告保留公开合成输入及实际候选/原文/页码；Mock token 保持未知，所有结果明确标记测试。终端 Key 输入无 TTY 或无法验证隐藏输入时失败关闭；未来真实入口仅允许首份、一次请求且不自动审核。五个原阻塞与免费复验见 [修复验收](docs/S2-2B-first-real-preflight-fix.md)。
+
 
 ## 本地启动（Windows PowerShell，两个终端）
 
@@ -66,12 +68,14 @@ Key 在后端受控密文内存中最长一小时，同时受登录期限限制�
 默认只规划第一份，0调用，不构造 Provider；免费运行全部五份固定响应可执行：
 
 ```powershell
-& .\backend\.venv\Scripts\python.exe -B backend/evaluations/evaluate_deepseek_v2.py --mode mock
+& .\backend\.venv\Scripts\python.exe -B backend/evaluations/evaluate_deepseek_v2.py --mode mock --case-id normal_chinese --demonstrate-review
 ```
 
 后续负责人明确提供授权、次数上限和预算后，收费命令及分批流程见 [执行手册](docs/S2-2B-real-evaluation.md)。必须同时提供 `--mode real --authorize-paid-calls --authorization-record`、调用/token上限、人民币预算、执行当天核实的最高单价及日期、全新报告路径，并交互输入“同意付费评测”和 `getpass` Key；不读环境或命令行 Key。首次只选 `normal_chinese --max-calls 1`，负责人审核后再逐份另行授权。预算不足、陈旧价格、重复账本、任一失败/未知结果均停止，不补发。
 
 五份合成白名单覆盖正常、否定/计划、多经历、时间歧义及注入；报告记录字段 Precision/Recall、证据定位/归属、错误候选、版本、token、预占与实际调用边界计数；实际费用须核对供应商账单。免费协议报告中的100%仅验证固定响应，不代表真实模型质量。旧 evaluate_resume_extraction.py 收费路径持续禁用。本人本机合成 CLI 评测不解除第三方服务器 BYOK 和真实个人数据处理的发布阻塞。
+
+评测只在系统临时目录创建新 SQLite/合成账户/私有存储，经0001～0006实际迁移；不接触默认开发库。每个样本独立隔离，退出销毁库、Key与原件，仅保留显式输出的公开合成报告。可查看 [首份PDF](backend/evaluations/fixtures/normal_chinese.synthetic.pdf) 和 [完整Mock审核报告](backend/evaluations/s2-2b-pdf-mock-report.json)。`--demonstrate-review` 是免费Mock预设的显式确认/拒绝演示；真实模式不允许该标志，候选只保持pending。不要在聊天、参数或环境中提供真实 Key；通过现有Web BYOK或经验证的原生终端安全输入。
 
 ## 前端验证与真实浏览器验收
 

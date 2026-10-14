@@ -4,28 +4,30 @@ Paid execution requires explicit flags, a fresh output ledger, interactive
 confirmation, getpass, call and token budgets, and operator-verified prices.
 """
 import argparse
-import getpass
 import json
 import os
 import re
+import sys
 from collections import Counter
 from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal
 from importlib.metadata import version
 from importlib.resources import files
 from pathlib import Path
-from types import SimpleNamespace
 from offerpilot_api.agent_runtime.byok import MODEL, redact_resume, input_token_upper
 from offerpilot_api.agent_runtime.providers.deepseek import DeepSeekProvider
-from offerpilot_api.resume_ingestion.evidence import build_text_layout
-from offerpilot_api.resume_ingestion.extractor import ExtractionDiagnostics, ExtractionError, PROMPT_PACKAGE
-from offerpilot_api.resume_ingestion.extractor_v2 import extract_student_profile_v2, PROMPT_VERSION
+from offerpilot_api.resume_ingestion.extractor import PROMPT_PACKAGE
+from offerpilot_api.resume_ingestion.extractor_v2 import PROMPT_VERSION
 from offerpilot_api.agent_runtime.llm_provider import LLMProviderError
 from offerpilot_api.resume_ingestion.evidence import locate_quote, text_fingerprint
 try:
+    from .pdf_evaluation import PdfEvaluationSession, PdfEvaluationError, MockResponseSpy
+    from .secure_key_input import read_api_key, UnsafeKeyInputError
     from .deepseek_v2_cases import CASESET_VERSION, CASE_IDS, evaluation_cases
     from .evaluate_resume_extraction_v2 import candidate_key
 except ImportError:
+    from pdf_evaluation import PdfEvaluationSession, PdfEvaluationError, MockResponseSpy
+    from secure_key_input import read_api_key, UnsafeKeyInputError
     from deepseek_v2_cases import CASESET_VERSION, CASE_IDS, evaluation_cases
     from evaluate_resume_extraction_v2 import candidate_key
 
@@ -160,29 +162,6 @@ def quality(result, expected, raw):
         human_review_note="Gold mismatch is a proxy for edits; real user editing effort must be measured separately.")
 
 
-class _ProtocolClient:
-    """SDK-shaped fixed response client with no sockets or network transport."""
-
-    def __init__(self, response, model):
-        self.response, self.model, self.calls = response, model, 0
-        self.chat = SimpleNamespace(completions=SimpleNamespace(create=self.create))
-
-    def create(self, **kwargs):
-        self.calls += 1
-        if self.calls != 1:
-            raise AssertionError("Protocol fixture permits exactly one request")
-        assert kwargs["model"] == self.model
-        assert kwargs["extra_body"] == {"thinking": {"type": "disabled"}}
-        assert kwargs["response_format"] == {"type": "json_object"} and kwargs["stream"] is False
-        assert "JSON" in kwargs["messages"][0]["content"]
-        return SimpleNamespace(
-            model=self.model, id="00000000-0000-4000-8000-000000000001", system_fingerprint=None,
-            choices=[SimpleNamespace(finish_reason="stop", message=SimpleNamespace(content=json.dumps(self.response, ensure_ascii=False)))],
-            usage=SimpleNamespace(prompt_tokens=1, completion_tokens=1, total_tokens=2),
-        )
-
-    def close(self):
-        pass
 
 
 def _write_report(path, report, *, exclusive=False):
@@ -229,6 +208,18 @@ class _CountedProvider:
     def __init__(self, provider, report, max_calls):
         self.provider, self.report, self.max_calls = provider, report, max_calls
 
+    @property
+    def last_usage(self):
+        return getattr(self.provider, "last_usage", None)
+
+    @property
+    def last_response_model(self):
+        return getattr(self.provider, "last_response_model", None)
+
+    def close(self):
+        if hasattr(self.provider, "close"):
+            self.provider.close()
+
     def generate_json(self, *, system_prompt, user_prompt):
         if self.report["actual_calls"] >= self.max_calls:
             raise LLMProviderError("Evaluation call budget exhausted", code="evaluation_call_budget_exhausted")
@@ -240,154 +231,220 @@ class _CountedProvider:
         return self.provider.generate_json(system_prompt=system_prompt, user_prompt=user_prompt)
 
 
+def _concrete_errors(result, expected):
+    """Public synthetic field values and evidence for human review, not logs."""
+    proposals = [{"category": item.category, "value": item.value.model_dump()}
+                 for item in result.batch.candidates] if result and result.batch else []
+    matched = _match_candidates(proposals, expected["candidates"])
+    reverse = {gold_index: actual_index for actual_index, gold_index in matched.items()}
+    rows = []
+    for index, proposal in enumerate(proposals):
+        truth = expected["candidates"][matched[index]]["value"] if index in matched else {}
+        metadata = result.candidate_metadata[index]
+        for field, actual in proposal["value"].items():
+            if actual != truth.get(field):
+                rows.append({"category": proposal["category"], "candidate_index": index,
+                             "field": field, "expected": truth.get(field), "actual": actual,
+                             "evidence_status": metadata["evidence_status"],
+                             "evidence": [{"source_text": trace["source_text"], "locations": trace["locations"],
+                                           "review_reasons": trace["review_reasons"]}
+                                          for trace in metadata["fields"] if trace.get("mapped_field") == field]})
+    for index, truth in enumerate(expected["candidates"]):
+        if index not in reverse:
+            rows.append({"category": truth["category"], "kind": "missing_candidate",
+                         "expected": truth["value"], "actual": None, "evidence": []})
+    return rows
+
+
+def _display_preview(prepared):
+    print("以下为实际PDF解析后的最终发送预览（固定合成资料；PDF原件不发送）。")
+    print(json.dumps({"pdf": prepared.pdf, **prepared.preview}, ensure_ascii=False, indent=2))
+
+
 def main():
-    parser = argparse.ArgumentParser(description="默认 dry-run（0 次调用）；仅负责人主动授权后真实调用合成样本")
+    try:
+        return _main_pdf()
+    except (UnsafeKeyInputError, PdfEvaluationError) as error:
+        # Fixed, safe evaluation messages. No exception/headers/key traceback.
+        print(str(error), file=sys.stderr)
+        return 2
+    except (OSError, EOFError, KeyboardInterrupt):
+        print("评测已安全停止；未完成的已存在账本不得重放，已发送请求可能收费。", file=sys.stderr)
+        return 2
+
+
+def _main_pdf():
+    parser = argparse.ArgumentParser(description="合成PDF→正式业务候选池；默认免费预览，真实调用需未来独立授权")
     parser.add_argument("--mode", choices=("plan", "mock", "real"))
     parser.add_argument("--authorize-paid-calls", action="store_true")
-    parser.add_argument("--authorization-record", help="负责人本批明确授权的记录标识，不含姓名或秘密")
+    parser.add_argument("--authorization-record")
     parser.add_argument("--max-calls", type=int, default=0)
     parser.add_argument("--case-limit", type=int)
-    parser.add_argument("--case-id", action="append", choices=CASE_IDS, help="仅可选择固定合成白名单；可重复参数选择不同样本")
+    parser.add_argument("--case-id", action="append", choices=CASE_IDS)
     parser.add_argument("--max-output-tokens", type=int, default=4096)
     parser.add_argument("--max-budget-cny", type=Decimal)
     parser.add_argument("--input-price-per-million-cny", type=Decimal)
     parser.add_argument("--output-price-per-million-cny", type=Decimal)
-    parser.add_argument("--price-audit-date", help="负责人核实官方最高单价的日期 YYYY-MM-DD")
+    parser.add_argument("--price-audit-date")
     parser.add_argument("--output", type=Path)
+    parser.add_argument("--demonstrate-review", action="store_true",
+                        help="仅免费Mock：显式演示确认一项技能、拒绝一项项目；真实模式不自动审核")
     args = parser.parse_args()
     mode = args.mode or ("real" if args.authorize_paid_calls else "plan")
     if (mode == "real") != args.authorize_paid_calls:
-        parser.error("真实模式必须显式 --authorize-paid-calls；plan/mock 不允许付费授权标志")
+        parser.error("真实模式必须显式authorize；免费模式不得携带收费授权")
     if args.case_id and args.case_limit is not None:
-        parser.error("case-id 与 case-limit 不能同时使用")
+        parser.error("case-id 与 case-limit不能同时使用")
     limit = args.case_limit if args.case_limit is not None else (5 if mode == "mock" else 1)
     if not 1 <= limit <= 5 or not 1 <= args.max_output_tokens <= 4096 or len(set(args.case_id or [])) != len(args.case_id or []):
-        parser.error("case-limit=1..5，case-id 不得重复；output tokens=1..4096")
-    available = evaluation_cases()
-    cases = [case for case in available if case["id"] in args.case_id] if args.case_id else available[:limit]
-    report = {"provider": "deepseek" if mode == "real" else "deepseek_protocol_mock" if mode == "mock" else "none",
-              "mode": mode, "test_result": mode != "real", "model": MODEL, "request_model": MODEL,
-              "model_alias_audit_date": "2026-10-12", "model_version_at_audit": "DeepSeek-V4.1-Flash",
-              "model_version_note": "Official documentation snapshot; response model alias cannot independently establish deployed weights.",
-              "openai_sdk_version": version("openai"), "caseset_version": CASESET_VERSION,
-              "provider_version": "deepseek-openai-json-v1.1",
-              "prompt_version": PROMPT_VERSION,
-              "prompt_sha256": text_fingerprint(files(PROMPT_PACKAGE).joinpath("resume_extract_v2.txt").read_text(encoding="utf-8")),
-              "redaction_version": "resume-redaction-v1",
-              "schema_version": "2.0", "reserved_calls": 0, "actual_calls": 0, "paid_calls": 0,
-              "protocol_calls": 0, "actual_cost_cny": None if mode == "real" else "0", "estimated_usage_cost_cny": None,
-              "call_count_note": "Actual calls count one provider invocation, including unknown/failed responses; billable calls require the provider statement.",
-              "status": "真实调用待验收", "cases": [],
-              "planned_cases": [{"case_id": case["id"], "coverage": case["coverage"],
-                                  "synthetic_text_sha256": text_fingerprint(case["text"]),
-                                  "sent_text_sha256": text_fingerprint(redact_resume(case["text"]))} for case in cases]}
+        parser.error("case-limit=1..5、case-id不得重复、output tokens=1..4096")
+    cases = [case for case in evaluation_cases() if case["id"] in args.case_id] if args.case_id else evaluation_cases()[:limit]
+    if args.demonstrate_review and mode != "mock":
+        parser.error("审核演示只允许显式免费Mock；真实候选保持pending")
     if args.output and args.output.exists():
-        parser.error("报告路径已存在，拒绝覆盖或重放；每批授权使用新账本")
-    if mode == "plan":
-        _write_report(args.output, report, exclusive=True)
-        print(json.dumps(report, ensure_ascii=False, indent=2))
-        return 0
+        parser.error("报告已存在，拒绝覆盖或重放；请使用新的评测账本")
     if mode == "real":
-        if not args.output or args.max_calls < len(cases) or args.max_calls > 5:
-            parser.error("付费运行需全新 --output 账本及足够的 --max-calls（最多5）")
+        if len(cases) != 1 or cases[0]["id"] != "normal_chinese" or args.max_calls != 1 or not args.output:
+            parser.error("首次真实评测仅normal_chinese、max-calls=1及全新output账本")
         if not args.authorization_record or not re.fullmatch(r"[A-Za-z0-9_-]{1,80}", args.authorization_record):
-            parser.error("必须记录负责人本批明确授权的 --authorization-record 标识（仅字母、数字、_、-）")
-        if any(value is None or not value.is_finite() or value <= 0 for value in (args.max_budget_cny, args.input_price_per_million_cny, args.output_price_per_million_cny)):
-            parser.error("请显式设置预算及核实当前峰值输入/输出单价，均需正数")
+            parser.error("必须记录负责人本批明确授权的authorization-record")
+        if any(value is None or not value.is_finite() or value <= 0 for value in
+               (args.max_budget_cny, args.input_price_per_million_cny, args.output_price_per_million_cny)):
+            parser.error("预算与核实的当前峰值单价必须为正数")
         try:
             price_audit = date.fromisoformat(args.price_audit_date or "")
         except ValueError:
-            parser.error("必须记录 --price-audit-date YYYY-MM-DD；不得沿用未经核实的价格")
+            parser.error("必须提供执行当天的price-audit-date YYYY-MM-DD")
         if price_audit != _execution_date():
-            parser.error("单价必须在执行当天（Asia/Shanghai）核实；陈旧或未来日期拒绝调用")
-        projected = sum(Decimal(input_token_upper(redact_resume(case['text']))) * args.input_price_per_million_cny / 1000000
-                        + Decimal(args.max_output_tokens) * args.output_price_per_million_cny / 1000000 for case in cases)
-        if projected > args.max_budget_cny:
-            parser.error("按输入保守上界和输出上限估计会超过预算，拒绝调用")
-        report.update(authorization_record=args.authorization_record, declared_max_calls=args.max_calls,
-                      declared_budget_cny=str(args.max_budget_cny), price_audit_date=price_audit.isoformat(),
-                      price_source="https://api-docs.deepseek.com/zh-cn/quick_start/pricing/",
-                      input_price_per_million_cny=str(args.input_price_per_million_cny),
-                      output_price_per_million_cny=str(args.output_price_per_million_cny), estimated_upper_cny=str(projected))
-        print(f"将发送 {len(cases)} 个纯合成样本，最多 {args.max_calls} 次，不重试。按您核实的单价估计上界 {projected} 元；实际费用以供应商账单为准。")
-        if input("负责人确认请完整输入：同意付费评测\n") != "同意付费评测":
-            print("未授权，调用次数 0。")
-            return 2
-        key = getpass.getpass("DeepSeek API Key（不显示、不保存）：")
-        if not key.strip():
-            print("未配置 Key，调用次数 0。")
-            return 2
-    else:
-        key = None
+            parser.error("价格必须在执行当天（Asia/Shanghai）核实")
+    report = {"provider": "deepseek" if mode == "real" else "mock_synthetic_pdf" if mode == "mock" else "none",
+              "mode": mode, "test_result": mode != "real", "model": MODEL, "request_model": MODEL,
+              "notice": "Mock 测试结果，不代表 DeepSeek 真实模型质量。" if mode != "real" else "真实合成评测，需逐字段审核。",
+              "model_alias_audit_date": "2026-10-14", "model_version_at_audit": "DeepSeek-V4.1-Flash",
+              "model_version_note": "Official alias snapshot; response model does not prove immutable weights.",
+              "openai_sdk_version": version("openai"), "provider_version": "deepseek-openai-json-v1.1",
+              "caseset_version": CASESET_VERSION, "prompt_version": PROMPT_VERSION,
+              "prompt_sha256": text_fingerprint(files(PROMPT_PACKAGE).joinpath("resume_extract_v2.txt").read_text(encoding="utf-8")),
+              "schema_version": "2.0", "redaction_version": "resume-redaction-v1",
+              "reserved_calls": 0, "actual_calls": 0, "paid_calls": 0, "protocol_calls": 0,
+              "actual_cost_cny": None if mode == "real" else "0", "estimated_usage_cost_cny": None,
+              "status": "预检准备中；未获得本提示之外的收费授权", "cases": [], "planned_cases": []}
     _write_report(args.output, report, exclusive=True)
-    provider = None
     failed = False
-    try:
-        if mode == "real":
-            provider = DeepSeekProvider(api_key=key, model=MODEL, timeout_seconds=10, max_output_tokens=args.max_output_tokens)
+    for case in cases:
+        # Every sample gets an independent account/store/DB; no prior review
+        # can make a later sample's "formal profile empty" check misleading.
+        with PdfEvaluationSession() as session:
+            prepared = session.prepare(case["id"])
+            report["planned_cases"].append({"case_id": case["id"], "coverage": case["coverage"],
+                                            "pdf": prepared.pdf, "preview": prepared.preview})
+            if mode == "plan":
+                _write_report(args.output, report)
+                continue
             key = None
-        for case in cases:
-            if mode == "mock":
-                client = _ProtocolClient(case["response"], MODEL)
-                provider = DeepSeekProvider(api_key="synthetic-no-network-key", model=MODEL, max_output_tokens=args.max_output_tokens, client=client)
+            if mode == "real":
+                projected = (Decimal(prepared.preview["max_input_tokens"]) * args.input_price_per_million_cny
+                             + Decimal(args.max_output_tokens) * args.output_price_per_million_cny) / 1000000
+                if projected > args.max_budget_cny:
+                    parser.error("实际PDF发送范围的保守输入/输出估算超过预算，拒绝调用")
+                report.update(authorization_record=args.authorization_record, declared_max_calls=1,
+                              declared_budget_cny=str(args.max_budget_cny), price_audit_date=price_audit.isoformat(),
+                              price_source="https://api-docs.deepseek.com/zh-cn/quick_start/pricing/",
+                              input_price_per_million_cny=str(args.input_price_per_million_cny),
+                              output_price_per_million_cny=str(args.output_price_per_million_cny),
+                              estimated_upper_cny=str(projected))
+                _display_preview(prepared)
+                print(f"最多一次请求、输出{args.max_output_tokens}token，峰值估算上界{projected}元；超时也可能收费，不重试。")
+                if input("负责人另行授权后请输入：同意付费评测\n") != "同意付费评测":
+                    report["status"] = "未确认收费；0调用"
+                    _write_report(args.output, report)
+                    return 2
+                if input("确认上述最终发送内容，请输入其完整SHA256：\n") != prepared.preview["sent_text_sha256"]:
+                    report["status"] = "未确认发送预览；0调用"
+                    _write_report(args.output, report)
+                    return 2
+                # The helper verifies a native hidden-input terminal first.
+                key = read_api_key()
+            run = session.create_run(prepared, mode="deepseek" if mode == "real" else "mock",
+                                     confirmed_sha256=prepared.preview["sent_text_sha256"], api_key=key)
             row = {"case_id": case["id"], "state": "outcome_unknown", "request_model": MODEL,
-                   "sent_text_sha256": text_fingerprint(redact_resume(case["text"])),
-                   "token_usage": None, "token_usage_kind": "provider_reported" if mode == "real" else "simulated_protocol_usage",
-                   "estimated_usage_cost_cny": None, "actual_cost_cny": None if mode == "real" else "0"}
-            report["reserved_calls"] += int(mode == "real")
+                   "run_id": run["id"], "token_usage": None, "estimated_usage_cost_cny": None}
             report["cases"].append(row)
             _write_report(args.output, report)
-            diagnostics = ExtractionDiagnostics()
-            result = None
-            try:
-                counted = _CountedProvider(provider, report, args.max_calls) if mode == "real" else provider
-                result = extract_student_profile_v2(case["text"], counted, max_attempts=1,
-                    model_input_text=redact_resume(case["text"]), text_layout=build_text_layout(case["text"]), diagnostics=diagnostics)
-                if result.batch is None:
-                    diagnostics.failure_reason = "empty_extraction"
-                    raise ExtractionError("No candidate facts returned")
-                row["state"] = "validated"
-            except ExtractionError:
-                row["state"] = "failed"
-                row["failure_code"] = diagnostics.failure_reason
-                result = None
-            row.update(quality(result, case["gold"], case["text"]))
+            provider = None
+
+            def factory(**_kwargs):
+                nonlocal provider
+                if mode == "real":
+                    provider = DeepSeekProvider(api_key=_kwargs["api_key"], model=MODEL, timeout_seconds=10,
+                                                max_output_tokens=args.max_output_tokens)
+                    return _CountedProvider(provider, report, 1)
+                provider = MockResponseSpy(prepared.case["response"])
+                return provider
+
+            def reserve():
+                if mode == "real":
+                    if report["reserved_calls"] >= 1:
+                        raise PdfEvaluationError("Single-call reservation exhausted")
+                    report["reserved_calls"] += 1
+                _write_report(args.output, report)  # fsync before delegate invocation
+            key = None
+            success = session.execute(prepared, run, provider_factory=factory, before_call=reserve)
+            details, result = session.collect(prepared, run, evaluation_kind="real" if mode == "real" else "mock")
+            row.update(details)
+            metrics = quality(result, prepared.case["gold"], prepared.raw_text)
+            row["candidate_count"] = metrics.pop("candidates")
+            row.update(metrics)
+            row["concrete_error_cases"] = _concrete_errors(result, prepared.case["gold"])
             row.update(_safe_response_metadata(provider))
-            row["attempt_count"] = len(diagnostics.attempts)
+            row["attempt_count"] = row["run"]["attempt_count"]
+            row["state"] = "validated" if success else "failed"
+            if not success:
+                row["failure_code"] = row["run"]["error_code"]
+            restored = session.relogin()
+            row["relogin_restores_candidate_ids"] = sorted(item["id"] for item in restored["candidates"]) == sorted(item["id"] for item in row["candidates"])
             if mode == "mock":
-                report["protocol_calls"] += client.calls
+                report["protocol_calls"] += row["provider_invocations"]
             if row["severe_errors"]:
                 row["state"] = "severe_quality_error"
-                result = None
-            usage = provider.last_usage
-            if usage:
-                row["token_usage"] = {"prompt_tokens": usage.prompt_tokens, "completion_tokens": usage.completion_tokens, "total_tokens": usage.total_tokens}
-                if mode == "real":
-                    row["estimated_usage_cost_cny"] = str((Decimal(usage.prompt_tokens) * args.input_price_per_million_cny + Decimal(usage.completion_tokens) * args.output_price_per_million_cny) / 1000000)
-            else:
-                row["state"] = "billing_unknown"
-                result = None  # Preserve quality, but stop further paid calls.
-            if usage and (usage.completion_tokens > args.max_output_tokens or usage.prompt_tokens > input_token_upper(redact_resume(case["text"]))):
-                row["state"] = "provider_usage_exceeded_bounds"
-                result = None
-            report["status"] = "已执行合成真实模型评测，需负责人审核；不代表真实简历质量或账单" if mode == "real" else "免费固定响应/协议桩验证；真实模型质量待验收"
+                success = False
+            usage = row["token_usage"]
+            if mode == "real":
+                if usage is None:
+                    row["state"] = "billing_unknown"
+                    success = False
+                else:
+                    row["estimated_usage_cost_cny"] = str((Decimal(usage["prompt_tokens"]) * args.input_price_per_million_cny
+                                                         + Decimal(usage["completion_tokens"]) * args.output_price_per_million_cny) / 1000000)
+                    report["estimated_usage_cost_cny"] = row["estimated_usage_cost_cny"]
+                    if usage["completion_tokens"] > args.max_output_tokens or usage["prompt_tokens"] > prepared.preview["max_input_tokens"]:
+                        row["state"] = "provider_usage_exceeded_bounds"
+                        success = False
+            if not row["preview_matches_actual_provider_input"] or not row["unconfirmed_candidates_not_in_profile"]:
+                success = False
+                row["state"] = "isolation_or_disclosure_failed"
+            if args.demonstrate_review and success:
+                skill = next((item for item in row["candidates"] if item["category"] == "skill" and item["evidence_status"] == "supported"), None)
+                rejected = next((item for item in row["candidates"] if item["category"] == "project"), None)
+                if skill and rejected:
+                    row["explicit_mock_review"] = session.review_demonstration(run,
+                        confirm_candidate_id=skill["id"], reject_candidate_id=rejected["id"])
+                else:
+                    success = False
+                    row["state"] = "review_demonstration_unavailable"
             report["summary"] = _aggregate(report["cases"])
-            if mode == "real" and all(row["estimated_usage_cost_cny"] is not None for row in report["cases"]):
-                report["estimated_usage_cost_cny"] = str(sum(Decimal(row["estimated_usage_cost_cny"]) for row in report["cases"]))
+            report["status"] = "Mock 测试结果，不代表 DeepSeek 真实模型质量。" if mode == "mock" else "已执行一次合成真实评测，需人工审核与核对账单"
             _write_report(args.output, report)
-            if mode == "mock":
-                provider.close()
-                provider = None
-            if result is None:
+            if not success:
                 failed = True
-                break  # No further charges after any failure or unknown result.
-    finally:
-        if provider is not None:
-            provider.close()
-    if mode == "mock":
+                break
+    if mode in ("plan", "mock"):
+        if mode == "plan":
+            report["status"] = "免费PDF预检准备完成；0 Provider/Key，真实调用待独立授权"
+            _write_report(args.output, report)
         print(json.dumps(report, ensure_ascii=False, indent=2))
     else:
-        print(f"已尝试调用 {report['paid_calls']} 次；实际费用请核对 DeepSeek 账单。报告不含Key、简历原文或模型原始输出。")
+        print(f"已尝试{report['actual_calls']}次；实际金额待账单核对。候选保持pending，未自动审核。")
     return int(failed)
 
 

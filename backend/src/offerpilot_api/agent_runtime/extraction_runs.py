@@ -498,7 +498,9 @@ def execute_extraction_run(session_factory: Callable[[], Session], *, run_id: UU
                 raise ExtractionRunError("source_version_changed", "发送范围已变化，请重新授权", 409)
         else:
             actual_provider = provider_factory()
-            model_text = None
+            # Keep the free protocol path on the same minimization boundary
+            # as DeepSeek, so a Spy can verify the disclosed input precisely.
+            model_text = redact_resume(claim.raw_text)
         provider = _BudgetedProvider(session_factory, claim, actual_provider, byok_vault)
         result = extract_student_profile_v2(claim.raw_text, provider, text_layout=claim.text_layout, diagnostics=diagnostics,
                                             max_attempts=1 if claim.mode == "deepseek" else 2, model_input_text=model_text)

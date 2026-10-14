@@ -4,6 +4,8 @@
 
 本轮只完成免费 Mock、SDK 协议桩和故障注入。负责人尚未授权收费，真实模型质量、供应商网络行为和真实账单仍待验收。本文准备后续可执行入口；不授权本文中的收费命令，不进入 S3。供应商 BYOK、API 训练退出及保留政策的发布阻塞见 [准备审查](S2-2B-readiness-review.md)。
 
+> 当前入口已由 S2-2B-Fix 改为实际PDF和正式业务闭环，详情见 [修复验收](S2-2B-first-real-preflight-fix.md)。首次真实模式只允许 `normal_chinese`、`max-calls=1`，不允许批量或自动审核；终端Key失败关闭。下文五份为免费验证白名单，不能据此扩大首次收费授权。
+
 ## 1. 五份固定合成样本
 
 数据版本 `s2-2b-five-synthetic-v1`，来源为既有 S2-2A 合成文本及独立 gold 的最小变体，完整文本、固定协议响应和人工维护标签在 [deepseek_v2_cases.py](../backend/evaluations/deepseek_v2_cases.py)。不接受用户文件、URL、数据库正文或额外输入。固定协议响应仅用于免费验证，不是任何真实模型的输出。
@@ -29,18 +31,20 @@ Set-Location 'D:\agent 项目\OfferPilot'
 # 显示五份样本的免费计划。
 & .\backend\.venv\Scripts\python.exe -B backend/evaluations/evaluate_deepseek_v2.py --mode plan --case-limit 5
 # SDK 形状的无网络 client，验证真实 Adapter 参数和 V2 流水线；不读取 Key。
-& .\backend\.venv\Scripts\python.exe -B backend/evaluations/evaluate_deepseek_v2.py --mode mock
+& .\backend\.venv\Scripts\python.exe -B backend/evaluations/evaluate_deepseek_v2.py --mode mock --case-id normal_chinese --demonstrate-review
 # 免费故障注入：所有“授权”分支均替换 Provider，绝不建立真实 transport。
 & .\backend\.venv\Scripts\python.exe -B -m unittest discover -s tests -p 'test_deepseek*.py' -v
 ```
 
-免费报告见 [s2-2b-free-preflight-report.json](../backend/evaluations/s2-2b-free-preflight-report.json)。`--output` 可将结果写到新的本地路径；所有模式均拒绝覆盖已存在的报告，可使用不同路径重跑。命令、用户预览和实际发送的简历字符串均来自同一个 `redact_resume` 结果；报告保存其 SHA-256，不保存全文。
+当前PDF闭环报告见 [s2-2b-pdf-mock-report.json](../backend/evaluations/s2-2b-pdf-mock-report.json)；旧 [纯文本协议报告](../backend/evaluations/s2-2b-free-preflight-report.json)保留为历史证据。`--output`只能使用新路径，已存在账本拒绝重放。允许公开的固定合成输入、最终脱敏预览、实际候选及定位写在隔离评测报告中，普通日志仍不记录正文；不接受真实用户文件或任意URL。
 
 ## 3. 后续收费权限和首次执行命令
 
 只有负责人另行明确给出真实调用授权、次数上限和人民币预算后，才能使用收费命令。设置任一配置、阅读本文或运行免费模式均不构成授权。
 
-真实 CLI 必须同时满足：`--mode real`（或收费授权标志推导出的真实模式）、`--authorize-paid-calls`、`--authorization-record`、足够且不超过5的 `--max-calls`、正数 `--max-budget-cny`、负责人核实的当前最高输入/输出单价与 `--price-audit-date`、全新 `--output`、交互完整输入“同意付费评测”、交互 `getpass` 提供自己的 Key。它不读取环境 Key，不接受命令行 Key，不依赖运行中的应用/API 或 BYOK vault。
+真实 CLI 必须同时满足：`--mode real`（或收费授权标志推导出的真实模式）、`--authorize-paid-calls`、`--authorization-record`、仅首份且 `--max-calls 1`、正数 `--max-budget-cny`、负责人核实的当前最高输入/输出单价与 `--price-audit-date`、全新 `--output`、费用及完整预览SHA确认、通过安全输入模块提供自己的 Key。它不读取环境/命令行 Key；不依赖正在运行的外部应用实例，而是自行创建隔离同进程正式API及SessionKeyVault。
+
+S2-2B-Fix进一步收紧：首次必须只选首份且 `--max-calls 1`。先展示实际PDF提取后的完整脱敏预览、hash与金额，再分别确认收费及完整发送SHA；原生TTY/隐藏输入验证失败或出现GetPassWarning时，在普通读取前拒绝Key。输入Key后复用正式BYOK API/Vault和正式预览，必须与刚确认内容一致，再创建一次持久运行。输入变化要求重新预览。CLI自身不监听公网端口，使用同进程正式API及临时隔离数据。
 
 `--price-audit-date` 必须等于执行当天的 Asia/Shanghai 日期，过期或未来日期均在提示 Key 前拒绝。测试使用固定时钟验证这些门槛，保证跨日期可重复；价格记录不代替负责人实际核实官方峰值单价。
 
@@ -70,15 +74,15 @@ CLI 授权记录是本批批准的追踪标识，不是外部签名授权系统�
 
 1. 负责人先明确批准一次合成调用与预算，只执行 `normal_chinese`。
 2. 人工检查 JSON/V2、四组字段、原文证据与归属、否定/未知语义没有变形，确认 usage 与账单可追踪；`response_model` 仅表示返回别名，不证明实际权重版本。
-3. 负责人据结果决定是否另行批准下一批。建议后四份也逐份运行：新授权记录、新账本、`--case-id negation_planned` 等、每批 `--max-calls 1`，不自动循环或复用旧授权。
+3. 负责人据结果决定是否另行批准下一批。当前首次入口拒绝其余样本，继续后四份需要单独授权并更新评测允许范围；每批采用新记录/预算/账本，不能自动循环或复用旧授权。
 4. 任一结构/安全/计量问题停止并修复，经免费回归后再申请新批次。五份合成模型结果完成后另行人工评审，不自动进入 S3、扩大样本或替换真实个人简历。
 
 建议初验门槛：无未经依据的可确认事实、无否定/计划变成满足、无注入产生的新事实、未知毕业年月不补全；所有被接受字段定位和经历归属100%。非空字段精确率/召回率必须连同分子分母与错误逐项审查。PLAN 中建议的95%/85%是待负责人批准的质量目标；五份小样本不支持上线保证。
 
 ## 5. 报告含义与本轮结果
 
-报告记录请求模型、安全过滤后的响应 model（缺失保持 null）、官方版本快照及核查日期、SDK版本、Prompt版本和SHA、Schema/脱敏/数据版本、发送文本SHA、逐样本非空字段 Precision/Recall/错漏、未知字段错误补全、重复/额外/遗漏候选、错误候选安全路径与待审核状态、逐字定位与独立 gold 经历范围内的归属比例、严重可确认错误、token、调用尝试数、预算与估算费用。不记录 Key、完整输入/Prompt、模型原始 JSON、响应 id 或用户标识。
+报告记录PDF标识/hash、请求模型、安全筛选的响应model、版本、发送hash及Spy一致性、实际合成候选值/分类、PDF原文/页码/偏移、待核实原因、具体expected/actual错误、字段Precision/Recall/错漏、范围归属、token和调用/预算/估算。只在受信纯合成评测报告公开实际提取正文与最终预览；不写Key、请求头、完整Prompt、原模型JSON或认证秘密。候选和运行ID是合成临时资源标识，不是用户凭据；普通日志继续无完整正文。
 
-`actual_calls`/`paid_calls` 为已尝试的 Provider 调用数，包括失败/未知；不证明供应商已计费或已接收到。`reserved_calls` 是调用前保留数。真实 `actual_cost_cny` 始终 null，待负责人核对账单；`estimated_usage_cost_cny` 只是用已声明峰值单价计算的上界，未计量时保持 null。协议桩 token 明确标记 `simulated_protocol_usage`，不当作实际消耗。
+`actual_calls`/`paid_calls`为已尝试的真实Provider边界数，包括失败/未知；不证明供应商已计费或收到。`reserved_calls`是调用前保留数。真实金额保持null，待核账；估算只用声明峰值单价。当前PDF Mock不提供虚构usage，token为null并标记 `unknown_not_measured_mock`；协议调用次数与真实次数分开。真实输出进入临时pending池，未自动review；CLI退出后销毁隔离DB及Key，报告保留实际合成候选/证据供人工评审。
 
 本轮五份免费固定响应：非空字段 **112/112**，逐字定位 **127/127**，独立经历范围归属 **113/113**，严重错误 **0**；协议桩 **5 次**，实际/收费 **0 次**。评测与原收费边界回归覆盖重复别名计数、一对一 gold 匹配、跨经历证据、否定/未知/注入、Schema/空输出/超时失败止步、缺失计量、usage越界、当天价格/预算/次数/授权/白名单/重复账本门槛，以及账本写入失败和输入提前拒绝时零调用、实际计数不混同预占。这些结果验证代码和夹具，真实模型质量仍待授权验收；最终专项及全仓数字由主审查报告记录。
