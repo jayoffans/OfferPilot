@@ -245,11 +245,16 @@ class TrustedProfileMigrationTests(unittest.TestCase):
             profile_id = profile.id
         with self.assertRaises(RuntimeError):
             command.downgrade(self.config, "0003_resume_file_lifecycle")
+        with self.engine.connect() as connection:
+            self.assertEqual(connection.scalar(text("SELECT version_num FROM alembic_version")), "0004_trusted_career_profile")
+        # Later migrations may add profile columns; restore them before using
+        # the current ORM to inspect the preserved historical parent row.
+        self.upgrade()
         with Session(self.engine) as session:
             stored = session.get(CareerProfile, profile_id)
             self.assertEqual(stored.user_id, owner_id)
             self.assertEqual(stored.revision, 3)
-            self.assertEqual(session.scalar(text("SELECT version_num FROM alembic_version")), "0004_trusted_career_profile")
+            self.assertEqual(session.scalar(text("SELECT version_num FROM alembic_version")), HEAD_REVISION)
 
     def test_offline_downgrade_cannot_skip_live_data_safety_check(self) -> None:
         with self.assertRaises(RuntimeError):

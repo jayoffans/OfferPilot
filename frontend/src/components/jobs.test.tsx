@@ -20,7 +20,7 @@ function requirement(overrides: Partial<JobRequirement> = {}): JobRequirement {
 function job(overrides: Partial<Job> = {}): Job {
   return { id, title: "合成后端实习生", company: "合成科技", location: "上海", salary: null, work_type: "internship", source_url: "https://careers.example.com/job", source_kind: "pasted", revision: 1, jd_version: 1, is_favorite: false, created_at: date, updated_at: date, review_summary: { total: 1, pending: 1, confirmed: 0, stale: 0 }, schema_version: "1.0", jd_text: jd, requirements: [requirement()], parser_version: "jd-rules-1.0", jd_snapshots: [{ version: 1, jd_text: jd, created_at: date }], ...overrides };
 }
-beforeEach(() => { vi.restoreAllMocks(); vi.clearAllMocks(); clearSession(); mocks.pathname = "/jobs/new"; mocks.userId = "synthetic-user"; });
+beforeEach(() => { vi.restoreAllMocks(); vi.clearAllMocks(); clearSession(); mocks.pathname = "/jobs/new"; mocks.userId = "synthetic-user"; vi.spyOn(api, "profile").mockResolvedValue({ schema_version: "1.0", revision: 0, updated_at: null, education: [], skills: [], projects: [], experiences: [], candidates: [], completion: { populated_groups: [], missing_fields: [], pending_count: 0 } }); vi.spyOn(api, "latestMatch").mockResolvedValue(null); });
 async function newBasics() {
   render(<JobPage />); const user = userEvent.setup();
   await screen.findByLabelText("招聘 JD"); await user.click(screen.getByRole("button", { name: "手工录入" }));

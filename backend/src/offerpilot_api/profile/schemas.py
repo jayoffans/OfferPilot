@@ -148,6 +148,54 @@ class ExperienceEntry(ExperienceValue):
     source: EntrySource
 
 
+class SalaryPreference(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    min: int | None = Field(default=None, ge=0, le=100000000, strict=True)
+    max: int | None = Field(default=None, ge=0, le=100000000, strict=True)
+    currency: Literal["CNY"] = "CNY"
+    period: Literal["month", "day", "year"]
+    tax: Literal["pre_tax", "after_tax", "unknown"] = "unknown"
+
+    @model_validator(mode="after")
+    def ordered_amounts(self):
+        if self.min is None and self.max is None:
+            raise ValueError("Salary preference requires an amount")
+        if self.min is not None and self.max is not None and self.min > self.max:
+            raise ValueError("Salary minimum must not exceed maximum")
+        return self
+
+
+class ProfilePreferences(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    locations: list[Annotated[str, Field(min_length=1, max_length=100, strict=True)]] = Field(default_factory=list, max_length=20)
+    work_types: list[Literal["internship", "full_time", "campus"]] = Field(default_factory=list, max_length=3)
+    target_roles: list[Annotated[str, Field(min_length=1, max_length=100, strict=True)]] = Field(default_factory=list, max_length=20)
+    salary: SalaryPreference | None = None
+    weekly_days: int | None = Field(default=None, ge=1, le=7, strict=True)
+    internship_months: int | None = Field(default=None, ge=1, le=36, strict=True)
+
+    @field_validator("locations", "target_roles")
+    @classmethod
+    def visible_unique_text(cls, values):
+        values = [value.strip() for value in values]
+        if any(not value for value in values) or len(set(values)) != len(values):
+            raise ValueError("Preferences must contain unique visible values")
+        return values
+
+    @field_validator("work_types")
+    @classmethod
+    def unique_work_types(cls, values):
+        if len(set(values)) != len(values):
+            raise ValueError("Work types must be unique")
+        return values
+
+
+class ProfilePreferencesSaveRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    revision: int = Field(ge=0, le=MAX_PROFILE_REVISION, strict=True)
+    preferences: ProfilePreferences
+
+
 class ProfileSaveRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
     revision: int = Field(ge=0, le=MAX_PROFILE_REVISION, strict=True)
@@ -249,3 +297,4 @@ class CareerProfileResponse(BaseModel):
     experiences: list[ExperienceEntry]
     candidates: list[ProfileCandidateResponse]
     completion: ProfileCompletion
+    preferences: ProfilePreferences = Field(default_factory=ProfilePreferences)

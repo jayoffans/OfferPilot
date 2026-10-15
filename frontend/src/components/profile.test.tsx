@@ -29,6 +29,34 @@ it("starts with an empty server profile and keeps all unprovided facts unknown",
   expect(screen.getByText(/教育经历的学校、技术技能/)).toBeVisible();
 });
 
+it("saves preferences separately, retains formal education and uses the new revision for later edits", async () => {
+  const original: CareerProfile = { ...blank, revision: 3, updated_at: "2026-10-15T00:00:00Z", education: [{ id: "entry-education", school: "合成大学", degree: "本科", major: null, start_date: null, end_date: "2027-06", end_date_kind: "expected", source: manual }] };
+  const saved: CareerProfile = { ...original, revision: 4, preferences: { locations: ["上海"], work_types: [], target_roles: [], salary: null, weekly_days: null, internship_months: null } };
+  vi.spyOn(api, "savePreferences").mockResolvedValue(saved);
+  const save = vi.spyOn(api, "saveProfile").mockResolvedValue({ ...saved, revision: 5 });
+  await open(original); const user = userEvent.setup();
+  await user.type(screen.getByLabelText("意向城市"), "上海");
+  expect(screen.getByLabelText("学校")).toBeDisabled();
+  await user.click(screen.getByRole("button", { name: "保存求职偏好" }));
+  expect(await screen.findByText("求职偏好已保存，已有匹配需要按最新依据重新计算。")).toBeVisible();
+  expect(screen.getByLabelText("学校")).toHaveValue("合成大学");
+  await user.type(screen.getByLabelText("专业", { exact: true }), "计算机科学与技术");
+  expect(screen.getByLabelText("意向城市")).toBeDisabled();
+  await user.click(screen.getByRole("button", { name: "保存资料" }));
+  await waitFor(() => expect(save).toHaveBeenCalledOnce());
+  expect(save.mock.calls[0][0].revision).toBe(4);
+  expect(save.mock.calls[0][0]).not.toHaveProperty("preferences");
+});
+
+it("warns before abandoning unsaved preferences through the workspace navigation", async () => {
+  await open(); const user = userEvent.setup();
+  await user.type(screen.getByLabelText("意向城市"), "上海");
+  await user.click(screen.getByRole("navigation", { name: "主要导航" }).querySelector('a[href="/jobs"]')!);
+  expect(await screen.findByRole("alertdialog")).toHaveTextContent("有修改尚未保存");
+  await user.click(screen.getByRole("button", { name: "继续编辑" }));
+  expect(screen.getByLabelText("意向城市")).toHaveValue("上海");
+});
+
 it("saves a partial manual education using the current revision and no client provenance", async () => {
   const changed: CareerProfile = { ...blank, revision: 1, updated_at: "2026-10-11T00:00:00Z", education: [{ id: "entry-education", school: "合成大学", degree: null, major: null, start_date: null, end_date: null, end_date_kind: null, source: manual }] };
   const save = vi.spyOn(api, "saveProfile").mockResolvedValue(changed);

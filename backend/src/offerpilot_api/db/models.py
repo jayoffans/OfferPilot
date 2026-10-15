@@ -196,6 +196,7 @@ class CareerProfile(Base):
     user_id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), ForeignKey("users.id", ondelete="RESTRICT"), nullable=False)
     revision: Mapped[int] = mapped_column(Integer, default=0, server_default=text("0"), nullable=False)
     schema_version: Mapped[str] = mapped_column(String(20), default="1.0", server_default=text("'1.0'"), nullable=False)
+    preferences: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict, server_default=text("'{}'"), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.current_timestamp(), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.current_timestamp(), nullable=False)
 
@@ -397,6 +398,43 @@ class JobCreateReceipt(Base):
     id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user_id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), ForeignKey("users.id", ondelete="RESTRICT"), nullable=False, index=True)
     job_id: Mapped[uuid.UUID | None] = mapped_column(Uuid(as_uuid=True), ForeignKey("saved_jobs.id", ondelete="SET NULL"), nullable=True, index=True)
+    idempotency_key: Mapped[str] = mapped_column(String(100), nullable=False)
+    request_digest: Mapped[str] = mapped_column(String(64), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.current_timestamp())
+
+
+class JobMatch(Base):
+    """Immutable evaluation for one owner-scoped pair of reviewed revisions."""
+
+    __tablename__ = "job_matches"
+    __table_args__ = (
+        UniqueConstraint("user_id", "job_id", "profile_revision", "job_revision", "rule_version", name="uq_job_matches_basis"),
+        CheckConstraint("profile_revision >= 1 AND job_revision >= 1 AND jd_version >= 1", name="ck_job_matches_versions"),
+        Index("ix_job_matches_owner_job_created", "user_id", "job_id", "created_at"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), ForeignKey("users.id", ondelete="RESTRICT"), nullable=False)
+    job_id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), ForeignKey("saved_jobs.id", ondelete="CASCADE"), nullable=False, index=True)
+    profile_revision: Mapped[int] = mapped_column(Integer, nullable=False)
+    job_revision: Mapped[int] = mapped_column(Integer, nullable=False)
+    jd_version: Mapped[int] = mapped_column(Integer, nullable=False)
+    rule_version: Mapped[str] = mapped_column(String(100), nullable=False)
+    schema_version: Mapped[str] = mapped_column(String(20), nullable=False)
+    evaluation: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.current_timestamp())
+
+
+class JobMatchReceipt(Base):
+    """Request hash only; historical replays never become the latest result."""
+
+    __tablename__ = "job_match_receipts"
+    __table_args__ = (UniqueConstraint("user_id", "idempotency_key", name="uq_job_match_receipts_request"),)
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), ForeignKey("users.id", ondelete="RESTRICT"), nullable=False)
+    job_id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), ForeignKey("saved_jobs.id", ondelete="CASCADE"), nullable=False, index=True)
+    match_id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), ForeignKey("job_matches.id", ondelete="CASCADE"), nullable=False, index=True)
     idempotency_key: Mapped[str] = mapped_column(String(100), nullable=False)
     request_digest: Mapped[str] = mapped_column(String(64), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.current_timestamp())

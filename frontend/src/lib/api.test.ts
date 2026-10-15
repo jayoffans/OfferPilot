@@ -3,6 +3,20 @@ import { api, ApiError, clearSession, SESSION_EXPIRED_EVENT } from './api';
 const user = { id: 'test', email: 'synthetic@example.com', created_at: '2026-10-11T00:00:00' };
 beforeEach(() => clearSession());
 afterEach(() => vi.unstubAllGlobals());
+it('matching and preference writes carry CSRF, revisions and no fabricated profile payload', async () => {
+  const bodies: unknown[] = [];
+  const fetcher = vi.fn((url: string, init?: RequestInit) => {
+    if (url.endsWith('/auth/csrf')) return Promise.resolve(Response.json({ csrf_token: 'matching-csrf' }));
+    expect(new Headers(init?.headers).get('X-CSRF-Token')).toBe('matching-csrf');
+    bodies.push(JSON.parse(init?.body as string));
+    return Promise.resolve(Response.json({ id: 'synthetic' }));
+  });
+  vi.stubGlobal('fetch', fetcher);
+  await api.createMatch('synthetic-job', { profile_revision: 3, job_revision: 2, idempotency_key: 'matching-attempt' });
+  await api.savePreferences({ revision: 3, preferences: { locations: ['上海'], work_types: [], target_roles: [], salary: null, weekly_days: null, internship_months: null } });
+  expect(bodies).toEqual([{ profile_revision: 3, job_revision: 2, idempotency_key: 'matching-attempt' }, { revision: 3, preferences: { locations: ['上海'], work_types: [], target_roles: [], salary: null, weekly_days: null, internship_months: null } }]);
+  expect(fetcher).toHaveBeenCalledTimes(3);
+});
 it('login errors remain in the form and do not expire an unrelated page session', async () => {
   const expired = vi.fn(); window.addEventListener(SESSION_EXPIRED_EVENT, expired);
   vi.stubGlobal('fetch', vi.fn().mockResolvedValue(Response.json({ detail: { code: 'invalid_credentials', message: '邮箱或密码错误' } }, { status: 401 })));

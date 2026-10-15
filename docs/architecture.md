@@ -1,9 +1,9 @@
 # OfferPilot 系统架构与技术方案
 
-**版本：** 0.8（S3-1 私有职位与确定性 JD 解析）
-**日期：** 2026-10-14
+**版本：** 0.9（S3-2 确定性岗位匹配）
+**日期：** 2026-10-15
 
-> **当前追加 S3-1：** `job_catalog` 负责私有职位、JD 快照、条件审核、CAS 和创建幂等；`job_intelligence` 提供 `JDParser` Protocol 与无网络的规则 Adapter。新增 `/api/v1/jobs` 端点和中文 `/jobs` 页面，通过既有会话/CSRF/代理/OpenAPI 接线。不读取或修改正式画像，不访问招聘链接，不构造 LLM Provider。旧 S2 准备段落保留为历史；S3-2 匹配仍未实现。详见 [条件设计](job-structure-design.md) 与 [验收](S3-1-acceptance.md)。
+> **当前追加 S3-2：** `job_intelligence/matching.py` 提供无网络、无模型的纯规则函数，`match_schemas.py` 校验版本化四态与证据，`match_services.py` 负责服务端正式数据读取、版本围栏、幂等、快照及失效判断。HTTP 层沿用身份/CSRF/安全错误；`profile` 独立保存最小偏好，复用画像 revision；`job_catalog` 保持私有职位与审核边界。中文详情通过 OpenAPI 生成类型展示结果。0008 在 0007 上向前扩展，不实现 S4/Browser。详细设计与验证见 [S3-2 验收](S3-2-acceptance.md)，旧 S2/S3-1 说明保留为历史。
 
 > **2026-10-14 后续单样本真实验收：** 已在用户受限授权下完成 `normal_chinese.synthetic.pdf` 唯一一次真实 DeepSeek 请求；5项候选全部 pending，正式画像四组为空，非空字段19/19、定位21/21、归属19/19，usage为1107/781 tokens。详见 [单样本质量报告](S2-2B-single-real-evaluation-2026-10-14.md)。下文准备阶段的“真实调用0次”为历史基线；否定/计划、多经历及其余四份未验收，生产和供应商阻塞不变，不进入S3。
 

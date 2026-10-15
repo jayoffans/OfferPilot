@@ -20,6 +20,7 @@ from offerpilot_api.db.models import CareerProfile, CareerProfileEntry, ProfileC
 from offerpilot_api.profile.schemas import (
     CandidateBatchV1, CareerProfileResponse, EducationEntry, ExperienceEntry,
     MAX_PROFILE_REVISION, ProfileCandidateReviewRequest, ProfileSaveRequest, ProjectEntry, SkillEntry, VALUE_MODELS,
+    ProfilePreferences, ProfilePreferencesSaveRequest,
 )
 from offerpilot_api.resume_ingestion.evidence import CandidateExtractionMetadata, evaluate_metadata, layout_fingerprint, text_fingerprint
 
@@ -150,6 +151,7 @@ def get_profile(db: Session, *, user_id: UUID) -> CareerProfileResponse:
         missing.append("experiences.organization")
     return CareerProfileResponse(
         revision=profile.revision if profile else 0, updated_at=profile.updated_at if profile else None,
+        preferences=ProfilePreferences.model_validate(profile.preferences if profile else {}),
         **groups, candidates=candidates,
         completion={"populated_groups": [group for group, items in groups.items() if items],
                     "missing_fields": missing, "pending_count": sum(item["status"] == "pending" for item in candidates)},
@@ -158,6 +160,19 @@ def get_profile(db: Session, *, user_id: UUID) -> CareerProfileResponse:
 
 def _manual_fields(value: dict) -> dict[str, str]:
     return {field: "manual" for field, provided in value.items() if provided is not None}
+
+
+def save_preferences(db: Session, *, user_id: UUID, payload: ProfilePreferencesSaveRequest) -> CareerProfileResponse:
+    """A small independent edit shares the sole profile CAS without replacing facts."""
+    _owner(user_id)
+    try:
+        profile = _claim_revision(db, user_id=user_id, revision=payload.revision)
+        profile.preferences = payload.preferences.model_dump(mode="json")
+        db.commit()
+        return get_profile(db, user_id=user_id)
+    except Exception:
+        db.rollback()
+        raise
 
 
 def save_profile(db: Session, *, user_id: UUID, payload: ProfileSaveRequest) -> CareerProfileResponse:
@@ -495,7 +510,15 @@ def remove_resume_profile_evidence(db: Session, *, user_id: UUID, resume_id: UUI
     """
     profile = _profile(db, user_id)
     if profile is None:
+        from offerpilot_api.job_intelligence.match_services import remove_resume_match_evidence
+        remove_resume_match_evidence(db, user_id=user_id, resume_id=resume_id)
         return
+    # Historical matches can still reference an entry removed from today's
+    # profile. Always erase their original source excerpts, even in that case.
+    db.execute(update(CareerProfile).where(CareerProfile.id == profile.id, CareerProfile.user_id == user_id)
+        .values(revision=CareerProfile.revision).execution_options(synchronize_session=False))
+    from offerpilot_api.job_intelligence.match_services import remove_resume_match_evidence
+    remove_resume_match_evidence(db, user_id=user_id, resume_id=resume_id)
     entries = db.scalar(select(func.count()).select_from(CareerProfileEntry).where(
         CareerProfileEntry.profile_id == profile.id, CareerProfileEntry.resume_id == resume_id,
     )) or 0

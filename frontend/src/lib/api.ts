@@ -26,6 +26,12 @@ export type JobUpdate = Schemas['JobSaveRequest'];
 export type JobRequirementInput = Schemas['JobRequirementInput'];
 export type JobRequirement = Schemas['JobRequirementResponse'];
 export type JobParsePreview = Schemas['JobParsePreviewResponse'];
+export type JobMatch = Schemas['JobMatchResponse'];
+export type MatchItem = Schemas['MatchItem'];
+export type ProfilePreferences = Schemas['ProfilePreferences'];
+export type PreferencesSave = Schemas['ProfilePreferencesSaveRequest'];
+type MatchCreate = Schemas['JobMatchCreateRequest'];
+type MatchHistory = Schemas['JobMatchHistoryResponse'];
 type LoginResponse = Schemas['LoginResponse'];
 
 let csrfToken: string | null = null;
@@ -142,6 +148,10 @@ async function write<T>(path: string, method: string, data?: unknown, signal?: A
 }
 
 export const api = {
+  createMatch: (id: string, data: MatchCreate, signal?: AbortSignal) => write<JobMatch>(`/jobs/${encodeURIComponent(id)}/matches`, 'POST', data, signal),
+  latestMatch: (id: string, signal?: AbortSignal) => request<JobMatch | null>(`/jobs/${encodeURIComponent(id)}/matches/latest`, { signal }),
+  match: (id: string, matchId: string, signal?: AbortSignal) => request<JobMatch>(`/jobs/${encodeURIComponent(id)}/matches/${encodeURIComponent(matchId)}`, { signal }),
+  matchHistory: (id: string, signal?: AbortSignal) => request<MatchHistory>(`/jobs/${encodeURIComponent(id)}/matches?limit=10`, { signal }),
   jobs: (query: URLSearchParams, signal?: AbortSignal) => request<JobList>(`/jobs?${query.toString()}`, { signal }),
   job: (id: string, signal?: AbortSignal) => request<Job>(`/jobs/${encodeURIComponent(id)}`, { signal }),
   parseJob: (jd_text: string, signal?: AbortSignal) => write<JobParsePreview>('/jobs/parse-preview', 'POST', { jd_text }, signal),
@@ -171,6 +181,7 @@ export const api = {
   logout: async (signal?: AbortSignal) => { await write<void>('/auth/logout', 'POST', undefined, signal); clearSession(); },
   profile: (signal?: AbortSignal) => request<CareerProfile>('/profile', { signal }),
   saveProfile: (data: ProfileSave, signal?: AbortSignal) => write<CareerProfile>('/profile', 'PUT', data, signal),
+  savePreferences: (data: PreferencesSave, signal?: AbortSignal) => write<CareerProfile>('/profile/preferences', 'PUT', data, signal),
   reviewCandidate: (id: string, data: ProfileReview, signal?: AbortSignal) => write<CareerProfile>(`/profile/candidates/${encodeURIComponent(id)}/review`, 'POST', data, signal),
   extraction: (id: string, signal?: AbortSignal) => request<ExtractionCapability>(`/resumes/${encodeURIComponent(id)}/extraction`, { signal }),
   createExtraction: (id: string, data: ExtractionCreate, signal?: AbortSignal) => write<ExtractionRun>(`/resumes/${encodeURIComponent(id)}/extraction-runs`, 'POST', data, signal),

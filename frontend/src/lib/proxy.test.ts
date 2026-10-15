@@ -5,6 +5,20 @@ import { allowedRoute, proxyApi } from './proxy';
 const id = '9e9bff19-a61d-4857-b128-e6225e2832cc';
 afterEach(() => { vi.unstubAllGlobals(); vi.unstubAllEnvs(); });
 describe('same-origin API boundary', () => {
+  it('allows only concrete private matching and preference routes', async () => {
+    for (const path of [`jobs/${id}/matches`, `jobs/${id}/matches/latest`, `jobs/${id}/matches/${id}`]) expect(allowedRoute('GET', path)).toBe(true);
+    expect(allowedRoute('POST', `jobs/${id}/matches`)).toBe(true);
+    expect(allowedRoute('PUT', 'profile/preferences')).toBe(true);
+    for (const method of ['PUT', 'PATCH', 'DELETE']) expect(allowedRoute(method, `jobs/${id}/matches`)).toBe(false);
+    expect(allowedRoute('POST', `jobs/${id}/matches/latest`)).toBe(false);
+    expect(allowedRoute('GET', 'jobs/not-a-uuid/matches')).toBe(false);
+    expect(allowedRoute('POST', 'profile/preferences')).toBe(false);
+    const fetcher = vi.fn().mockResolvedValue(Response.json({ items: [], total: 0 })); vi.stubGlobal('fetch', fetcher);
+    expect((await proxyApi(new Request(`http://127.0.0.1:3000/api/v1/jobs/${id}/matches?limit=10`), ['jobs', id, 'matches'])).status).toBe(200);
+    expect(new URL(fetcher.mock.calls[0][0]).search).toBe('?limit=10');
+    for (const query of ['user_id=other', 'limit=1&limit=2', 'limit=10&url=http://localhost']) expect((await proxyApi(new Request(`http://127.0.0.1:3000/api/v1/jobs/${id}/matches?${query}`), ['jobs', id, 'matches'])).status).toBe(404);
+    expect(fetcher).toHaveBeenCalledOnce();
+  });
   it('exposes only the implemented auth, file and profile API', () => {
     expect(allowedRoute('GET', `resumes/${id}/download`)).toBe(true);
     for (const target of ['../health', 'auth/invite', '__e2e/ready', `resumes/${id}/profile`, 'https://example.com']) expect(allowedRoute('GET', target)).toBe(false);

@@ -266,6 +266,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/profile/preferences": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Write Preferences */
+        put: operations["write_preferences_api_v1_profile_preferences_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/resumes/{resume_id}/extraction": {
         parameters: {
             query?: never;
@@ -529,6 +546,58 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/jobs/{job_id}/matches": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** History */
+        get: operations["history_api_v1_jobs__job_id__matches_get"];
+        put?: never;
+        /** Calculate */
+        post: operations["calculate_api_v1_jobs__job_id__matches_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/jobs/{job_id}/matches/latest": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Latest */
+        get: operations["latest_api_v1_jobs__job_id__matches_latest_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/jobs/{job_id}/matches/{match_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Detail */
+        get: operations["detail_api_v1_jobs__job_id__matches__match_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -647,6 +716,7 @@ export interface components {
             /** Candidates */
             candidates: components["schemas"]["ProfileCandidateResponse"][];
             completion: components["schemas"]["ProfileCompletion"];
+            preferences?: components["schemas"]["ProfilePreferences"];
         };
         /** CsrfResponse */
         CsrfResponse: {
@@ -768,6 +838,21 @@ export interface components {
             page?: number | null;
             /** Paragraph */
             paragraph?: number | null;
+        };
+        /** ExcludedRequirement */
+        ExcludedRequirement: {
+            /**
+             * Requirement Id
+             * Format: uuid
+             */
+            requirement_id: string;
+            /** Content */
+            content: string;
+            /**
+             * Reason
+             * @enum {string}
+             */
+            reason: "pending_review" | "stale_jd";
         };
         /** ExperienceEntry */
         ExperienceEntry: {
@@ -1059,6 +1144,26 @@ export interface components {
              */
             database: "ok";
         };
+        /** JDMatchEvidence */
+        JDMatchEvidence: {
+            /** Evidence Text */
+            evidence_text?: string | null;
+            /** Source Jd Version */
+            source_jd_version: number;
+            /** Source Start */
+            source_start?: number | null;
+            /** Source End */
+            source_end?: number | null;
+            /** Line Start */
+            line_start?: number | null;
+            /** Line End */
+            line_end?: number | null;
+            /**
+             * Source Kind
+             * @enum {string}
+             */
+            source_kind: "rule" | "manual" | "user_modified" | "job_field";
+        };
         /** JobCreateRequest */
         JobCreateRequest: {
             /** Title */
@@ -1220,6 +1325,55 @@ export interface components {
             page: number;
             /** Page Size */
             page_size: number;
+        };
+        /** JobMatchCreateRequest */
+        JobMatchCreateRequest: {
+            /** Profile Revision */
+            profile_revision: number;
+            /** Job Revision */
+            job_revision: number;
+            /** Idempotency Key */
+            idempotency_key: string;
+        };
+        /** JobMatchHistoryResponse */
+        JobMatchHistoryResponse: {
+            /** Items */
+            items: components["schemas"]["JobMatchResponse"][];
+            /** Total */
+            total: number;
+        };
+        /** JobMatchResponse */
+        JobMatchResponse: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Job Id
+             * Format: uuid
+             */
+            job_id: string;
+            /** Profile Revision */
+            profile_revision: number;
+            /** Job Revision */
+            job_revision: number;
+            /** Jd Version */
+            jd_version: number;
+            /** Rule Version */
+            rule_version: string;
+            /** Schema Version */
+            schema_version: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Stale */
+            stale: boolean;
+            /** Stale Reasons */
+            stale_reasons: ("profile_changed" | "job_changed" | "rule_changed")[];
+            evaluation: components["schemas"]["MatchEvaluation"];
         };
         /** JobParsePreviewRequest */
         JobParsePreviewRequest: {
@@ -1450,6 +1604,69 @@ export interface components {
             /** Csrf Token */
             csrf_token: string;
         };
+        /** MatchEvaluation */
+        MatchEvaluation: {
+            /**
+             * Schema Version
+             * @default 1.0
+             * @constant
+             */
+            schema_version: "1.0";
+            /** Rule Version */
+            rule_version: string;
+            /**
+             * Conclusion
+             * @enum {string}
+             */
+            conclusion: "hard_conflict" | "verify_first" | "consider";
+            /** Reasons */
+            reasons: string[];
+            /** Items */
+            items: components["schemas"]["MatchItem"][];
+            /** Excluded Requirements */
+            excluded_requirements: components["schemas"]["ExcludedRequirement"][];
+            /** Next Steps */
+            next_steps: string[];
+        };
+        /** MatchItem */
+        MatchItem: {
+            /** Requirement Id */
+            requirement_id: string | null;
+            /** Type */
+            type: string;
+            /** Content */
+            content: string;
+            /**
+             * Priority
+             * @enum {string}
+             */
+            priority: "must" | "preferred" | "uncertain";
+            /**
+             * Group
+             * @enum {string}
+             */
+            group: "education" | "skills" | "experience" | "work_conditions" | "preferences";
+            /**
+             * Scope
+             * @default qualification
+             * @enum {string}
+             */
+            scope: "qualification" | "preference";
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "met" | "partial" | "unknown" | "unmet";
+            /** Reason */
+            reason: string;
+            /** Profile Evidence */
+            profile_evidence?: components["schemas"]["ProfileMatchEvidence"][];
+            jd_evidence: components["schemas"]["JDMatchEvidence"];
+            /** Rule Version */
+            rule_version: string;
+            /** Verification */
+            verification?: string[];
+        };
         /** ProfileCandidateResponse */
         ProfileCandidateResponse: {
             /**
@@ -1520,6 +1737,46 @@ export interface components {
             missing_fields: string[];
             /** Pending Count */
             pending_count: number;
+        };
+        /** ProfileMatchEvidence */
+        ProfileMatchEvidence: {
+            /** Entry Id */
+            entry_id: string | null;
+            /**
+             * Category
+             * @enum {string}
+             */
+            category: "education" | "skill" | "project" | "experience" | "preference";
+            /** Field */
+            field: string;
+            /** Value */
+            value: string;
+            /** Source Kind */
+            source_kind: string;
+            /** Resume Id */
+            resume_id?: string | null;
+            /** Source Text */
+            source_text?: string | null;
+        };
+        /** ProfilePreferences */
+        ProfilePreferences: {
+            /** Locations */
+            locations?: string[];
+            /** Work Types */
+            work_types?: ("internship" | "full_time" | "campus")[];
+            /** Target Roles */
+            target_roles?: string[];
+            salary?: components["schemas"]["SalaryPreference"] | null;
+            /** Weekly Days */
+            weekly_days?: number | null;
+            /** Internship Months */
+            internship_months?: number | null;
+        };
+        /** ProfilePreferencesSaveRequest */
+        ProfilePreferencesSaveRequest: {
+            /** Revision */
+            revision: number;
+            preferences: components["schemas"]["ProfilePreferences"];
         };
         /** ProfileSaveRequest */
         ProfileSaveRequest: {
@@ -1710,6 +1967,30 @@ export interface components {
              * Format: date-time
              */
             created_at: string;
+        };
+        /** SalaryPreference */
+        SalaryPreference: {
+            /** Min */
+            min?: number | null;
+            /** Max */
+            max?: number | null;
+            /**
+             * Currency
+             * @default CNY
+             * @constant
+             */
+            currency: "CNY";
+            /**
+             * Period
+             * @enum {string}
+             */
+            period: "month" | "day" | "year";
+            /**
+             * Tax
+             * @default unknown
+             * @enum {string}
+             */
+            tax: "pre_tax" | "after_tax" | "unknown";
         };
         /** SkillEntry */
         SkillEntry: {
@@ -3259,6 +3540,84 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["ProfileCandidateReviewRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CareerProfileResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    write_preferences_api_v1_profile_preferences_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProfilePreferencesSaveRequest"];
             };
         };
         responses: {
@@ -5160,6 +5519,317 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["JobDetailResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    history_api_v1_jobs__job_id__matches_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JobMatchHistoryResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    calculate_api_v1_jobs__job_id__matches_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["JobMatchCreateRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JobMatchResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    latest_api_v1_jobs__job_id__matches_latest_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JobMatchResponse"] | null;
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    detail_api_v1_jobs__job_id__matches__match_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                job_id: string;
+                match_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JobMatchResponse"];
                 };
             };
             /** @description Unauthorized */

@@ -10,8 +10,8 @@ from offerpilot_api.core.api_errors import error_responses
 from offerpilot_api.db.models import User
 from offerpilot_api.db.session import get_db
 from offerpilot_api.identity.dependencies import get_current_user
-from offerpilot_api.profile.schemas import CareerProfileResponse, ProfileCandidateReviewRequest, ProfileSaveRequest
-from offerpilot_api.profile.services import get_profile, review_profile_candidate, save_profile
+from offerpilot_api.profile.schemas import CareerProfileResponse, ProfileCandidateReviewRequest, ProfileSaveRequest, ProfilePreferencesSaveRequest
+from offerpilot_api.profile.services import get_profile, review_profile_candidate, save_profile, save_preferences
 
 router = APIRouter(prefix="/api/v1/profile", tags=["profile"], responses=error_responses(401, 403, 404, 409, 422, 503))
 
@@ -41,3 +41,12 @@ def review_current_candidate(
     current_user: Annotated[User, Depends(get_current_user)],
 ) -> CareerProfileResponse:
     return review_profile_candidate(db, user_id=current_user.id, candidate_id=candidate_id, payload=payload)
+
+
+@router.put("/preferences", response_model=CareerProfileResponse)
+def write_preferences(
+    payload: ProfilePreferencesSaveRequest,
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+) -> CareerProfileResponse:
+    return save_preferences(db, user_id=current_user.id, payload=payload)

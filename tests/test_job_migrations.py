@@ -149,8 +149,9 @@ class JobMigrationTests(unittest.TestCase):
             command.downgrade(self.config, PREVIOUS_REVISION)
         with self.engine.connect() as db:
             self.assertEqual(self.snapshot(db, tables), original)
-            self.assertEqual(db.scalar(text("SELECT version_num FROM alembic_version")),
-                             ScriptDirectory.from_config(self.config).get_current_head())
+            # Later empty migrations may be safely reversed first; 0007 is
+            # where this historical downgrade refuses to drop private jobs.
+            self.assertEqual(db.scalar(text("SELECT version_num FROM alembic_version")), "0007_private_jobs")
         with Session(self.engine) as db:
             self.assertEqual(db.get(SavedJob, job_id).user_id, owner)
             self.assertEqual(db.get(JobJDSnapshot, snapshot_id).jd_text, "必须掌握 Python")
