@@ -52,6 +52,24 @@ it('profile writes use the generated contract, current revision and server sessi
   expect(fetcher).toHaveBeenCalledTimes(2);
   expect(fetcher.mock.calls[1][0]).toBe('/api/v1/profile');
 });
+it('job writes carry CSRF, revision and idempotency and are never implicitly retried', async () => {
+  const id = '11111111-1111-4111-8111-111111111111';
+  const requests: { url: string; method: string; body: unknown }[] = [];
+  vi.stubGlobal('fetch', vi.fn((url: string, init?: RequestInit) => {
+    if (url.endsWith('/auth/csrf')) return Promise.resolve(Response.json({ csrf_token: 'synthetic-csrf' }));
+    expect(new Headers(init?.headers).get('X-CSRF-Token')).toBe('synthetic-csrf');
+    expect(init?.credentials).toBe('same-origin');
+    requests.push({ url, method: init?.method || 'GET', body: JSON.parse(String(init?.body)) });
+    return Promise.resolve(init?.method === 'DELETE' ? new Response(null, { status: 204 }) : Response.json({ id, revision: 1 }));
+  }));
+  await api.createJob({ title: '合成职位', work_type: 'unknown', jd_text: 'Java优先', idempotency_key: 'synthetic-create', requirements: [] });
+  await api.favoriteJob(id, 3, true); await api.deleteJob(id, 4);
+  expect(requests).toEqual([
+    { url: '/api/v1/jobs', method: 'POST', body: { title: '合成职位', work_type: 'unknown', jd_text: 'Java优先', idempotency_key: 'synthetic-create', requirements: [] } },
+    { url: `/api/v1/jobs/${id}/favorite`, method: 'PATCH', body: { revision: 3, is_favorite: true } },
+    { url: `/api/v1/jobs/${id}`, method: 'DELETE', body: { revision: 4 } },
+  ]);
+});
 
 it('extraction mutations preserve idempotency, resource version and run revision with session CSRF', async () => {
   const id = '11111111-1111-4111-8111-111111111111';

@@ -28,6 +28,24 @@ describe('same-origin API boundary', () => {
     const response = await proxyApi(new Request('http://127.0.0.1:3000/api/v1/auth/login', { method: 'POST', headers: { Origin: 'https://attacker.example' } }), ['auth', 'login']);
     expect(response.status).toBe(403); expect(fetcher).not.toHaveBeenCalled();
   });
+  it('allows only concrete job resource and review routes', () => {
+    expect(allowedRoute('POST', 'jobs/parse-preview')).toBe(true);
+    expect(allowedRoute('PUT', `jobs/${id}`)).toBe(true);
+    expect(allowedRoute('PATCH', `jobs/${id}/favorite`)).toBe(true);
+    expect(allowedRoute('GET', `jobs/${id}/requirements`)).toBe(true);
+    expect(allowedRoute('POST', `jobs/${id}/requirements/${id}/review`)).toBe(true);
+    for (const target of ['jobs/fetch-url', 'jobs/not-a-uuid', `jobs/${id}/submit`, `jobs/${id}/match`, `jobs/${id}/requirements/not-a-uuid/review`]) expect(allowedRoute('POST', target)).toBe(false);
+    expect(allowedRoute('GET', `jobs/${id}/requirements/${id}`)).toBe(false);
+  });
+  it('forwards only whitelisted unique job-list parameters, without enabling arbitrary targets', async () => {
+    const fetcher = vi.fn().mockResolvedValue(Response.json({ items: [] })); vi.stubGlobal('fetch', fetcher);
+    const response = await proxyApi(new Request('http://127.0.0.1:3000/api/v1/jobs?q=Java%20%E4%BC%98%E5%85%88&is_favorite=true&page=2'), ['jobs']);
+    expect(response.status).toBe(200);
+    expect(new URL(fetcher.mock.calls[0][0]).searchParams.get('q')).toBe('Java 优先');
+    for (const query of ['url=https://evil.example', 'q=a&q=b', 'user_id=other', 'page=1&redirect=evil']) expect((await proxyApi(new Request(`http://127.0.0.1:3000/api/v1/jobs?${query}`), ['jobs'])).status).toBe(404);
+    expect((await proxyApi(new Request(`http://127.0.0.1:3000/api/v1/jobs/${id}?q=a`), ['jobs', id])).status).toBe(404);
+    expect(fetcher).toHaveBeenCalledTimes(1);
+  });
   it('forwards HttpOnly session and CSRF without unrelated browser cookies', async () => {
     vi.stubGlobal('fetch', vi.fn(async (_url, init) => {
       const headers = new Headers(init.headers);

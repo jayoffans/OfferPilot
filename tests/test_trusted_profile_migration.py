@@ -11,6 +11,7 @@ from uuid import uuid4
 
 from alembic import command
 from alembic.config import Config
+from alembic.script import ScriptDirectory
 from sqlalchemy import CheckConstraint, MetaData, Table, delete, inspect, select, text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
@@ -21,7 +22,7 @@ from offerpilot_api.db.models import CareerProfile, CareerProfileEntry, ProfileC
 from offerpilot_api.db.session import build_engine
 
 
-HEAD_REVISION = "0006_deepseek_byok"
+HEAD_REVISION = ScriptDirectory.from_config(Config(str(BACKEND_ROOT / "alembic.ini"))).get_current_head()
 
 
 class TrustedProfileMigrationTests(unittest.TestCase):

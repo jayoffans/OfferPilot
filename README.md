@@ -1,6 +1,8 @@
 # OfferPilot
 
-当前交付为 **S1 中文账户/私有 PDF + S2-1 可信画像 + S2-2A Mock 流水线 + S2-2B 本地 DeepSeek/BYOK 集成代码**。“我的资料”可配置会话 Key、选择已上传简历、独立预览并主动授权一次解析、查询任务和审核四类候选。未经用户审核不写正式画像；上传/浏览/刷新不收费，真实模式不自动重试。本轮真实 DeepSeek 调用 **0 次**，真实调用与质量**待验收**；生产开关关闭。供应商 BYOK 使用许可、API 保留/训练退出与上线隐私条件未确认，不能宣称可公开处理真实简历。详见 [PLAN](docs/PLAN.md)、[S2-2B 验收](docs/S2-2B-acceptance.md)，此前证据保留在 [S2-2A 验收](docs/S2-2A-acceptance.md)。S3、Browser、完整账户导出/注销及公网部署不在本批。
+当前交付为 **S1 中文账户/私有 PDF + S2 可信画像与受控解析 + S3-1 私有职位管理与 JD 条件审核**。“职位”支持粘贴或手工导入、搜索筛选、编辑删除、收藏、免费规则整理及原文对照审核；未审核或旧 JD 条件不会变成可信匹配输入。没有匹配分数、岗位推荐或投递功能。运行与验证见 [S3-1 验收](docs/S3-1-acceptance.md)、[条件设计](docs/job-structure-design.md) 和 [PLAN](docs/PLAN.md)。
+
+S3-1 不调用模型、不抓取招聘网站、不改变正式画像。本轮真实模型请求0次；S2历史已单独完成一次正常合成样本请求，字段19/19、证据21/21且候选全部待审核，不能代表总体质量，见 [单样本报告](docs/S2-2B-single-real-evaluation-2026-10-14.md)。S2其余真实评测没有继续，生产真实模式仍关闭，既有供应商与上线条件继续保留。此前批次的准备说明及“0调用”记录为历史。
 
 2026-10-14 完成 S2-2B 正式模型验收准备收尾：最小修复 SDK 响应形状、原始 usage 类型与压缩边界，补全版本化 V2 Prompt；准备五份合成样本和免费协议/故障验证。兼容性结论、全部免费结果和剩余阻塞见 [准备报告](docs/S2-2B-readiness-review.md)、[供应商协议审查](docs/S2-2B-provider-policy-review.md)。本轮仍未执行真实请求或收费命令。
 
@@ -9,9 +11,9 @@ S2-2B-Fix 已将评测入口接到实际合成 PDF、正式上传/私有存储/�
 
 ## 本地启动（Windows PowerShell，两个终端）
 
-需要 Python 3.11、uv 和 Node.js 22.12+（本机使用 22.16）。按锁文件安装；本批新增 cryptography 50.0.2 用于 Fernet 内存密钥加密，无 Redis。后端 head 为 0006（会话授权和计量），0001～0005 不变；前端继续使用生成 OpenAPI 契约。
+需要 Python 3.11、uv 和 Node.js 22.12+（本机使用 22.16）。按锁文件安装；S3-1没有新增依赖。现有 cryptography 50.0.2 用于 Fernet 内存密钥加密，无 Redis。后端 head 为 0007（私有职位），0001～0006 不变；前端继续使用生成 OpenAPI 契约。
 
-**终端 A：后端。** 显式使用一个本机开发库。相对 SQLite 文件路径固定解析到 `backend/`；以下命令不会迁移默认旧库。新库升级到 0006；已有本机库应先备份再执行同一向前升级命令，可复用私有目录。不要切换为生产地址。本批只迁移隔离测试库，没有替你修改现有开发或生产库。
+**终端 A：后端。** 显式使用一个本机开发库。相对 SQLite 文件路径固定解析到 `backend/`；以下命令不会迁移默认旧库。新库升级到 0007；已有本机库应先备份再执行同一向前升级命令，可复用私有目录。不要切换为生产地址。本批只迁移隔离测试库，没有替你修改现有开发或生产库。
 
 ```powershell
 Set-Location 'D:\agent 项目\OfferPilot'
@@ -43,6 +45,30 @@ npm.cmd run dev
 
 若 npm 连接 `127.0.0.1` 代理失败，检查当前终端的 HTTP_PROXY/HTTPS_PROXY/ALL_PROXY；仅在确认不需要该失效代理后清空这三个进程环境变量。不要关闭 TLS 校验或修改全局代理来绕过问题。
 
+## S3-1：中文职位管理
+
+登录后进入“职位” → 添加职位 → 粘贴招聘 JD（或手工录入） → 填写名称及已知信息 → 显式点击“免费规则整理” → 对照原文逐条确认、修订、删错或补充 → 保存。只有岗位名称必填；未审核条件可保存后继续。所有数据只属于本人，刷新和重新登录从数据库恢复，不需要配置模型 Key。
+
+列表支持岗位/公司/城市搜索、工作类型/收藏/审核状态筛选及排序；详情显示原文、条件、引文行号/字符区间、来源、创建/更新时间和版本。改 JD 后旧条件需重新绑定审核；并发409保留输入。来源链接仅安全保存/展示，后台不访问；当前没有匹配分数或自动申请。
+
+| 方法与路径 | 行为 |
+|---|---|
+| POST /api/v1/jobs | 基本信息、JD、幂等键、可选条件；省略条件时免费规则生成pending |
+| GET /api/v1/jobs | 本人分页列表；q/work_type/is_favorite/review_status/sort/page/page_size |
+| POST /api/v1/jobs/parse-preview | 仅本地规则预览，所有条件pending，无模型/网络 |
+| GET /api/v1/jobs/{id} | 本人详情、条件和历史JD快照 |
+| PUT /api/v1/jobs/{id} | revision + 基本信息/JD/完整条件集合，允许部分审核进度 |
+| DELETE /api/v1/jobs/{id} | JSON revision；清职位、快照及条件，保留最小防重回执 |
+| PATCH /api/v1/jobs/{id}/favorite | revision + is_favorite |
+| GET /api/v1/jobs/{id}/requirements | 本人条件及证据/审核/版本 |
+| POST /api/v1/jobs/{id}/requirements | revision + requirement，新增一条 |
+| PUT /api/v1/jobs/{id}/requirements | revision + requirements，全量保存审核进度 |
+| PUT /api/v1/jobs/{id}/requirements/{rid} | revision + requirement，修改一条 |
+| DELETE /api/v1/jobs/{id}/requirements/{rid} | JSON revision，删除一条 |
+| POST /api/v1/jobs/{id}/requirements/{rid}/review | revision + action confirm/reopen |
+
+review_status筛选值pending/reviewed；sort值updated_desc/created_desc/title_asc。所有写接口复用会话与CSRF，既有/未知跨用户资源统一404。每人1000个岗位，每JD30,000字符、每岗位100条条件/100份快照；规则可能漏分或保守归类，长于2000字符的句段保留全文并提示手工拆分，不伪装AI理解。无需修改开发或生产数据；仅在自行备份并选定的本机库上运行现有 Alembic head 命令。
+
 ## S2-2B：本机中文 BYOK 与授权解析
 
 完成上述本机依赖/新库步骤后，**负责人自行决定**是否在终端 A 启动前设置：
@@ -59,7 +85,7 @@ Key 在后端受控密文内存中最长一小时，同时受登录期限限制�
 
 新增 `GET/PUT/DELETE /api/v1/ai/deepseek-key`、`GET /api/v1/resumes/{id}/extraction-preview`；原 create/run/candidate/review API 扩展并复用。API Schema、0006字段用途/删除边界、供应商资料和发布阻塞见 [S2-2B 验收](docs/S2-2B-acceptance.md)。
 
-**免费真实评测预览（本轮只执行此命令）：**
+**S2 历史免费评测预览入口（S3-1 不继续真实评测）：**
 
 ```powershell
 & .\backend\.venv\Scripts\python.exe -B backend/evaluations/evaluate_deepseek_v2.py
@@ -92,7 +118,7 @@ npm.cmd run test:e2e
 
 E2E 自行启动 8001 的真实 FastAPI 和 3001 的独立 Next 服务，迁移新临时 SQLite 库、签发合成测试邀请并生成合成 PDF；不使用开发/生产数据。端口占用会拒绝运行，不复用现存服务。可设置 `OFFERPILOT_E2E_API_PORT`、`OFFERPILOT_E2E_WEB_PORT` 为两个空闲端口；后端 Python 默认为仓库 venv，特殊位置可设 `OFFERPILOT_E2E_PYTHON`。不要同时用多个 E2E 进程写同一个 `.next` 目录。
 
-身份、文件与画像 API 使用真实后端；AI场景仅在私有 launcher 使用无网络 Provider 故障注入，不调用 DeepSeek。故障恢复用测试进程内的受限控制通道制造实际文件系统异常、修改原件字节、撤销会话和停启服务；控制端点不属于正式 FastAPI app/OpenAPI，前端代理也不开放它们。密码、邀请、Cookie 和控制秘密不写日志、trace 或截图。正常退出关闭服务、数据库并删除临时测试根目录；清理失败使测试失败。截图只包含合成资料，保存在忽略的 `frontend/artifacts/screenshots/`，运行全套 E2E 可重新生成全部 24 张；验收详见 [docs/S1-3-acceptance.md](docs/S1-3-acceptance.md)。
+身份、文件与画像 API 使用真实后端；AI场景仅在私有 launcher 使用无网络 Provider 故障注入，不调用 DeepSeek。故障恢复用测试进程内的受限控制通道制造实际文件系统异常、修改原件字节、撤销会话和停启服务；控制端点不属于正式 FastAPI app/OpenAPI，前端代理也不开放它们。密码、邀请、Cookie 和控制秘密不写日志、trace 或截图。正常退出关闭服务、数据库并删除临时测试根目录；清理失败使测试失败。截图只包含合成资料，保存在忽略的 `frontend/artifacts/screenshots/`，运行全套 E2E 可重生各批截图；S1原24张、S3-1新增24张，验收详见 [S1-3](docs/S1-3-acceptance.md) 与 [S3-1](docs/S3-1-acceptance.md)。
 
 当后端 API 改动时，在仓库根目录执行 `backend\.venv\Scripts\python.exe frontend/scripts/export-openapi.py`，再在 frontend 执行 `npm.cmd run api:generate`、`npm.cmd run api:check`。导出仅读取 Schema，不迁移数据库或读取用户记录；生成类型提交，`.next`、node_modules、测试截图与运行数据不提交。
 
@@ -196,7 +222,7 @@ S2-1 追加0004新建三张独立画像/候选表，0001～0003不变；空库�
 
 ## 当前边界
 
-当前没有公开生产 BYOK 服务、真实模型质量结论、岗位匹配、密码找回/修改、邮箱验证、账户注销、数据导出或生产部署。真实任务只支持一个本机 API 进程；独立 CLI 不处理真实任务。供应商条款、脱敏长尾、HTTPS/ACL、账户生命周期/备份、PostgreSQL/容量/解析隔离仍须上线前验证。完成本轮允许范围与免费验收后停止，真实调用待负责人进一步明确授权，不自动进入 S3。
+当前没有公开生产 BYOK 服务、总体模型质量结论、岗位匹配、密码找回/修改、邮箱验证、账户注销、数据导出或生产部署。真实任务只支持一个本机 API 进程；独立 CLI 不处理真实任务。供应商条款、脱敏长尾、HTTPS/ACL、账户生命周期/备份、PostgreSQL/容量/解析隔离仍须上线前验证。S3-1 完成后停止，不自动进入 S3-2。
 
 
 S2-2B免费验收：后端255/255，前端49/49，完整Chromium18/18，HTTP、契约/类型/lint/build及旧迁移兼容通过。真实DeepSeek请求0次、费用0元，真实调用/质量待验收。细项与发布阻塞见 [S2-2B验收](docs/S2-2B-acceptance.md)。

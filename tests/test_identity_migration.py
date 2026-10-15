@@ -12,6 +12,7 @@ from alembic import command
 from alembic.autogenerate import compare_metadata
 from alembic.config import Config
 from alembic.migration import MigrationContext
+from alembic.script import ScriptDirectory
 from sqlalchemy import MetaData, Table, create_engine, delete, event, inspect, select, text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
@@ -58,7 +59,7 @@ class IdentityMigrationTests(unittest.TestCase):
         self.assertTrue(expected <= set(inspect(self.engine).get_table_names()))
         with self.engine.connect() as connection:
             self.assertEqual(connection.scalar(text("PRAGMA foreign_keys")), 1)
-            self.assertEqual(connection.scalar(text("SELECT version_num FROM alembic_version")), "0006_deepseek_byok")
+            self.assertEqual(connection.scalar(text("SELECT version_num FROM alembic_version")), ScriptDirectory.from_config(self.config).get_current_head())
             context = MigrationContext.configure(
                 connection, opts={"compare_type": True, "compare_server_default": True}
             )

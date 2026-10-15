@@ -16,6 +16,7 @@ from offerpilot_api.api.routes.resume import router as resume_router
 from offerpilot_api.api.routes.profile import router as profile_router
 from offerpilot_api.api.routes.extraction import router as extraction_router
 from offerpilot_api.api.routes.byok import router as byok_router
+from offerpilot_api.api.routes.jobs import router as jobs_router
 from offerpilot_api.agent_runtime.byok import SessionKeyVault
 from offerpilot_api.agent_runtime.extraction_runs import ExtractionRunError, extraction_dispatcher, mock_provider_factory
 from offerpilot_api.core.config import get_settings
@@ -23,6 +24,7 @@ from offerpilot_api.identity.services import IdentityError
 from offerpilot_api.db.session import SessionLocal, engine
 from offerpilot_api.resume_ingestion.lifecycle import ResumeLifecycleError
 from offerpilot_api.profile.services import ProfileError
+from offerpilot_api.job_catalog.services import JobError
 
 
 @asynccontextmanager
@@ -53,11 +55,17 @@ def create_app() -> FastAPI:
     app.include_router(profile_router)
     app.include_router(extraction_router)
     app.include_router(byok_router)
+    app.include_router(jobs_router)
     app.state.byok_vault = SessionKeyVault()
     app.state.extraction_settings = settings
     app.state.deepseek_provider_factory = None
     app.state.extraction_provider_factory = mock_provider_factory
     app.state.extraction_dispatcher_enabled = True
+
+    @app.exception_handler(JobError)
+    async def job_error(_request: Request, exc: JobError) -> JSONResponse:
+        return JSONResponse(status_code=exc.status_code, content={"detail": {"code": exc.code, "message": exc.message}},
+                            headers={"Cache-Control": "no-store"})
 
     @app.exception_handler(ExtractionRunError)
     async def extraction_error(_request: Request, exc: ExtractionRunError) -> JSONResponse:
@@ -103,6 +111,9 @@ def create_app() -> FastAPI:
             "start_date", "end_date", "end_date_kind", "name", "level", "role", "description", "is_current",
             "organization", "experience_type", "action", "value", "id", "source",
             "idempotency_key", "source_version", "mode", "run_id",
+            "title", "company", "location", "salary", "work_type", "source_url", "jd_text",
+            "requirements", "requirement", "type", "content", "priority", "review_status", "evidence_text",
+            "source_start", "source_jd_version", "is_favorite", "q", "sort", "page", "page_size",
         }
         fields = sorted({str(e["loc"][-1]) for e in exc.errors() if e.get("loc") and e["loc"][-1] in known_fields})
         return JSONResponse(

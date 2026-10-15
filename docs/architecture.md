@@ -1,11 +1,13 @@
 # OfferPilot 系统架构与技术方案
 
-**版本：** 0.7（S2-2B 本机集成与正式模型验收准备）
-**日期：** 2026-10-12
+**版本：** 0.8（S3-1 私有职位与确定性 JD 解析）
+**日期：** 2026-10-14
+
+> **当前追加 S3-1：** `job_catalog` 负责私有职位、JD 快照、条件审核、CAS 和创建幂等；`job_intelligence` 提供 `JDParser` Protocol 与无网络的规则 Adapter。新增 `/api/v1/jobs` 端点和中文 `/jobs` 页面，通过既有会话/CSRF/代理/OpenAPI 接线。不读取或修改正式画像，不访问招聘链接，不构造 LLM Provider。旧 S2 准备段落保留为历史；S3-2 匹配仍未实现。详见 [条件设计](job-structure-design.md) 与 [验收](S3-1-acceptance.md)。
 
 > **2026-10-14 后续单样本真实验收：** 已在用户受限授权下完成 `normal_chinese.synthetic.pdf` 唯一一次真实 DeepSeek 请求；5项候选全部 pending，正式画像四组为空，非空字段19/19、定位21/21、归属19/19，usage为1107/781 tokens。详见 [单样本质量报告](S2-2B-single-real-evaluation-2026-10-14.md)。下文准备阶段的“真实调用0次”为历史基线；否定/计划、多经历及其余四份未验收，生产和供应商阻塞不变，不进入S3。
 
-> **当前实施范围：** S1 提供真实邀请身份、私有 PDF 生命周期和中文工作台；S2-1 提供唯一正式画像及候选审核；S2-2A 提供 V2、证据和持久 Mock 运行；S2-2B 已实现本机 DeepSeek Adapter、会话 BYOK 和独立授权，并完成免费兼容性与评测准备。实际 DeepSeek 请求仍为 0，真实模型质量待负责人授权验收；生产真实模式关闭。PostgreSQL、Redis、云对象存储、生产 Worker、岗位匹配和 Browser Agent 未实施。当前证据见 [正式模型验收准备](S2-2B-readiness-review.md)，下文保留后续目标设计。
+> **历史 S2-2B 批次实施范围：** S1 提供真实邀请身份、私有 PDF 生命周期和中文工作台；S2-1 提供唯一正式画像及候选审核；S2-2A 提供 V2、证据和持久 Mock 运行；S2-2B 已实现本机 DeepSeek Adapter、会话 BYOK 和独立授权，并完成免费兼容性与评测准备。实际 DeepSeek 请求仍为 0，真实模型质量待负责人授权验收；生产真实模式关闭。PostgreSQL、Redis、云对象存储、生产 Worker、岗位匹配和 Browser Agent 未实施。当前证据见 [正式模型验收准备](S2-2B-readiness-review.md)，下文保留后续目标设计。
 
 Phase 1-2 上传接口仅在 `development` 环境可用，默认上传目录为本地 `backend/uploads/`；仅接收不超过 10 MiB、50 页且有可选中文本的 PDF。PyMuPDF 采用 AGPL 或商业许可，正式发布前需确定适用许可方案。
 

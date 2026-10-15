@@ -39,7 +39,7 @@ class ExtractionMigrationTests(unittest.TestCase):
         self.upgrade()
         with self.engine.connect() as db:
             self.assertEqual(self.snapshot(db, tables), original)
-            self.assertEqual(db.scalar(text("SELECT version_num FROM alembic_version")), "0006_deepseek_byok")
+            self.assertEqual(db.scalar(text("SELECT version_num FROM alembic_version")), migration_harness.HEAD_REVISION)
             self.assertEqual(db.execute(text("PRAGMA foreign_key_check")).all(), [])
         with Session(self.engine) as db:
             self.assertIsNone(db.get(ResumeDocument, resume_id).text_layout)

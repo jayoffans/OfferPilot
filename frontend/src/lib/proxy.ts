@@ -1,5 +1,10 @@
 const UUID = '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}';
-const READ = new RegExp(`^(me|auth/csrf|profile|ai/deepseek-key|resumes|resumes/${UUID}(/(lifecycle|download|extraction|extraction-preview))?|extraction-runs/${UUID}(/candidates)?)$`, 'i');
+const READ = new RegExp(`^(me|auth/csrf|profile|ai/deepseek-key|resumes|resumes/${UUID}(/(lifecycle|download|extraction|extraction-preview))?|extraction-runs/${UUID}(/candidates)?|jobs|jobs/${UUID}(/requirements)?)$`, 'i');
+const JOB = new RegExp(`^jobs/${UUID}$`, 'i');
+const JOB_FAVORITE = new RegExp(`^jobs/${UUID}/favorite$`, 'i');
+const JOB_REQUIREMENTS = new RegExp(`^jobs/${UUID}/requirements$`, 'i');
+const JOB_REQUIREMENT = new RegExp(`^jobs/${UUID}/requirements/${UUID}$`, 'i');
+const JOB_REVIEW = new RegExp(`^jobs/${UUID}/requirements/${UUID}/review$`, 'i');
 const RESOURCE = new RegExp(`^resumes/${UUID}$`, 'i');
 const REVIEW = new RegExp(`^profile/candidates/${UUID}/review$`, 'i');
 const EXTRACTION_WRITE = new RegExp(`^(resumes/${UUID}/extraction-runs|extraction-runs/${UUID}/(cancel|retry))$`, 'i');
@@ -10,9 +15,11 @@ function error(status: number, code: string, message: string) {
 }
 export function allowedRoute(method: string, path: string): boolean {
   if (method === 'GET') return READ.test(path);
-  if (method === 'POST') return ['auth/register', 'auth/login', 'auth/logout', 'resumes'].includes(path) || REVIEW.test(path) || EXTRACTION_WRITE.test(path);
-  if (method === 'PUT') return path === 'profile' || path === 'ai/deepseek-key';
+  if (method === 'POST') return ['auth/register', 'auth/login', 'auth/logout', 'resumes', 'jobs', 'jobs/parse-preview'].includes(path) || REVIEW.test(path) || EXTRACTION_WRITE.test(path) || JOB_REQUIREMENTS.test(path) || JOB_REVIEW.test(path);
+  if (method === 'PUT') return path === 'profile' || path === 'ai/deepseek-key' || JOB.test(path) || JOB_REQUIREMENTS.test(path) || JOB_REQUIREMENT.test(path);
   if (method === 'DELETE' && path === 'ai/deepseek-key') return true;
+  if (method === 'PATCH' && JOB_FAVORITE.test(path)) return true;
+  if (method === 'DELETE' && (JOB.test(path) || JOB_REQUIREMENT.test(path))) return true;
   return (method === 'DELETE' || method === 'PATCH') && RESOURCE.test(path);
 }
 export function allowedOrigin(request: Request): boolean {
@@ -49,7 +56,9 @@ async function bodyWithinLimit(request: Request, signal: AbortSignal): Promise<U
 }
 export async function proxyApi(request: Request, segments: string[]): Promise<Response> {
   const path = segments.join('/');
-  if (!allowedRoute(request.method, path) || new URL(request.url).search) return error(404, 'route_not_found', '请求的接口不存在。');
+  const query = new URL(request.url).searchParams;
+  const jobListQuery = request.method === 'GET' && path === 'jobs' && [...query.keys()].every(key => ['q', 'work_type', 'is_favorite', 'review_status', 'sort', 'page', 'page_size'].includes(key) && query.getAll(key).length === 1);
+  if (!allowedRoute(request.method, path) || (query.size > 0 && !jobListQuery)) return error(404, 'route_not_found', '请求的接口不存在。');
   if (!allowedOrigin(request)) return error(403, 'untrusted_origin', '请求来源未获授权。');
   if (Number(request.headers.get('content-length')) > MAX_BODY_BYTES) return error(413, 'body_too_large', '文件过大，请使用不超过 10 MiB 的 PDF。');
   let target: URL;
@@ -70,7 +79,7 @@ export async function proxyApi(request: Request, segments: string[]): Promise<Re
   const timeout = setTimeout(() => controller.abort(), 55_000);
   try {
     const body = ['GET', 'HEAD'].includes(request.method) ? undefined : await bodyWithinLimit(request, controller.signal);
-    const upstream = await fetch(new URL(`/api/v1/${path}`, target), {
+    const upstream = await fetch(new URL(`/api/v1/${path}${jobListQuery && query.size ? `?${query.toString()}` : ''}`, target), {
       method: request.method, headers, body: body as BodyInit | undefined, signal: controller.signal, redirect: 'manual', cache: 'no-store',
     });
     const responseHeaders = new Headers({ 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff' });

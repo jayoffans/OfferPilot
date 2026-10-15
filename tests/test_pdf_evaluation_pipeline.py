@@ -7,10 +7,13 @@ import socket
 import threading
 import unittest
 from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
 from unittest.mock import patch
 from uuid import UUID
 
 from sqlalchemy import func, select
+from alembic.config import Config
+from alembic.script import ScriptDirectory
 
 from backend.evaluations.pdf_evaluation import (
     GROUPS, MOCK_NOTICE, SYNTHETIC_CONTACTS, MockResponseSpy,
@@ -72,7 +75,8 @@ class PdfEvaluationPipelineTests(unittest.TestCase):
         self.assertTrue(success)
         report, result = self.session.collect(prepared, run)
         self.assertEqual(provider.calls, 1)
-        self.assertEqual(report["migration_head"], "0006_deepseek_byok")
+        current_head = ScriptDirectory.from_config(Config(str(Path(__file__).resolve().parents[1] / "backend" / "alembic.ini"))).get_current_head()
+        self.assertEqual(report["migration_head"], current_head)
         self.assertTrue(report["preview_matches_actual_provider_input"])
         self.assertEqual(report["actual_sent_sha256"], prepared.preview["sent_text_sha256"])
         self.assertEqual(self.session.spies[run["id"]].input_text, prepared.preview["redacted_text"])

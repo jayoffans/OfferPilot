@@ -8,7 +8,7 @@ from typing import Any
 
 from sqlalchemy import (
     JSON, Boolean, CheckConstraint, DateTime, Float, ForeignKey, Index, Integer,
-    String, Text, UniqueConstraint, Uuid, func, text, true,
+    String, Text, UniqueConstraint, Uuid, false, func, text, true,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -312,3 +312,91 @@ class ResumeExtractionRun(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.current_timestamp(), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.current_timestamp(), nullable=False)
     finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class SavedJob(Base):
+    """A private, user-provided job; never a public recruitment catalog."""
+
+    __tablename__ = "saved_jobs"
+    __table_args__ = (
+        UniqueConstraint("user_id", "content_digest", name="uq_saved_jobs_owner_content"),
+        CheckConstraint("revision >= 1 AND jd_version >= 1", name="ck_saved_jobs_versions"),
+        CheckConstraint("work_type IN ('unknown', 'internship', 'campus', 'full_time')", name="ck_saved_jobs_work_type"),
+        CheckConstraint("source_kind IN ('pasted', 'manual')", name="ck_saved_jobs_source_kind"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), ForeignKey("users.id", ondelete="RESTRICT"), nullable=False, index=True)
+    title: Mapped[str] = mapped_column(String(200), nullable=False)
+    company: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    location: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    salary: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    work_type: Mapped[str] = mapped_column(String(20), nullable=False)
+    source_url: Mapped[str | None] = mapped_column(String(2048), nullable=True)
+    source_kind: Mapped[str] = mapped_column(String(20), nullable=False)
+    content_digest: Mapped[str] = mapped_column(String(64), nullable=False)
+    revision: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    jd_version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    is_favorite: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default=false())
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.current_timestamp())
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.current_timestamp())
+
+
+class JobJDSnapshot(Base):
+    __tablename__ = "job_jd_snapshots"
+    __table_args__ = (
+        UniqueConstraint("job_id", "version", name="uq_job_jd_snapshots_version"),
+        CheckConstraint("version >= 1", name="ck_job_jd_snapshots_version"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    job_id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), ForeignKey("saved_jobs.id", ondelete="CASCADE"), nullable=False, index=True)
+    version: Mapped[int] = mapped_column(Integer, nullable=False)
+    jd_text: Mapped[str] = mapped_column(Text, nullable=False)
+    text_sha256: Mapped[str] = mapped_column(String(64), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.current_timestamp())
+
+
+class JobRequirement(Base):
+    __tablename__ = "job_requirements"
+    __table_args__ = (
+        CheckConstraint("type IN ('education', 'major', 'graduation', 'experience', 'location', 'internship_duration', 'technical_skill', 'project', 'internship_experience', 'language', 'other', 'salary', 'work_type', 'responsibility')", name="ck_job_requirements_type"),
+        CheckConstraint("priority IN ('must', 'preferred', 'uncertain')", name="ck_job_requirements_priority"),
+        CheckConstraint("review_status IN ('pending', 'confirmed')", name="ck_job_requirements_review_status"),
+        CheckConstraint("source_kind IN ('rule', 'manual', 'user_modified')", name="ck_job_requirements_source_kind"),
+        CheckConstraint("position >= 0 AND revision >= 1", name="ck_job_requirements_versions"),
+        CheckConstraint("(evidence_text IS NULL AND source_start IS NULL AND source_end IS NULL) OR (evidence_text IS NOT NULL AND source_start IS NOT NULL AND source_end IS NOT NULL AND source_start >= 0 AND source_end > source_start)", name="ck_job_requirements_evidence"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    job_id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), ForeignKey("saved_jobs.id", ondelete="CASCADE"), nullable=False, index=True)
+    snapshot_id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), ForeignKey("job_jd_snapshots.id", ondelete="CASCADE"), nullable=False, index=True)
+    type: Mapped[str] = mapped_column(String(32), nullable=False)
+    content: Mapped[str] = mapped_column(Text, nullable=False)
+    priority: Mapped[str] = mapped_column(String(20), nullable=False)
+    review_status: Mapped[str] = mapped_column(String(20), nullable=False)
+    evidence_text: Mapped[str | None] = mapped_column(Text, nullable=True)
+    source_start: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    source_end: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    source_kind: Mapped[str] = mapped_column(String(20), nullable=False)
+    position: Mapped[int] = mapped_column(Integer, nullable=False)
+    revision: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    schema_version: Mapped[str] = mapped_column(String(20), nullable=False, default="1.0")
+    parser_version: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.current_timestamp())
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.current_timestamp())
+    reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class JobCreateReceipt(Base):
+    """Minimal request digest/tombstone prevents replay recreating a deleted job."""
+
+    __tablename__ = "job_create_receipts"
+    __table_args__ = (UniqueConstraint("user_id", "idempotency_key", name="uq_job_create_receipts_request"),)
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), ForeignKey("users.id", ondelete="RESTRICT"), nullable=False, index=True)
+    job_id: Mapped[uuid.UUID | None] = mapped_column(Uuid(as_uuid=True), ForeignKey("saved_jobs.id", ondelete="SET NULL"), nullable=True, index=True)
+    idempotency_key: Mapped[str] = mapped_column(String(100), nullable=False)
+    request_digest: Mapped[str] = mapped_column(String(64), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.current_timestamp())

@@ -18,6 +18,14 @@ export type ExtractionCreate = Schemas['ExtractionRunCreateRequest'];
 export type ExtractionCandidates = Schemas['ExtractionRunCandidatesResponse'];
 export type KeyStatus = Schemas['KeyStatus'];
 export type ExtractionPreview = Schemas['ExtractionPreview'];
+export type Job = Schemas['JobDetailResponse'];
+export type JobList = Schemas['JobListResponse'];
+export type JobListItem = Schemas['JobListItem'];
+export type JobCreate = Schemas['JobCreateRequest'];
+export type JobUpdate = Schemas['JobSaveRequest'];
+export type JobRequirementInput = Schemas['JobRequirementInput'];
+export type JobRequirement = Schemas['JobRequirementResponse'];
+export type JobParsePreview = Schemas['JobParsePreviewResponse'];
 type LoginResponse = Schemas['LoginResponse'];
 
 let csrfToken: string | null = null;
@@ -134,6 +142,13 @@ async function write<T>(path: string, method: string, data?: unknown, signal?: A
 }
 
 export const api = {
+  jobs: (query: URLSearchParams, signal?: AbortSignal) => request<JobList>(`/jobs?${query.toString()}`, { signal }),
+  job: (id: string, signal?: AbortSignal) => request<Job>(`/jobs/${encodeURIComponent(id)}`, { signal }),
+  parseJob: (jd_text: string, signal?: AbortSignal) => write<JobParsePreview>('/jobs/parse-preview', 'POST', { jd_text }, signal),
+  createJob: (data: JobCreate, signal?: AbortSignal) => write<Job>('/jobs', 'POST', data, signal),
+  updateJob: (id: string, data: JobUpdate, signal?: AbortSignal) => write<Job>(`/jobs/${encodeURIComponent(id)}`, 'PUT', data, signal),
+  favoriteJob: (id: string, revision: number, is_favorite: boolean, signal?: AbortSignal) => write<Job>(`/jobs/${encodeURIComponent(id)}/favorite`, 'PATCH', { revision, is_favorite }, signal),
+  deleteJob: (id: string, revision: number, signal?: AbortSignal) => write<void>(`/jobs/${encodeURIComponent(id)}`, 'DELETE', { revision }, signal),
   deepseekKey: (signal?: AbortSignal) => request<KeyStatus>('/ai/deepseek-key', { signal }),
   configureDeepseekKey: (api_key: string, signal?: AbortSignal) => write<KeyStatus>('/ai/deepseek-key', 'PUT', { api_key }, signal),
   revokeDeepseekKey: (signal?: AbortSignal) => write<KeyStatus>('/ai/deepseek-key', 'DELETE', undefined, signal),

@@ -13,6 +13,7 @@ from alembic import command
 from alembic.autogenerate import compare_metadata
 from alembic.config import Config
 from alembic.migration import MigrationContext
+from alembic.script import ScriptDirectory
 from sqlalchemy import CheckConstraint, MetaData, Table, delete, inspect, select, text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
@@ -146,7 +147,7 @@ class FileLifecycleMigrationTests(unittest.TestCase):
         self.assert_metadata_matches()
         with self.engine.connect() as connection:
             self.assertEqual(connection.scalar(text("PRAGMA foreign_keys")), 1)
-            self.assertEqual(connection.scalar(text("SELECT version_num FROM alembic_version")), "0006_deepseek_byok")
+            self.assertEqual(connection.scalar(text("SELECT version_num FROM alembic_version")), ScriptDirectory.from_config(self.config).get_current_head())
             self.assertEqual(connection.execute(text("PRAGMA foreign_key_check")).all(), [])
         keys = inspect(self.engine).get_foreign_keys("resume_file_operations")
         self.assertEqual(len(keys), 1)
@@ -334,7 +335,7 @@ class FileLifecycleMigrationTests(unittest.TestCase):
                     document = session.get(ResumeDocument, resume_id)
                     for field, value in values.items():
                         self.assertEqual(getattr(document, field), value)
-                    self.assertEqual(session.scalar(text("SELECT version_num FROM alembic_version")), "0006_deepseek_byok")
+                    self.assertEqual(session.scalar(text("SELECT version_num FROM alembic_version")), ScriptDirectory.from_config(self.config).get_current_head())
                     document.object_key = document.byte_size = document.sha256 = None
                     document.processing_status, document.lifecycle_status = "parsed", "active"
                     session.commit()
