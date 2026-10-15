@@ -1,6 +1,8 @@
 const UUID = '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}';
 const READ = new RegExp(`^(me|auth/csrf|profile|ai/deepseek-key|resumes|resumes/${UUID}(/(lifecycle|download|extraction|extraction-preview))?|extraction-runs/${UUID}(/candidates)?|jobs|jobs/${UUID}(/requirements|/matches(/latest|/${UUID})?)?)$`, 'i');
 const JOB_MATCHES = new RegExp(`^jobs/${UUID}/matches$`, 'i');
+const APPLICATION = new RegExp(`^applications/${UUID}$`, 'i');
+const APPLICATION_EVENTS = new RegExp(`^applications/${UUID}/events$`, 'i');
 const JOB = new RegExp(`^jobs/${UUID}$`, 'i');
 const JOB_FAVORITE = new RegExp(`^jobs/${UUID}/favorite$`, 'i');
 const JOB_REQUIREMENTS = new RegExp(`^jobs/${UUID}/requirements$`, 'i');
@@ -15,6 +17,9 @@ function error(status: number, code: string, message: string) {
   return Response.json({ detail: { code, message } }, { status, headers: { 'Cache-Control': 'no-store' } });
 }
 export function allowedRoute(method: string, path: string): boolean {
+  if (method === 'GET' && (path === 'applications' || APPLICATION.test(path) || APPLICATION_EVENTS.test(path))) return true;
+  if (method === 'POST' && path === 'applications') return true;
+  if ((method === 'PUT' || method === 'DELETE') && APPLICATION.test(path)) return true;
   if (method === 'GET') return READ.test(path);
   if (method === 'POST') return ['auth/register', 'auth/login', 'auth/logout', 'resumes', 'jobs', 'jobs/parse-preview'].includes(path) || JOB_MATCHES.test(path) || REVIEW.test(path) || EXTRACTION_WRITE.test(path) || JOB_REQUIREMENTS.test(path) || JOB_REVIEW.test(path);
   if (method === 'PUT') return path === 'profile' || path === 'profile/preferences' || path === 'ai/deepseek-key' || JOB.test(path) || JOB_REQUIREMENTS.test(path) || JOB_REQUIREMENT.test(path);
@@ -60,7 +65,9 @@ export async function proxyApi(request: Request, segments: string[]): Promise<Re
   const query = new URL(request.url).searchParams;
   const jobListQuery = request.method === 'GET' && path === 'jobs' && [...query.keys()].every(key => ['q', 'work_type', 'is_favorite', 'review_status', 'sort', 'page', 'page_size'].includes(key) && query.getAll(key).length === 1);
   const matchHistoryQuery = request.method === 'GET' && JOB_MATCHES.test(path) && [...query.keys()].every(key => key === 'limit' && query.getAll(key).length === 1);
-  if (!allowedRoute(request.method, path) || (query.size > 0 && !jobListQuery && !matchHistoryQuery)) return error(404, 'route_not_found', '请求的接口不存在。');
+  const applicationListQuery = request.method === 'GET' && path === 'applications' && [...query.keys()].every(key => ['q', 'status', 'job_id', 'sort', 'page', 'page_size'].includes(key) && query.getAll(key).length === 1);
+  const applicationEventsQuery = request.method === 'GET' && APPLICATION_EVENTS.test(path) && [...query.keys()].every(key => ['page', 'page_size'].includes(key) && query.getAll(key).length === 1);
+  if (!allowedRoute(request.method, path) || (query.size > 0 && !jobListQuery && !matchHistoryQuery && !applicationListQuery && !applicationEventsQuery)) return error(404, 'route_not_found', '请求的接口不存在。');
   if (!allowedOrigin(request)) return error(403, 'untrusted_origin', '请求来源未获授权。');
   if (Number(request.headers.get('content-length')) > MAX_BODY_BYTES) return error(413, 'body_too_large', '文件过大，请使用不超过 10 MiB 的 PDF。');
   let target: URL;
@@ -81,7 +88,7 @@ export async function proxyApi(request: Request, segments: string[]): Promise<Re
   const timeout = setTimeout(() => controller.abort(), 55_000);
   try {
     const body = ['GET', 'HEAD'].includes(request.method) ? undefined : await bodyWithinLimit(request, controller.signal);
-    const upstream = await fetch(new URL(`/api/v1/${path}${(jobListQuery || matchHistoryQuery) && query.size ? `?${query.toString()}` : ''}`, target), {
+    const upstream = await fetch(new URL(`/api/v1/${path}${(jobListQuery || matchHistoryQuery || applicationListQuery || applicationEventsQuery) && query.size ? `?${query.toString()}` : ''}`, target), {
       method: request.method, headers, body: body as BodyInit | undefined, signal: controller.signal, redirect: 'manual', cache: 'no-store',
     });
     const responseHeaders = new Headers({ 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff' });

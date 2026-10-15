@@ -69,7 +69,7 @@ def run() -> None:
             command.upgrade(Config(str(BACKEND / "alembic.ini")), "head")
         with engine.connect() as connection:
             revision = connection.exec_driver_sql("SELECT version_num FROM alembic_version").scalar()
-        if revision != "0008_trusted_job_matches":
+        if revision != "0009_application_tracker":
             raise RuntimeError("E2E migration baseline changed; review the harness")
 
         app = create_app()

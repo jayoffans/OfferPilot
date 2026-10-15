@@ -4,6 +4,7 @@ import unittest
 from uuid import uuid4
 
 from alembic import command
+from alembic.script import ScriptDirectory
 from sqlalchemy import CheckConstraint, MetaData, UniqueConstraint, inspect, select, text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
@@ -42,7 +43,8 @@ class JobMatchMigrationTests(unittest.TestCase):
         self.upgrade()
         with self.engine.connect() as db:
             self.assertEqual(self.snapshot(db, tables), original)
-            self.assertEqual(db.scalar(text("SELECT version_num FROM alembic_version")), CURRENT)
+            self.assertEqual(db.scalar(text("SELECT version_num FROM alembic_version")),
+                             ScriptDirectory.from_config(self.config).get_current_head())
             self.assertEqual(db.execute(text("PRAGMA foreign_key_check")).all(), [])
             self.assertEqual(db.scalar(text("SELECT preferences FROM career_profiles")), "{}")
             self.assertEqual(db.scalar(text("SELECT count(*) FROM job_matches")), 0)

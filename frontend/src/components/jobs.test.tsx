@@ -11,6 +11,7 @@ import { safeJobLink } from "./jobs-ui";
 const mocks = vi.hoisted(() => ({ replace: vi.fn(), push: vi.fn(), signOut: vi.fn(), pathname: "/jobs/new", userId: "synthetic-user" }));
 vi.mock("next/navigation", () => ({ usePathname: () => mocks.pathname, useRouter: () => mocks }));
 vi.mock("@/lib/auth", () => ({ useAuth: () => ({ status: "authenticated", user: { id: mocks.userId, email: "synthetic@example.com" }, signOut: mocks.signOut }) }));
+vi.mock("@/components/job-applications", () => ({ JobApplicationsPanel: () => null }));
 const id = "11111111-1111-4111-8111-111111111111";
 const jd = "本科及以上学历。\n必须掌握 Python。\n熟悉 Java 优先。\n专业范围待核实。";
 const date = "2026-10-14T00:00:00Z";

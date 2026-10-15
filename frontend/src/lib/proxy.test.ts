@@ -5,6 +5,23 @@ import { allowedRoute, proxyApi } from './proxy';
 const id = '9e9bff19-a61d-4857-b128-e6225e2832cc';
 afterEach(() => { vi.unstubAllGlobals(); vi.unstubAllEnvs(); });
 describe('same-origin API boundary', () => {
+  it('allows concrete application resources and only unique bounded list and timeline queries', async () => {
+    for (const path of ['applications', `applications/${id}`, `applications/${id}/events`]) expect(allowedRoute('GET', path)).toBe(true);
+    expect(allowedRoute('POST', 'applications')).toBe(true);
+    for (const method of ['PUT', 'DELETE']) expect(allowedRoute(method, `applications/${id}`)).toBe(true);
+    for (const method of ['POST', 'PATCH']) expect(allowedRoute(method, `applications/${id}`)).toBe(false);
+    for (const path of ['applications/not-a-uuid', `applications/${id}/submit`, `applications/${id}/events/${id}`]) expect(allowedRoute('GET', path)).toBe(false);
+    expect(allowedRoute('PUT', `applications/${id}/events`)).toBe(false);
+    const fetcher = vi.fn().mockImplementation(() => Promise.resolve(Response.json({ items: [], total: 0 }))); vi.stubGlobal('fetch', fetcher);
+    expect((await proxyApi(new Request(`http://127.0.0.1:3000/api/v1/applications?job_id=${id}&status=interview&sort=next_action_asc&page=2`), ['applications'])).status).toBe(200);
+    expect(new URL(fetcher.mock.calls[0][0]).searchParams.get('job_id')).toBe(id);
+    expect((await proxyApi(new Request(`http://127.0.0.1:3000/api/v1/applications/${id}/events?page=2&page_size=20`), ['applications', id, 'events'])).status).toBe(200);
+    expect(new URL(fetcher.mock.calls[1][0]).search).toBe('?page=2&page_size=20');
+    for (const query of ['user_id=other', 'q=a&q=b', 'page=1&url=http://localhost']) expect((await proxyApi(new Request(`http://127.0.0.1:3000/api/v1/applications?${query}`), ['applications'])).status).toBe(404);
+    expect((await proxyApi(new Request(`http://127.0.0.1:3000/api/v1/applications/${id}?page=1`), ['applications', id])).status).toBe(404);
+    expect((await proxyApi(new Request(`http://127.0.0.1:3000/api/v1/applications/${id}/events?user_id=other`), ['applications', id, 'events'])).status).toBe(404);
+    expect(fetcher).toHaveBeenCalledTimes(2);
+  });
   it('allows only concrete private matching and preference routes', async () => {
     for (const path of [`jobs/${id}/matches`, `jobs/${id}/matches/latest`, `jobs/${id}/matches/${id}`]) expect(allowedRoute('GET', path)).toBe(true);
     expect(allowedRoute('POST', `jobs/${id}/matches`)).toBe(true);

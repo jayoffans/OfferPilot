@@ -18,6 +18,8 @@ from offerpilot_api.api.routes.extraction import router as extraction_router
 from offerpilot_api.api.routes.byok import router as byok_router
 from offerpilot_api.api.routes.jobs import router as jobs_router
 from offerpilot_api.api.routes.job_matches import router as job_matches_router
+from offerpilot_api.api.routes.applications import router as applications_router
+from offerpilot_api.application_tracker.services import ApplicationError
 from offerpilot_api.agent_runtime.byok import SessionKeyVault
 from offerpilot_api.agent_runtime.extraction_runs import ExtractionRunError, extraction_dispatcher, mock_provider_factory
 from offerpilot_api.core.config import get_settings
@@ -59,11 +61,17 @@ def create_app() -> FastAPI:
     app.include_router(byok_router)
     app.include_router(jobs_router)
     app.include_router(job_matches_router)
+    app.include_router(applications_router)
     app.state.byok_vault = SessionKeyVault()
     app.state.extraction_settings = settings
     app.state.deepseek_provider_factory = None
     app.state.extraction_provider_factory = mock_provider_factory
     app.state.extraction_dispatcher_enabled = True
+
+    @app.exception_handler(ApplicationError)
+    async def application_error(_request: Request, exc: ApplicationError) -> JSONResponse:
+        return JSONResponse(status_code=exc.status_code, content={"detail": {"code": exc.code, "message": exc.message}},
+                            headers={"Cache-Control": "no-store"})
 
     @app.exception_handler(JobError)
     async def job_error(_request: Request, exc: JobError) -> JSONResponse:
@@ -124,6 +132,8 @@ def create_app() -> FastAPI:
             "source_start", "source_jd_version", "is_favorite", "q", "sort", "page", "page_size",
             "profile_revision", "job_revision", "preferences", "locations", "work_types", "target_roles",
             "min", "max", "currency", "period", "tax", "weekly_days", "internship_months", "limit",
+            "job_id", "match_id", "reapply", "status", "submitted_at", "notes", "next_action",
+            "occurred_at", "due_date", "due_time", "timezone", "confirmed",
         }
         fields = sorted({str(e["loc"][-1]) for e in exc.errors() if e.get("loc") and e["loc"][-1] in known_fields})
         return JSONResponse(

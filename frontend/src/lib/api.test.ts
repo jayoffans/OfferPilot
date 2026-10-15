@@ -3,6 +3,22 @@ import { api, ApiError, clearSession, SESSION_EXPIRED_EVENT } from './api';
 const user = { id: 'test', email: 'synthetic@example.com', created_at: '2026-10-11T00:00:00' };
 beforeEach(() => clearSession());
 afterEach(() => vi.unstubAllGlobals());
+it('application create, edit and delete carry CSRF, revision and explicit idempotency intent', async () => {
+  const bodies: unknown[] = [];
+  const methods: string[] = [];
+  const fetcher = vi.fn((url: string, init?: RequestInit) => {
+    if (url.endsWith('/auth/csrf')) return Promise.resolve(Response.json({ csrf_token: 'application-csrf' }));
+    expect(new Headers(init?.headers).get('X-CSRF-Token')).toBe('application-csrf');
+    expect(init?.credentials).toBe('same-origin'); bodies.push(JSON.parse(init?.body as string)); methods.push(init?.method || 'GET');
+    return Promise.resolve(init?.method === 'DELETE' ? new Response(null, { status: 204 }) : Response.json({ id: 'synthetic' }));
+  });
+  vi.stubGlobal('fetch', fetcher);
+  const create = { job_id: 'synthetic-job', job_revision: 2, idempotency_key: 'create-key', reapply: false, match_id: null };
+  const update = { revision: 1, idempotency_key: 'edit-key', status: 'submitted' as const, submitted_at: null, notes: '用户确认', next_action: null };
+  const remove = { revision: 2, idempotency_key: 'delete-key', confirmed: true as const };
+  await api.createApplication(create); await api.updateApplication('application-id', update); await api.deleteApplication('application-id', remove);
+  expect(bodies).toEqual([create, update, remove]); expect(methods).toEqual(['POST', 'PUT', 'DELETE']); expect(fetcher).toHaveBeenCalledTimes(4);
+});
 it('matching and preference writes carry CSRF, revisions and no fabricated profile payload', async () => {
   const bodies: unknown[] = [];
   const fetcher = vi.fn((url: string, init?: RequestInit) => {

@@ -30,6 +30,12 @@ export type JobMatch = Schemas['JobMatchResponse'];
 export type MatchItem = Schemas['MatchItem'];
 export type ProfilePreferences = Schemas['ProfilePreferences'];
 export type PreferencesSave = Schemas['ProfilePreferencesSaveRequest'];
+export type Application = Schemas['ApplicationResponse'];
+export type ApplicationList = Schemas['ApplicationListResponse'];
+export type ApplicationCreate = Schemas['ApplicationCreateRequest'];
+export type ApplicationUpdate = Schemas['ApplicationUpdateRequest'];
+export type ApplicationDelete = Schemas['ApplicationDeleteRequest'];
+export type ApplicationEvents = Schemas['ApplicationEventListResponse'];
 type MatchCreate = Schemas['JobMatchCreateRequest'];
 type MatchHistory = Schemas['JobMatchHistoryResponse'];
 type LoginResponse = Schemas['LoginResponse'];
@@ -148,6 +154,12 @@ async function write<T>(path: string, method: string, data?: unknown, signal?: A
 }
 
 export const api = {
+  applications: (query: URLSearchParams, signal?: AbortSignal) => request<ApplicationList>(`/applications?${query.toString()}`, { signal }),
+  application: (id: string, signal?: AbortSignal) => request<Application>(`/applications/${encodeURIComponent(id)}`, { signal }),
+  createApplication: (data: ApplicationCreate, signal?: AbortSignal) => write<Application>('/applications', 'POST', data, signal),
+  updateApplication: (id: string, data: ApplicationUpdate, signal?: AbortSignal) => write<Application>(`/applications/${encodeURIComponent(id)}`, 'PUT', data, signal),
+  deleteApplication: (id: string, data: ApplicationDelete, signal?: AbortSignal) => write<void>(`/applications/${encodeURIComponent(id)}`, 'DELETE', data, signal),
+  applicationEvents: (id: string, query: URLSearchParams, signal?: AbortSignal) => request<ApplicationEvents>(`/applications/${encodeURIComponent(id)}/events?${query.toString()}`, { signal }),
   createMatch: (id: string, data: MatchCreate, signal?: AbortSignal) => write<JobMatch>(`/jobs/${encodeURIComponent(id)}/matches`, 'POST', data, signal),
   latestMatch: (id: string, signal?: AbortSignal) => request<JobMatch | null>(`/jobs/${encodeURIComponent(id)}/matches/latest`, { signal }),
   match: (id: string, matchId: string, signal?: AbortSignal) => request<JobMatch>(`/jobs/${encodeURIComponent(id)}/matches/${encodeURIComponent(matchId)}`, { signal }),

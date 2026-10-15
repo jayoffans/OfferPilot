@@ -322,6 +322,9 @@ def favorite_job(db: Session, *, user_id: UUID, job_id: UUID, payload: JobFavori
 def delete_job(db: Session, *, user_id: UUID, job_id: UUID, revision: int):
     try:
         _claim(db, user_id, job_id, revision)
+        from offerpilot_api.db.models import Application
+        if db.scalar(select(Application.id).where(Application.job_id == job_id, Application.user_id == user_id).limit(1)):
+            raise JobError("job_has_applications", "该职位有关联申请；请先在投递进度中确认并删除相关申请，避免丢失历史", 409)
         db.execute(delete(SavedJob).where(SavedJob.id == job_id, SavedJob.user_id == user_id))
         db.commit()
     except Exception:

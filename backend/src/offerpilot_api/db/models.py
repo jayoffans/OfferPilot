@@ -3,11 +3,11 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime
+from datetime import date, datetime
 from typing import Any
 
 from sqlalchemy import (
-    JSON, Boolean, CheckConstraint, DateTime, Float, ForeignKey, Index, Integer,
+    JSON, Boolean, CheckConstraint, Date, DateTime, Float, ForeignKey, Index, Integer,
     String, Text, UniqueConstraint, Uuid, false, func, text, true,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -437,4 +437,84 @@ class JobMatchReceipt(Base):
     match_id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), ForeignKey("job_matches.id", ondelete="CASCADE"), nullable=False, index=True)
     idempotency_key: Mapped[str] = mapped_column(String(100), nullable=False)
     request_digest: Mapped[str] = mapped_column(String(64), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.current_timestamp())
+
+
+class Application(Base):
+    """A user's manual application attempt, independent from job favorites."""
+
+    __tablename__ = "applications"
+    __table_args__ = (
+        UniqueConstraint("user_id", "job_id", "attempt_number", name="uq_applications_attempt"),
+        UniqueConstraint("user_id", "job_id", "active_slot", name="uq_applications_active"),
+        CheckConstraint("status IN ('preparing', 'submitted', 'assessment', 'interview', 'offer', 'rejected', 'withdrawn', 'closed')", name="ck_applications_status"),
+        CheckConstraint("revision >= 1 AND attempt_number >= 1", name="ck_applications_versions"),
+        CheckConstraint("(status IN ('rejected', 'withdrawn', 'closed') AND active_slot IS NULL) OR (status NOT IN ('rejected', 'withdrawn', 'closed') AND active_slot = 1 AND active_slot IS NOT NULL)", name="ck_applications_active"),
+        CheckConstraint("(action_title IS NULL AND action_notes IS NULL AND action_due_date IS NULL AND action_due_time IS NULL AND action_status IS NULL) OR (action_title IS NOT NULL AND action_notes IS NOT NULL AND action_status IS NOT NULL AND action_status IN ('pending', 'completed', 'cancelled'))", name="ck_applications_action"),
+        CheckConstraint("action_due_time IS NULL OR action_due_date IS NOT NULL", name="ck_applications_action_time"),
+        Index("ix_applications_owner_updated", "user_id", "updated_at"),
+        Index("ix_applications_job_id", "job_id"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), ForeignKey("users.id", ondelete="RESTRICT"), nullable=False)
+    job_id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), ForeignKey("saved_jobs.id", ondelete="RESTRICT"), nullable=False)
+    # Minimal creation snapshot, never a duplicate JD, resume, or profile.
+    job_title: Mapped[str] = mapped_column(String(200), nullable=False)
+    company: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    location: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    match_id: Mapped[uuid.UUID | None] = mapped_column(Uuid(as_uuid=True), ForeignKey("job_matches.id", ondelete="SET NULL"), nullable=True)
+    attempt_number: Mapped[int] = mapped_column(Integer, nullable=False)
+    status: Mapped[str] = mapped_column(String(24), nullable=False)
+    # NULL terminal slots allow multiple past attempts under ordinary UNIQUE.
+    active_slot: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    revision: Mapped[int] = mapped_column(Integer, nullable=False)
+    submitted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    notes: Mapped[str] = mapped_column(Text, nullable=False, default="", server_default=text("''"))
+    action_title: Mapped[str | None] = mapped_column(String(300), nullable=True)
+    action_notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    action_due_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    action_due_time: Mapped[str | None] = mapped_column(String(5), nullable=True)
+    action_status: Mapped[str | None] = mapped_column(String(16), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.current_timestamp())
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.current_timestamp())
+
+
+class ApplicationEvent(Base):
+    """Append-only human changes; correction appends another business event."""
+
+    __tablename__ = "application_events"
+    __table_args__ = (
+        UniqueConstraint("application_id", "revision", "type", name="uq_application_events_change"),
+        CheckConstraint("revision >= 1", name="ck_application_events_revision"),
+        CheckConstraint("type IN ('application_created', 'status_changed', 'notes_changed', 'next_action_changed', 'submitted_at_changed')", name="ck_application_events_type"),
+        Index("ix_application_events_owner_application", "user_id", "application_id", "recorded_at"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), ForeignKey("users.id", ondelete="RESTRICT"), nullable=False)
+    application_id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), ForeignKey("applications.id", ondelete="CASCADE"), nullable=False)
+    revision: Mapped[int] = mapped_column(Integer, nullable=False)
+    type: Mapped[str] = mapped_column(String(32), nullable=False)
+    changes: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
+    occurred_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    recorded_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+
+class ApplicationReceipt(Base):
+    """Digest-only receipts survive deletion to prevent a late retry resurrection."""
+
+    __tablename__ = "application_receipts"
+    __table_args__ = (
+        UniqueConstraint("user_id", "idempotency_key", name="uq_application_receipts_request"),
+        CheckConstraint("operation IN ('create', 'update', 'delete')", name="ck_application_receipts_operation"),
+        Index("ix_application_receipts_application_id", "application_id"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), ForeignKey("users.id", ondelete="RESTRICT"), nullable=False)
+    application_id: Mapped[uuid.UUID | None] = mapped_column(Uuid(as_uuid=True), ForeignKey("applications.id", ondelete="SET NULL"), nullable=True)
+    idempotency_key: Mapped[str] = mapped_column(String(100), nullable=False)
+    request_digest: Mapped[str] = mapped_column(String(64), nullable=False)
+    operation: Mapped[str] = mapped_column(String(16), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.current_timestamp())
