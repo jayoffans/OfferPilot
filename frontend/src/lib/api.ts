@@ -36,6 +36,7 @@ export type ApplicationCreate = Schemas['ApplicationCreateRequest'];
 export type ApplicationUpdate = Schemas['ApplicationUpdateRequest'];
 export type ApplicationDelete = Schemas['ApplicationDeleteRequest'];
 export type ApplicationEvents = Schemas['ApplicationEventListResponse'];
+export type DashboardData = Schemas['DashboardResponse'];
 type MatchCreate = Schemas['JobMatchCreateRequest'];
 type MatchHistory = Schemas['JobMatchHistoryResponse'];
 type LoginResponse = Schemas['LoginResponse'];
@@ -154,6 +155,7 @@ async function write<T>(path: string, method: string, data?: unknown, signal?: A
 }
 
 export const api = {
+  dashboard: (signal?: AbortSignal) => request<DashboardData>('/dashboard?limit=5', { signal }),
   applications: (query: URLSearchParams, signal?: AbortSignal) => request<ApplicationList>(`/applications?${query.toString()}`, { signal }),
   application: (id: string, signal?: AbortSignal) => request<Application>(`/applications/${encodeURIComponent(id)}`, { signal }),
   createApplication: (data: ApplicationCreate, signal?: AbortSignal) => write<Application>('/applications', 'POST', data, signal),

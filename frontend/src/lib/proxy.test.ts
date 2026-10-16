@@ -5,6 +5,16 @@ import { allowedRoute, proxyApi } from './proxy';
 const id = '9e9bff19-a61d-4857-b128-e6225e2832cc';
 afterEach(() => { vi.unstubAllGlobals(); vi.unstubAllEnvs(); });
 describe('same-origin API boundary', () => {
+  it('exposes read-only dashboard aggregation and forwards only its bounded query', async () => {
+    expect(allowedRoute('GET', 'dashboard')).toBe(true);
+    for (const method of ['POST', 'PUT', 'PATCH', 'DELETE']) expect(allowedRoute(method, 'dashboard')).toBe(false);
+    const fetcher = vi.fn().mockImplementation(() => Promise.resolve(Response.json({}))); vi.stubGlobal('fetch', fetcher);
+    expect((await proxyApi(new Request('http://127.0.0.1:3000/api/v1/dashboard?limit=5'), ['dashboard'])).status).toBe(200);
+    expect(new URL(fetcher.mock.calls[0][0]).search).toBe('?limit=5');
+    for (const query of ['user_id=other', 'limit=5&limit=10', 'limit=5&url=http://localhost']) expect((await proxyApi(new Request(`http://127.0.0.1:3000/api/v1/dashboard?${query}`), ['dashboard'])).status).toBe(404);
+    expect((await proxyApi(new Request('http://127.0.0.1:3000/api/v1/applications?next_action=pending&overdue=true'), ['applications'])).status).toBe(200);
+    expect(new URL(fetcher.mock.calls[1][0]).search).toBe('?next_action=pending&overdue=true'); expect(fetcher).toHaveBeenCalledTimes(2);
+  });
   it('allows concrete application resources and only unique bounded list and timeline queries', async () => {
     for (const path of ['applications', `applications/${id}`, `applications/${id}/events`]) expect(allowedRoute('GET', path)).toBe(true);
     expect(allowedRoute('POST', 'applications')).toBe(true);

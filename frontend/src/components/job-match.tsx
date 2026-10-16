@@ -62,7 +62,7 @@ function MatchCondition({ item }: { item: MatchItem }) {
   </article>;
 }
 
-export function JobMatchPanel({ job, onReview, disabled = false }: { job: Job; onReview(): void; disabled?: boolean }) {
+export function JobMatchPanel({ job, onReview, onMatchSaved, disabled = false }: { job: Job; onReview(): void; onMatchSaved?(): void; disabled?: boolean }) {
   const { user, status } = useAuth();
   const [profile, setProfile] = useState<CareerProfile | null>(null);
   const [result, setResult] = useState<JobMatch | null>(null);
@@ -113,7 +113,7 @@ export function JobMatchPanel({ job, onReview, disabled = false }: { job: Job; o
     if (attempt.current?.basis !== basis) attempt.current = { basis, key: crypto.randomUUID() };
     try {
       const data = await api.createMatch(job.id, { profile_revision: profile.revision, job_revision: job.revision, idempotency_key: attempt.current.key }, controller.signal);
-      if (!controller.signal.aborted) { setResult(data); setHistory(null); setBasisConflict(false); }
+      if (!controller.signal.aborted) { setResult(data); setHistory(null); setBasisConflict(false); onMatchSaved?.(); }
     } catch (cause) {
       if (!controller.signal.aborted) { setBasisConflict(true); setError(cause instanceof ApiError && cause.status === 409 ? `${formatError(cause)} 请刷新匹配状态并重新载入职位，核对最新画像与已审核条件后再计算。` : `匹配未完成。${formatError(cause)} 请先刷新匹配状态确认结果，再重试。`); }
     } finally { locked.current = false; if (!controller.signal.aborted) setBusy(false); }

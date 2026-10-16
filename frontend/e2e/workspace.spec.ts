@@ -218,7 +218,7 @@ test("多个真实文件、安全文件名与 1440/768/390 响应式截图", asy
   for (const width of [1440, 390]) {
     await page.setViewportSize({ width, height: 1000 });
     await page.goto("/");
-    await expect(page.getByRole("button", { name: "上传我的第一份简历", exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: "上传第一份简历", exact: true })).toBeVisible();
     await page.screenshot({ path: path.join(screenshots, `dashboard-empty-${width}.png`), fullPage: true });
     await page.goto("/resumes");
     await expect(page.getByRole("heading", { name: "准备好你的第一份简历", exact: true })).toBeVisible();
@@ -247,7 +247,10 @@ test("多个真实文件、安全文件名与 1440/768/390 响应式截图", asy
     await page.setViewportSize({ width, height: 1000 });
     await page.goto("/");
     await expect(page.getByRole("heading", { name: "工作台", exact: true })).toBeVisible();
-    await expect(page.getByText("已保存简历", { exact: true })).toBeVisible();
+    await expect(page.getByRole("link", { name: "完善我的资料", exact: true })).toBeVisible();
+    const workbench = await page.request.get("/api/v1/dashboard");
+    expect(workbench.status()).toBe(200);
+    expect((await workbench.json()).onboarding.resume_count).toBe(12);
     await page.screenshot({ path: path.join(screenshots, `dashboard-${width}.png`), fullPage: true });
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
     await page.goto("/resumes");

@@ -3,6 +3,13 @@ import { api, ApiError, clearSession, SESSION_EXPIRED_EVENT } from './api';
 const user = { id: 'test', email: 'synthetic@example.com', created_at: '2026-10-11T00:00:00' };
 beforeEach(() => clearSession());
 afterEach(() => vi.unstubAllGlobals());
+it('dashboard reads are bounded, uncached and expire a rejected session without retry', async () => {
+  const expired = vi.fn(); window.addEventListener(SESSION_EXPIRED_EVENT, expired);
+  const fetcher = vi.fn().mockResolvedValue(Response.json({}, { status: 401 })); vi.stubGlobal('fetch', fetcher);
+  await expect(api.dashboard()).rejects.toMatchObject({ status: 401 });
+  expect(fetcher.mock.calls[0][0]).toBe('/api/v1/dashboard?limit=5'); expect(fetcher.mock.calls[0][1]).toMatchObject({ credentials: 'same-origin', cache: 'no-store' });
+  expect(fetcher).toHaveBeenCalledOnce(); expect(expired).toHaveBeenCalledOnce(); window.removeEventListener(SESSION_EXPIRED_EVENT, expired);
+});
 it('application create, edit and delete carry CSRF, revision and explicit idempotency intent', async () => {
   const bodies: unknown[] = [];
   const methods: string[] = [];

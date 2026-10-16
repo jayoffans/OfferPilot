@@ -17,7 +17,7 @@ function error(status: number, code: string, message: string) {
   return Response.json({ detail: { code, message } }, { status, headers: { 'Cache-Control': 'no-store' } });
 }
 export function allowedRoute(method: string, path: string): boolean {
-  if (method === 'GET' && (path === 'applications' || APPLICATION.test(path) || APPLICATION_EVENTS.test(path))) return true;
+  if (method === 'GET' && (path === 'dashboard' || path === 'applications' || APPLICATION.test(path) || APPLICATION_EVENTS.test(path))) return true;
   if (method === 'POST' && path === 'applications') return true;
   if ((method === 'PUT' || method === 'DELETE') && APPLICATION.test(path)) return true;
   if (method === 'GET') return READ.test(path);
@@ -65,9 +65,10 @@ export async function proxyApi(request: Request, segments: string[]): Promise<Re
   const query = new URL(request.url).searchParams;
   const jobListQuery = request.method === 'GET' && path === 'jobs' && [...query.keys()].every(key => ['q', 'work_type', 'is_favorite', 'review_status', 'sort', 'page', 'page_size'].includes(key) && query.getAll(key).length === 1);
   const matchHistoryQuery = request.method === 'GET' && JOB_MATCHES.test(path) && [...query.keys()].every(key => key === 'limit' && query.getAll(key).length === 1);
-  const applicationListQuery = request.method === 'GET' && path === 'applications' && [...query.keys()].every(key => ['q', 'status', 'job_id', 'sort', 'page', 'page_size'].includes(key) && query.getAll(key).length === 1);
+  const applicationListQuery = request.method === 'GET' && path === 'applications' && [...query.keys()].every(key => ['q', 'status', 'job_id', 'next_action', 'overdue', 'sort', 'page', 'page_size'].includes(key) && query.getAll(key).length === 1);
+  const dashboardQuery = request.method === 'GET' && path === 'dashboard' && [...query.keys()].every(key => key === 'limit' && query.getAll(key).length === 1);
   const applicationEventsQuery = request.method === 'GET' && APPLICATION_EVENTS.test(path) && [...query.keys()].every(key => ['page', 'page_size'].includes(key) && query.getAll(key).length === 1);
-  if (!allowedRoute(request.method, path) || (query.size > 0 && !jobListQuery && !matchHistoryQuery && !applicationListQuery && !applicationEventsQuery)) return error(404, 'route_not_found', '请求的接口不存在。');
+  if (!allowedRoute(request.method, path) || (query.size > 0 && !jobListQuery && !matchHistoryQuery && !applicationListQuery && !applicationEventsQuery && !dashboardQuery)) return error(404, 'route_not_found', '请求的接口不存在。');
   if (!allowedOrigin(request)) return error(403, 'untrusted_origin', '请求来源未获授权。');
   if (Number(request.headers.get('content-length')) > MAX_BODY_BYTES) return error(413, 'body_too_large', '文件过大，请使用不超过 10 MiB 的 PDF。');
   let target: URL;
@@ -88,7 +89,7 @@ export async function proxyApi(request: Request, segments: string[]): Promise<Re
   const timeout = setTimeout(() => controller.abort(), 55_000);
   try {
     const body = ['GET', 'HEAD'].includes(request.method) ? undefined : await bodyWithinLimit(request, controller.signal);
-    const upstream = await fetch(new URL(`/api/v1/${path}${(jobListQuery || matchHistoryQuery || applicationListQuery || applicationEventsQuery) && query.size ? `?${query.toString()}` : ''}`, target), {
+    const upstream = await fetch(new URL(`/api/v1/${path}${(jobListQuery || matchHistoryQuery || applicationListQuery || applicationEventsQuery || dashboardQuery) && query.size ? `?${query.toString()}` : ''}`, target), {
       method: request.method, headers, body: body as BodyInit | undefined, signal: controller.signal, redirect: 'manual', cache: 'no-store',
     });
     const responseHeaders = new Headers({ 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff' });

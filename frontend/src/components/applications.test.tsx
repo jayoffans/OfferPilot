@@ -7,8 +7,8 @@ import { ApplicationsPage } from "./applications-page";
 import { JobApplicationsPanel } from "./job-applications";
 import { actionDue, localDateTime, shanghaiInstant } from "./applications-ui";
 
-const mocks = vi.hoisted(() => ({ replace: vi.fn(), push: vi.fn(), pathname: "/applications", userId: "application-owner" }));
-vi.mock("next/navigation", () => ({ usePathname: () => mocks.pathname, useRouter: () => mocks }));
+const mocks = vi.hoisted(() => ({ replace: vi.fn(), push: vi.fn(), pathname: "/applications", userId: "application-owner", query: "" }));
+vi.mock("next/navigation", () => ({ usePathname: () => mocks.pathname, useSearchParams: () => new URLSearchParams(mocks.query), useRouter: () => mocks }));
 vi.mock("@/lib/auth", () => ({ useAuth: () => ({ status: "authenticated", user: { id: mocks.userId, email: "synthetic-app@example.com" }, signOut: vi.fn() }) }));
 const id = "11111111-1111-4111-8111-111111111111";
 const jobId = "22222222-2222-4222-8222-222222222222";
@@ -17,7 +17,7 @@ const action = { title: "准备技术面试", notes: "复习真实项目", due_d
 function application(overrides: Partial<Application> = {}): Application { return { id, job_id: jobId, job_title: "合成软件实习生", company: "合成科技", location: "上海", status: "preparing", attempt_number: 1, submitted_at: null, notes: "", next_action: null, revision: 1, created_at: date, updated_at: date, is_overdue: false, match: null, ...overrides }; }
 function events(overrides: Partial<ApplicationEvents> = {}): ApplicationEvents { return { items: [{ id: "event-id", type: "application_created", occurred_at: date, recorded_at: date, revision: 1, changes: { before: null, after: { status: "preparing" } } }], total: 1, page: 1, page_size: 20, ...overrides }; }
 function savedJob(): Job { return { id: jobId, title: "合成软件实习生", company: "合成科技", location: "上海", revision: 3 } as Job; }
-beforeEach(() => { vi.restoreAllMocks(); vi.clearAllMocks(); clearSession(); mocks.userId = "application-owner"; mocks.pathname = "/applications"; vi.spyOn(api, "applicationEvents").mockResolvedValue(events()); vi.spyOn(api, "latestMatch").mockResolvedValue(null); });
+beforeEach(() => { vi.restoreAllMocks(); vi.clearAllMocks(); clearSession(); mocks.userId = "application-owner"; mocks.pathname = "/applications"; mocks.query = ""; vi.spyOn(api, "applicationEvents").mockResolvedValue(events()); vi.spyOn(api, "latestMatch").mockResolvedValue(null); });
 async function detail(data = application()) { vi.spyOn(api, "application").mockResolvedValue(data); render(<ApplicationPage id={id} />); await screen.findByLabelText("申请状态", { exact: true }); return userEvent.setup(); }
 
 it("shows a truthful empty state and sends server search, status, sort and paging filters", async () => {
@@ -144,4 +144,42 @@ it("editing notes preserves the original precise submitted instant", async () =>
   await user.click(screen.getByRole("button", { name: "保存申请修改" }));
   await waitFor(() => expect(update).toHaveBeenCalledOnce());
   expect(update.mock.calls[0][1].submitted_at).toBe(precise);
+});
+
+it("loads next-action and overdue filters from the URL and preserves them in the detail return link", async () => {
+  mocks.query = "q=合成&status=interview&next_action=pending&overdue=true&sort=next_action_asc&page=2";
+  const list = vi.spyOn(api, "applications").mockResolvedValue({ items: [application({ next_action: action, status: "interview", is_overdue: true })], total: 15, page: 2, page_size: 12 });
+  render(<ApplicationsPage />); await screen.findByText("合成软件实习生");
+  expect(screen.getByLabelText("下一步行动筛选")).toHaveValue("pending"); expect(screen.getByLabelText("逾期筛选")).toHaveValue("true");
+  const query = list.mock.calls.at(-1)![0]; expect(query.get("page")).toBe("2"); expect(query.get("overdue")).toBe("true");
+  const href = screen.getByRole("link", { name: /合成软件实习生/ }).getAttribute("href")!;
+  expect(new URL(href, "http://localhost").searchParams.get("returnTo")).toContain("next_action=pending&overdue=true&sort=next_action_asc&page=2");
+});
+
+it("normalizes malformed URL enum values and pages instead of forwarding inherited object keys", async () => {
+  mocks.query = "status=__proto__&next_action=unknown&overdue=maybe&sort=toString&page=-1";
+  const list = vi.spyOn(api, "applications").mockResolvedValue({ items: [], total: 0, page: 1, page_size: 12 });
+  render(<ApplicationsPage />); await screen.findByRole("heading", { name: "从一个认真考虑的机会开始" });
+  const query = list.mock.calls.at(-1)![0]; expect(query.get("status")).toBeNull(); expect(query.get("next_action")).toBeNull(); expect(query.get("overdue")).toBeNull(); expect(query.get("sort")).toBe("updated_desc"); expect(query.get("page")).toBe("1");
+});
+
+it("updates URL filters and resets pagination without dropping multiword company searches", async () => {
+  const list = vi.spyOn(api, "applications").mockResolvedValue({ items: [], total: 0, page: 1, page_size: 12 });
+  render(<ApplicationsPage />); await screen.findByRole("heading", { name: "从一个认真考虑的机会开始" });
+  fireEvent.change(screen.getByLabelText("搜索申请"), { target: { value: "合成 科技" } });
+  fireEvent.change(screen.getByLabelText("下一步行动筛选"), { target: { value: "none" } });
+  fireEvent.change(screen.getByLabelText("逾期筛选"), { target: { value: "false" } });
+  await waitFor(() => expect(list.mock.calls.at(-1)![0].get("q")).toBe("合成 科技"));
+  const query = new URLSearchParams(window.location.search); expect(query.get("q")).toBe("合成 科技"); expect(query.get("next_action")).toBe("none"); expect(query.get("overdue")).toBe("false"); expect(query.get("page")).toBe("1");
+});
+
+it("provides the originating filtered list as the explicit back link", async () => {
+  vi.spyOn(api, "application").mockResolvedValue(application()); render(<ApplicationPage id={id} backHref="/applications?status=offer&page=3" />);
+  expect(screen.getByRole("link", { name: "返回投递进度" })).toHaveAttribute("href", "/applications?status=offer&page=3");
+  await screen.findByLabelText("申请状态", { exact: true });
+});
+
+it("explains ended applications and prevents restoring cancelled pending work", async () => {
+  await detail(application({ status: "closed", next_action: { ...action, status: "cancelled" } }));
+  expect(screen.getByRole("button", { name: "恢复待完成" })).toBeDisabled(); expect(screen.getByText(/申请已结束，未完成行动会取消/)).toBeVisible();
 });

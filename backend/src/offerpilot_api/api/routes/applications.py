@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 from offerpilot_api.application_tracker.schemas import (
     ApplicationCreateRequest, ApplicationDeleteRequest, ApplicationEventListResponse,
     ApplicationListResponse, ApplicationResponse, ApplicationSort, ApplicationStatus,
-    ApplicationUpdateRequest,
+    ApplicationUpdateRequest, NextActionFilter,
 )
 from offerpilot_api.application_tracker.services import (
     create_application, delete_application, get_application, list_applications, list_events, update_application,
@@ -33,11 +33,12 @@ def create(payload: ApplicationCreateRequest, db: DB, current_user: CurrentUser)
 def read_list(db: DB, current_user: CurrentUser,
               q: Annotated[str | None, Query(max_length=200)] = None,
               status: ApplicationStatus | None = None, job_id: UUID | None = None,
+              next_action: NextActionFilter | None = None, overdue: bool | None = None,
               sort: ApplicationSort = "updated_desc",
               page: Annotated[int, Query(ge=1, le=100000)] = 1,
               page_size: Annotated[int, Query(ge=1, le=100)] = 20):
     return list_applications(db, user_id=current_user.id, q=q, status=status, job_id=job_id,
-                             sort=sort, page=page, page_size=page_size)
+                             next_action=next_action, overdue=overdue, sort=sort, page=page, page_size=page_size)
 
 
 @router.get("/{application_id}", response_model=ApplicationResponse)

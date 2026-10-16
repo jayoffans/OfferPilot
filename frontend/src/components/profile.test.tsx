@@ -151,7 +151,7 @@ it("warns on reload, navigation and logout while preserving an unsaved draft", a
   const user = userEvent.setup(); await open();
   await user.click(screen.getByRole("button", { name: "添加技能" })); await user.type(screen.getByLabelText("技能名称"), "Python");
   const event = new Event("beforeunload", { cancelable: true }); window.dispatchEvent(event); expect(event.defaultPrevented).toBe(true);
-  await user.click(screen.getAllByRole("link", { name: "我的简历" })[0]);
+  await user.click(screen.getByRole("link", { name: "管理简历文件" }));
   expect(screen.getByRole("alertdialog")).toHaveTextContent("有修改尚未保存"); expect(mocks.push).not.toHaveBeenCalled();
   await user.click(screen.getByRole("button", { name: "继续编辑" })); expect(screen.getByLabelText("技能名称")).toHaveValue("Python");
   await user.click(screen.getByRole("button", { name: "账户菜单" })); await user.click(screen.getByRole("menuitem", { name: "退出登录" }));
@@ -199,7 +199,7 @@ it("returning with an old in-memory draft detects a new revision and keeps the o
 it("explicitly abandoning navigation discards the in-memory draft", async () => {
   const user = userEvent.setup(); await open();
   await user.click(screen.getByRole("button", { name: "添加技能" })); await user.type(screen.getByLabelText("技能名称"), "Python");
-  await user.click(screen.getAllByRole("link", { name: "我的简历" })[0]);
+  await user.click(screen.getByRole("link", { name: "管理简历文件" }));
   await user.click(screen.getByRole("button", { name: "放弃修改并离开" }));
   expect(mocks.push).toHaveBeenCalledWith("/resumes"); expect(readProfileDraft("synthetic-user")).toBeNull();
 });

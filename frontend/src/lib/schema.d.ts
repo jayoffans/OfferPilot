@@ -652,6 +652,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/dashboard": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Dashboard */
+        get: operations["dashboard_api_v1_dashboard_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -961,6 +978,172 @@ export interface components {
             source_text: string;
             /** Supports Current Value */
             supports_current_value: boolean;
+        };
+        /** DashboardActionGroup */
+        DashboardActionGroup: {
+            /** Total */
+            total: number;
+            /** Items */
+            items: components["schemas"]["DashboardActionItem"][];
+        };
+        /** DashboardActionItem */
+        DashboardActionItem: {
+            /**
+             * Application Id
+             * Format: uuid
+             */
+            application_id: string;
+            /**
+             * Job Id
+             * Format: uuid
+             */
+            job_id: string;
+            /** Revision */
+            revision: number;
+            /**
+             * Application Status
+             * @enum {string}
+             */
+            application_status: "preparing" | "submitted" | "assessment" | "interview" | "offer" | "rejected" | "withdrawn" | "closed";
+            /** Job Title */
+            job_title: string;
+            /** Company */
+            company: string | null;
+            next_action: components["schemas"]["NextActionInput"];
+            /** Is Overdue */
+            is_overdue: boolean;
+        };
+        /** DashboardActions */
+        DashboardActions: {
+            overdue: components["schemas"]["DashboardActionGroup"];
+            today: components["schemas"]["DashboardActionGroup"];
+            upcoming: components["schemas"]["DashboardActionGroup"];
+            undated: components["schemas"]["DashboardActionGroup"];
+            completed: components["schemas"]["DashboardActionGroup"];
+            cancelled: components["schemas"]["DashboardActionGroup"];
+        };
+        /** DashboardActivity */
+        DashboardActivity: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Application Id
+             * Format: uuid
+             */
+            application_id: string;
+            /** Job Title */
+            job_title: string;
+            /** Company */
+            company: string | null;
+            /**
+             * Type
+             * @enum {string}
+             */
+            type: "application_created" | "status_changed" | "notes_changed" | "next_action_changed" | "submitted_at_changed";
+            /** Action Status */
+            action_status: ("pending" | "completed" | "cancelled") | null;
+            /**
+             * Application Status
+             * @enum {string}
+             */
+            application_status: "preparing" | "submitted" | "assessment" | "interview" | "offer" | "rejected" | "withdrawn" | "closed";
+            /**
+             * Recorded At
+             * Format: date-time
+             */
+            recorded_at: string;
+        };
+        /** DashboardJobItem */
+        DashboardJobItem: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Title */
+            title: string;
+            /** Company */
+            company: string | null;
+            /** Reasons */
+            reasons: ("favorite_without_application" | "review_pending" | "requirements_missing" | "match_stale" | "unmatched")[];
+            /**
+             * Next Step
+             * @enum {string}
+             */
+            next_step: "review" | "match" | "apply";
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /** DashboardJobs */
+        DashboardJobs: {
+            /** Total */
+            total: number;
+            /** Items */
+            items: components["schemas"]["DashboardJobItem"][];
+        };
+        /** DashboardOnboarding */
+        DashboardOnboarding: {
+            /** Resume Count */
+            resume_count: number;
+            /** Profile Entry Count */
+            profile_entry_count: number;
+            /** Job Count */
+            job_count: number;
+            /** Application Count */
+            application_count: number;
+            /**
+             * Next Step
+             * @enum {string}
+             */
+            next_step: "upload_resume" | "complete_profile" | "import_job" | "review_job" | "match_job" | "create_application" | "manage_actions";
+            /** Job Id */
+            job_id: string | null;
+        };
+        /** DashboardResponse */
+        DashboardResponse: {
+            /**
+             * Generated At
+             * Format: date-time
+             */
+            generated_at: string;
+            /**
+             * Timezone
+             * @default Asia/Shanghai
+             * @constant
+             */
+            timezone: "Asia/Shanghai";
+            /**
+             * Today
+             * Format: date
+             */
+            today: string;
+            actions: components["schemas"]["DashboardActions"];
+            summary: components["schemas"]["DashboardSummary"];
+            jobs: components["schemas"]["DashboardJobs"];
+            /** Recent Activity */
+            recent_activity: components["schemas"]["DashboardActivity"][];
+            onboarding: components["schemas"]["DashboardOnboarding"];
+        };
+        /** DashboardSummary */
+        DashboardSummary: {
+            /** Total */
+            total: number;
+            /** Preparing */
+            preparing: number;
+            /** Submitted */
+            submitted: number;
+            /** Assessment Interview */
+            assessment_interview: number;
+            /** Offer */
+            offer: number;
+            /** Ended */
+            ended: number;
         };
         /** EducationEntry */
         EducationEntry: {
@@ -6150,6 +6333,8 @@ export interface operations {
                 q?: string | null;
                 status?: ("preparing" | "submitted" | "assessment" | "interview" | "offer" | "rejected" | "withdrawn" | "closed") | null;
                 job_id?: string | null;
+                next_action?: ("pending" | "completed" | "cancelled" | "none") | null;
+                overdue?: boolean | null;
                 sort?: "updated_desc" | "created_desc" | "submitted_desc" | "next_action_asc";
                 page?: number;
                 page_size?: number;
@@ -6580,6 +6765,73 @@ export interface operations {
             };
             /** @description Not Found */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    dashboard_api_v1_dashboard_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DashboardResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };

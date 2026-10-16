@@ -10,12 +10,12 @@ import { useAuth } from "@/lib/auth";
 import { ApplicationBadge, applicationError, isTerminal } from "@/components/applications-ui";
 import { formatDate, Notice, Spinner } from "@/components/ui";
 
-export function JobApplicationsPanel({ job, disabled = false }: { job: Job; disabled?: boolean }) {
+export function JobApplicationsPanel({ job, disabled = false, matchRefresh = 0 }: { job: Job; disabled?: boolean; matchRefresh?: number }) {
   const { user, status } = useAuth();
   const router = useRouter();
   const [records, setRecords] = useState<ApplicationList | null>(null);
-  const [match, setMatch] = useState<JobMatch | null>(null);
-  const [includeMatch, setIncludeMatch] = useState(false);
+  const [matchResult, setMatchResult] = useState<{ scope: string; value: JobMatch | null } | null>(null);
+  const [selectedMatchId, setSelectedMatchId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -26,6 +26,7 @@ export function JobApplicationsPanel({ job, disabled = false }: { job: Job; disa
   const pending = useRef(false);
   const action = useRef<AbortController | null>(null);
   const userId = user?.id;
+  const matchScope = `${userId}:${job.id}:${job.revision}:${matchRefresh}`;
   useEffect(() => () => { action.current?.abort(); attempt.current = null; pending.current = false; }, [userId, status]);
   useEffect(() => {
     if (status !== "authenticated" || !userId) return;
@@ -34,10 +35,18 @@ export function JobApplicationsPanel({ job, disabled = false }: { job: Job; disa
     setLoading(true); setError(null);
     const query = new URLSearchParams({ job_id: job.id, sort: "created_desc", page: "1", page_size: "100" });
     void api.applications(query, controller.signal).then(data => { if (!controller.signal.aborted) { setRecords(data); setOwner(userId); } }).catch(cause => { if (!controller.signal.aborted) setError(applicationError(cause)); }).finally(() => { if (!controller.signal.aborted) setLoading(false); });
-    void api.latestMatch(job.id, controller.signal).then(data => { if (!controller.signal.aborted) setMatch(data); }).catch(() => { if (!controller.signal.aborted) setMatch(null); });
     }, 0);
     return () => { clearTimeout(timer); controller.abort(); };
   }, [job.id, job.revision, userId, status, refresh]);
+  useEffect(() => {
+    if (status !== "authenticated" || !userId) return;
+    const controller = new AbortController();
+    void api.latestMatch(job.id, controller.signal).then(data => { if (!controller.signal.aborted) setMatchResult({ scope: matchScope, value: data }); }).catch(() => { if (!controller.signal.aborted) setMatchResult({ scope: matchScope, value: null }); });
+    return () => controller.abort();
+  }, [job.id, userId, status, refresh, matchScope]);
+  const match = status === "authenticated" && matchResult?.scope === matchScope && matchResult.value?.job_id === job.id ? matchResult.value : null;
+  const includeMatch = !!match && selectedMatchId === match.id;
+  const matchStale = match && (match.stale || match.job_revision !== job.revision || match.jd_version !== job.jd_version);
   const visible = owner === userId ? records : null;
   const active = visible?.items.find(item => !isTerminal(item.status));
   const previous = visible?.items[0];
@@ -59,7 +68,7 @@ export function JobApplicationsPanel({ job, disabled = false }: { job: Job; disa
     } finally { pending.current = false; if (!controller.signal.aborted) setBusy(false); }
   }
   return <section className="panel job-applications" aria-labelledby="job-applications-title"><div className="section-heading"><div><h2 id="job-applications-title"><ClipboardList size={19} />投递记录</h2><p>由你决定何时开始、如何推进。收藏和匹配结论不会自动改变申请状态。</p></div><Link className="inline-link" href="/applications">全部申请<ArrowUpRight size={14} /></Link></div>
-    {loading ? <Spinner label="正在查询这个职位的申请" /> : <>{error && <Notice>{error}</Notice>}{!visible ? <button className="button button-secondary" onClick={() => setRefresh(value => value + 1)}>重新查询申请</button> : <>{active ? <div className="application-current"><div><ApplicationBadge status={active.status} /><span>第 {active.attempt_number} 次申请 · {formatDate(active.updated_at, true)} 更新</span></div><Link className="button button-primary" href={`/applications/${active.id}`}>继续跟踪申请<ArrowUpRight size={16} /></Link></div> : <div className="application-start"><div><strong>{previous ? "重新考虑这个机会？" : "决定把这个机会列入计划？"}</strong><p>{previous ? "上一轮已结束。明确创建新一轮，保留此前的独立历史。" : "先建立“准备投递”记录，实际投递后再由你更新。无需重复填写岗位信息。"}</p>{match && <label className="application-match-check"><input type="checkbox" checked={includeMatch} disabled={busy || disabled} onChange={event => setIncludeMatch(event.target.checked)} />关联这份匹配分析（{match.stale ? "历史结果，依据已变更" : "当前依据"}）</label>}</div><button className="button button-primary" disabled={busy || disabled} onClick={() => { if (previous) setReapplyOpen(true); else void create(false); }}>{busy ? <Spinner label="正在创建" /> : <><Plus size={16} />{previous ? "创建新一轮申请" : "准备投递"}</>}</button></div>}{visible.items.length > 0 && <details className="application-job-history"><summary>查看该职位的申请记录（{visible.total} 条）</summary>{visible.items.map(item => <Link className="application-history-link" key={item.id} href={`/applications/${item.id}`}><span>第 {item.attempt_number} 次 · {formatDate(item.created_at)}</span><ApplicationBadge status={item.status} /><ArrowUpRight size={14} /></Link>)}</details>}<p className="field-hint">存在申请记录时，删除职位会被阻止，以保护申请历史。申请详情可单独确认删除记录。</p></>}</>}
+    {loading ? <Spinner label="正在查询这个职位的申请" /> : <>{error && <Notice>{error}</Notice>}{!visible ? <button className="button button-secondary" onClick={() => setRefresh(value => value + 1)}>重新查询申请</button> : <>{active ? <div className="application-current"><div><ApplicationBadge status={active.status} /><span>第 {active.attempt_number} 次申请 · {formatDate(active.updated_at, true)} 更新</span></div><Link className="button button-primary" href={`/applications/${active.id}`}>继续跟踪申请<ArrowUpRight size={16} /></Link></div> : <div className="application-start"><div><strong>{previous ? "重新考虑这个机会？" : "决定把这个机会列入计划？"}</strong><p>{previous ? "上一轮已结束。明确创建新一轮，保留此前的独立历史。" : "先建立“准备投递”记录，实际投递后再由你更新。无需重复填写岗位信息。"}</p>{match && <label className="application-match-check"><input type="checkbox" checked={includeMatch} disabled={busy || disabled} onChange={event => setSelectedMatchId(event.target.checked ? match.id : null)} />关联这份匹配分析（{matchStale ? "历史结果，依据已变更" : "当前依据"}）</label>}</div><button className="button button-primary" disabled={busy || disabled} onClick={() => { if (previous) setReapplyOpen(true); else void create(false); }}>{busy ? <Spinner label="正在创建" /> : <><Plus size={16} />{previous ? "创建新一轮申请" : "准备投递"}</>}</button></div>}{visible.items.length > 0 && <details className="application-job-history"><summary>查看该职位的申请记录（{visible.total} 条）</summary>{visible.items.map(item => <Link className="application-history-link" key={item.id} href={`/applications/${item.id}`}><span>第 {item.attempt_number} 次 · {formatDate(item.created_at)}</span><ApplicationBadge status={item.status} /><ArrowUpRight size={14} /></Link>)}</details>}<p className="field-hint">存在申请记录时，删除职位会被阻止，以保护申请历史。申请详情可单独确认删除记录。</p></>}</>}
     <Dialog.Root open={reapplyOpen} onOpenChange={setReapplyOpen}><Dialog.Portal><Dialog.Overlay className="dialog-overlay" /><Dialog.Content className="dialog-content compact-dialog"><Dialog.Title>为这个职位创建新一轮申请？</Dialog.Title><Dialog.Description className="delete-description">新一轮从“准备投递”开始。上一轮记录和时间线会保留，实际是否允许再次投递需由你向招聘方核实。</Dialog.Description><div className="dialog-actions"><Dialog.Close className="button button-secondary">保留原有记录</Dialog.Close><button className="button button-primary" onClick={() => { void create(true); }}>确认创建新一轮</button></div></Dialog.Content></Dialog.Portal></Dialog.Root>
   </section>;
 }

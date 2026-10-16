@@ -19,6 +19,7 @@ from offerpilot_api.api.routes.byok import router as byok_router
 from offerpilot_api.api.routes.jobs import router as jobs_router
 from offerpilot_api.api.routes.job_matches import router as job_matches_router
 from offerpilot_api.api.routes.applications import router as applications_router
+from offerpilot_api.api.routes.dashboard import router as dashboard_router
 from offerpilot_api.application_tracker.services import ApplicationError
 from offerpilot_api.agent_runtime.byok import SessionKeyVault
 from offerpilot_api.agent_runtime.extraction_runs import ExtractionRunError, extraction_dispatcher, mock_provider_factory
@@ -62,6 +63,7 @@ def create_app() -> FastAPI:
     app.include_router(jobs_router)
     app.include_router(job_matches_router)
     app.include_router(applications_router)
+    app.include_router(dashboard_router)
     app.state.byok_vault = SessionKeyVault()
     app.state.extraction_settings = settings
     app.state.deepseek_provider_factory = None

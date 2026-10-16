@@ -11,9 +11,9 @@ from datetime import datetime, time, timedelta, timezone
 from uuid import UUID
 
 from pydantic import ValidationError
-from sqlalchemy import case, delete, func, or_, select, update
+from sqlalchemy import and_, case, delete, func, or_, select, update
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, load_only
 
 from offerpilot_api.application_tracker.schemas import (
     ApplicationCreateRequest, ApplicationDeleteRequest, ApplicationEventListResponse, ApplicationEventResponse,
@@ -112,14 +112,15 @@ def is_action_overdue(action: NextActionInput | None, *, now: datetime | None = 
     return current > deadline
 
 
-def _match_reference(db, user_id, job, match_id):
+def _match_reference(db, user_id, job, match_id, *, matches=None, profile_revision=None):
     if match_id is None:
         return None
-    result = db.scalar(select(JobMatch).where(JobMatch.id == match_id, JobMatch.user_id == user_id,
-                                            JobMatch.job_id == job.id))
-    if result is None:
+    result = matches.get(match_id) if matches is not None else db.scalar(select(JobMatch).where(
+        JobMatch.id == match_id, JobMatch.user_id == user_id, JobMatch.job_id == job.id))
+    if result is None or result.job_id != job.id:
         return None
-    profile_revision = db.scalar(select(CareerProfile.revision).where(CareerProfile.user_id == user_id)) or 0
+    if profile_revision is None:
+        profile_revision = db.scalar(select(CareerProfile.revision).where(CareerProfile.user_id == user_id)) or 0
     reasons = []
     if profile_revision != result.profile_revision:
         reasons.append("profile_changed")
@@ -133,14 +134,34 @@ def _match_reference(db, user_id, job, match_id):
         stale=bool(reasons), stale_reasons=reasons)
 
 
-def _response(db, user_id, row):
-    job = _job(db, user_id, row.job_id)
+def _response(db, user_id, row, *, jobs=None, matches=None, profile_revision=None, now=None):
+    job = jobs.get(row.job_id) if jobs is not None else _job(db, user_id, row.job_id)
+    if job is None:
+        raise _missing()
     action = _action(row)
     return ApplicationResponse(id=row.id, job_id=row.job_id, job_title=row.job_title,
         company=row.company, location=row.location, attempt_number=row.attempt_number,
         status=row.status, revision=row.revision, submitted_at=_utc(row.submitted_at), notes=row.notes,
         next_action=action, created_at=_utc(row.created_at), updated_at=_utc(row.updated_at),
-        is_overdue=is_action_overdue(action), match=_match_reference(db, user_id, job, row.match_id))
+        is_overdue=row.status not in TERMINAL_STATUSES and is_action_overdue(action, now=now),
+        match=_match_reference(db, user_id, job, row.match_id, matches=matches, profile_revision=profile_revision))
+
+
+def _pending_action_predicate():
+    return and_(Application.action_title.is_not(None), Application.action_status == "pending",
+                Application.status.not_in(TERMINAL_STATUSES))
+
+
+def _overdue_predicate(now):
+    """Use the same strict minute deadline as is_action_overdue, including exact equality."""
+    current = _utc(now).astimezone(SHANGHAI)
+    minute = current.strftime("%H:%M")
+    earlier_time = (Application.action_due_time <= minute if current.second or current.microsecond
+                    else Application.action_due_time < minute)
+    return and_(_pending_action_predicate(), Application.action_due_date.is_not(None),
+                or_(Application.action_due_date < current.date(),
+                    and_(Application.action_due_date == current.date(),
+                         Application.action_due_time.is_not(None), earlier_time)))
 
 
 def get_application(db: Session, *, user_id: UUID, application_id: UUID) -> ApplicationResponse:
@@ -148,8 +169,9 @@ def get_application(db: Session, *, user_id: UUID, application_id: UUID) -> Appl
 
 
 def list_applications(db: Session, *, user_id: UUID, q=None, status=None, job_id=None,
-                      sort="updated_desc", page=1, page_size=20):
+                      next_action=None, overdue=None, sort="updated_desc", page=1, page_size=20):
     _owner(user_id)
+    now = _now()
     filters = [Application.user_id == user_id]
     if q and q.strip():
         escaped = q.strip().replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
@@ -159,18 +181,35 @@ def list_applications(db: Session, *, user_id: UUID, q=None, status=None, job_id
         filters.append(Application.status == status)
     if job_id is not None:
         filters.append(Application.job_id == job_id)
+    if next_action is not None:
+        filters.append(Application.action_title.is_(None) if next_action == "none" else
+            _pending_action_predicate() if next_action == "pending" else Application.action_status == next_action)
+    if overdue is not None:
+        filters.append(_overdue_predicate(now) if overdue else ~_overdue_predicate(now))
     orders = {
         "updated_desc": [Application.updated_at.desc()],
         "created_desc": [Application.created_at.desc()],
         "submitted_desc": [Application.submitted_at.desc().nullslast()],
-        "next_action_asc": [case((Application.action_status == "pending", 0), else_=1),
+        "next_action_asc": [case((_pending_action_predicate(), 0), else_=1),
                             Application.action_due_date.asc().nullslast(),
-                            func.coalesce(Application.action_due_time, "23:59").asc()],
+                            func.coalesce(Application.action_due_time, "24:00").asc()],
     }
     total = db.scalar(select(func.count()).select_from(Application).where(*filters))
-    rows = db.scalars(select(Application).where(*filters).order_by(*orders[sort], Application.id)
-        .offset((page - 1) * page_size).limit(page_size))
-    return ApplicationListResponse(items=[_response(db, user_id, row) for row in rows],
+    rows = list(db.scalars(select(Application).where(*filters).order_by(*orders[sort], Application.id)
+        .offset((page - 1) * page_size).limit(page_size)))
+    # A bounded page uses batch metadata reads rather than a job/match/profile
+    # query per row. Historical evaluations and JD snapshots are never loaded.
+    jobs = {row.id: row for row in db.scalars(select(SavedJob).options(load_only(
+        SavedJob.id, SavedJob.revision, SavedJob.jd_version)).where(
+        SavedJob.user_id == user_id, SavedJob.id.in_({row.job_id for row in rows})))} if rows else {}
+    match_ids = {row.match_id for row in rows if row.match_id is not None}
+    matches = {row.id: row for row in db.scalars(select(JobMatch).options(load_only(
+        JobMatch.id, JobMatch.job_id, JobMatch.created_at, JobMatch.profile_revision,
+        JobMatch.job_revision, JobMatch.jd_version, JobMatch.rule_version)).where(
+        JobMatch.user_id == user_id, JobMatch.id.in_(match_ids)))} if match_ids else {}
+    revision = (db.scalar(select(CareerProfile.revision).where(CareerProfile.user_id == user_id)) or 0) if matches else 0
+    return ApplicationListResponse(items=[_response(db, user_id, row, jobs=jobs, matches=matches,
+        profile_revision=revision, now=now) for row in rows],
                                    total=total, page=page, page_size=page_size)
 
 
@@ -329,7 +368,13 @@ def update_application(db: Session, *, user_id: UUID, application_id: UUID, payl
         if old["notes"] != payload.notes:
             changes.append(("notes_changed", old["notes"], payload.notes))
         old_action = old["next_action"].model_dump(mode="json") if old["next_action"] else None
-        new_action = payload.next_action.model_dump(mode="json") if payload.next_action else None
+        action = payload.next_action
+        # Ending an application also ends its unfinished action. The effective
+        # state and its event share the same CAS/receipt transaction. Reopening
+        # does not silently revive that action; users can restore it explicitly.
+        if action is not None and action.status == "pending" and payload.status in TERMINAL_STATUSES:
+            action = action.model_copy(update={"status": "cancelled"})
+        new_action = action.model_dump(mode="json") if action else None
         if old_action != new_action:
             changes.append(("next_action_changed", old_action, new_action))
         if count + len(changes) > MAX_EVENTS_PER_APPLICATION:
@@ -339,7 +384,6 @@ def update_application(db: Session, *, user_id: UUID, application_id: UUID, payl
         row.active_slot = None if payload.status in TERMINAL_STATUSES else 1
         row.submitted_at = payload.submitted_at
         row.notes = payload.notes
-        action = payload.next_action
         row.action_title = action.title if action else None
         row.action_notes = action.notes if action else None
         row.action_due_date = action.due_date if action else None

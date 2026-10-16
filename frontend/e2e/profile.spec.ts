@@ -210,7 +210,7 @@ test("两个真实页面并发编辑：409 保留输入，未保存导航和退�
     await expect(second.getByText(/版本|更新|冲突/).first()).toBeVisible();
     await mkdir(screenshots, { recursive: true });
     await cleanScreenshot(second, "profile-conflict", 1440);
-    await second.getByRole("link", { name: "我的简历", exact: true }).first().click();
+    await second.getByRole("link", { name: "职位", exact: true }).first().click();
     const guard = second.getByRole("alertdialog");
     await expect(guard).toBeVisible();
     await guard.getByRole("button", { name: "继续编辑", exact: true }).click();

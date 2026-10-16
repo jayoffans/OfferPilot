@@ -4921,6 +4921,44 @@
             }
           },
           {
+            "name": "next_action",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "pending",
+                    "completed",
+                    "cancelled",
+                    "none"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Next Action"
+            }
+          },
+          {
+            "name": "overdue",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Overdue"
+            }
+          },
+          {
             "name": "sort",
             "in": "query",
             "required": false,
@@ -5406,6 +5444,91 @@
               }
             },
             "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        }
+      }
+    },
+    "/api/v1/dashboard": {
+      "get": {
+        "tags": [
+          "applications"
+        ],
+        "summary": "Dashboard",
+        "operationId": "dashboard_api_v1_dashboard_get",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 20,
+              "minimum": 1,
+              "default": 5,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DashboardResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
           },
           "409": {
             "content": {
@@ -6263,6 +6386,447 @@
           "supports_current_value"
         ],
         "title": "CurrentEvidence"
+      },
+      "DashboardActionGroup": {
+        "properties": {
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/DashboardActionItem"
+            },
+            "type": "array",
+            "title": "Items"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "total",
+          "items"
+        ],
+        "title": "DashboardActionGroup"
+      },
+      "DashboardActionItem": {
+        "properties": {
+          "application_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Application Id"
+          },
+          "job_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Job Id"
+          },
+          "revision": {
+            "type": "integer",
+            "title": "Revision"
+          },
+          "application_status": {
+            "type": "string",
+            "enum": [
+              "preparing",
+              "submitted",
+              "assessment",
+              "interview",
+              "offer",
+              "rejected",
+              "withdrawn",
+              "closed"
+            ],
+            "title": "Application Status"
+          },
+          "job_title": {
+            "type": "string",
+            "title": "Job Title"
+          },
+          "company": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Company"
+          },
+          "next_action": {
+            "$ref": "#/components/schemas/NextActionInput"
+          },
+          "is_overdue": {
+            "type": "boolean",
+            "title": "Is Overdue"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "application_id",
+          "job_id",
+          "revision",
+          "application_status",
+          "job_title",
+          "company",
+          "next_action",
+          "is_overdue"
+        ],
+        "title": "DashboardActionItem"
+      },
+      "DashboardActions": {
+        "properties": {
+          "overdue": {
+            "$ref": "#/components/schemas/DashboardActionGroup"
+          },
+          "today": {
+            "$ref": "#/components/schemas/DashboardActionGroup"
+          },
+          "upcoming": {
+            "$ref": "#/components/schemas/DashboardActionGroup"
+          },
+          "undated": {
+            "$ref": "#/components/schemas/DashboardActionGroup"
+          },
+          "completed": {
+            "$ref": "#/components/schemas/DashboardActionGroup"
+          },
+          "cancelled": {
+            "$ref": "#/components/schemas/DashboardActionGroup"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "overdue",
+          "today",
+          "upcoming",
+          "undated",
+          "completed",
+          "cancelled"
+        ],
+        "title": "DashboardActions"
+      },
+      "DashboardActivity": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "application_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Application Id"
+          },
+          "job_title": {
+            "type": "string",
+            "title": "Job Title"
+          },
+          "company": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Company"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "application_created",
+              "status_changed",
+              "notes_changed",
+              "next_action_changed",
+              "submitted_at_changed"
+            ],
+            "title": "Type"
+          },
+          "action_status": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "pending",
+                  "completed",
+                  "cancelled"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Action Status"
+          },
+          "application_status": {
+            "type": "string",
+            "enum": [
+              "preparing",
+              "submitted",
+              "assessment",
+              "interview",
+              "offer",
+              "rejected",
+              "withdrawn",
+              "closed"
+            ],
+            "title": "Application Status"
+          },
+          "recorded_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Recorded At"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "application_id",
+          "job_title",
+          "company",
+          "type",
+          "action_status",
+          "application_status",
+          "recorded_at"
+        ],
+        "title": "DashboardActivity"
+      },
+      "DashboardJobItem": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "company": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Company"
+          },
+          "reasons": {
+            "items": {
+              "type": "string",
+              "enum": [
+                "favorite_without_application",
+                "review_pending",
+                "requirements_missing",
+                "match_stale",
+                "unmatched"
+              ]
+            },
+            "type": "array",
+            "title": "Reasons"
+          },
+          "next_step": {
+            "type": "string",
+            "enum": [
+              "review",
+              "match",
+              "apply"
+            ],
+            "title": "Next Step"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "company",
+          "reasons",
+          "next_step",
+          "updated_at"
+        ],
+        "title": "DashboardJobItem"
+      },
+      "DashboardJobs": {
+        "properties": {
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/DashboardJobItem"
+            },
+            "type": "array",
+            "title": "Items"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "total",
+          "items"
+        ],
+        "title": "DashboardJobs"
+      },
+      "DashboardOnboarding": {
+        "properties": {
+          "resume_count": {
+            "type": "integer",
+            "title": "Resume Count"
+          },
+          "profile_entry_count": {
+            "type": "integer",
+            "title": "Profile Entry Count"
+          },
+          "job_count": {
+            "type": "integer",
+            "title": "Job Count"
+          },
+          "application_count": {
+            "type": "integer",
+            "title": "Application Count"
+          },
+          "next_step": {
+            "type": "string",
+            "enum": [
+              "upload_resume",
+              "complete_profile",
+              "import_job",
+              "review_job",
+              "match_job",
+              "create_application",
+              "manage_actions"
+            ],
+            "title": "Next Step"
+          },
+          "job_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Job Id"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "resume_count",
+          "profile_entry_count",
+          "job_count",
+          "application_count",
+          "next_step",
+          "job_id"
+        ],
+        "title": "DashboardOnboarding"
+      },
+      "DashboardResponse": {
+        "properties": {
+          "generated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Generated At"
+          },
+          "timezone": {
+            "type": "string",
+            "const": "Asia/Shanghai",
+            "title": "Timezone",
+            "default": "Asia/Shanghai"
+          },
+          "today": {
+            "type": "string",
+            "format": "date",
+            "title": "Today"
+          },
+          "actions": {
+            "$ref": "#/components/schemas/DashboardActions"
+          },
+          "summary": {
+            "$ref": "#/components/schemas/DashboardSummary"
+          },
+          "jobs": {
+            "$ref": "#/components/schemas/DashboardJobs"
+          },
+          "recent_activity": {
+            "items": {
+              "$ref": "#/components/schemas/DashboardActivity"
+            },
+            "type": "array",
+            "title": "Recent Activity"
+          },
+          "onboarding": {
+            "$ref": "#/components/schemas/DashboardOnboarding"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "generated_at",
+          "today",
+          "actions",
+          "summary",
+          "jobs",
+          "recent_activity",
+          "onboarding"
+        ],
+        "title": "DashboardResponse"
+      },
+      "DashboardSummary": {
+        "properties": {
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "preparing": {
+            "type": "integer",
+            "title": "Preparing"
+          },
+          "submitted": {
+            "type": "integer",
+            "title": "Submitted"
+          },
+          "assessment_interview": {
+            "type": "integer",
+            "title": "Assessment Interview"
+          },
+          "offer": {
+            "type": "integer",
+            "title": "Offer"
+          },
+          "ended": {
+            "type": "integer",
+            "title": "Ended"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "total",
+          "preparing",
+          "submitted",
+          "assessment_interview",
+          "offer",
+          "ended"
+        ],
+        "title": "DashboardSummary"
       },
       "EducationEntry": {
         "properties": {
