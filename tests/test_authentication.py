@@ -487,8 +487,20 @@ class AuthenticationTests(unittest.TestCase):
         self.account()
         self.login()
         session_token = self.client.cookies.get(SESSION_COOKIE_NAME)
-        with self.engine.begin() as connection:
-            connection.execute(text("DROP TABLE users"))
+        if self.engine.dialect.name == "postgresql":
+            # The isolated PG runner supplies this fixture's migration URL;
+            # the application role deliberately cannot perform DDL or grants.
+            from offerpilot_api.db.session import build_engine as build_fault_engine
+            fault_engine = build_fault_engine(self.postgres_migration_url)
+            try:
+                with fault_engine.begin() as connection:
+                    role = connection.dialect.identifier_preparer.quote_identifier(self.engine.url.username)
+                    connection.execute(text(f"REVOKE SELECT ON users FROM {role}"))
+            finally:
+                fault_engine.dispose()
+        else:
+            with self.engine.begin() as connection:
+                connection.execute(text("DROP TABLE users"))
         stream = io.StringIO()
         handler = logging.StreamHandler(stream)
         logger = logging.getLogger()

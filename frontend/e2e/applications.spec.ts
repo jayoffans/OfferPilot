@@ -139,7 +139,7 @@ test("申请真实双页面409与提交后丢失响应的原请求重试", async
   });
   const before = (await events(page.request, application.id)).total;
   await page.getByRole("button", { name: "保存申请修改", exact: true }).click();
-  await expect(page.getByRole("alert")).toBeVisible();
+  await expect(page.getByRole("main").getByRole("alert")).toContainText("保存结果可能尚未确认");
   const committed = await read(page.request, application.id);
   expect(committed.notes).toBe("服务端已提交但响应丢失");
   await save(page, application.id);

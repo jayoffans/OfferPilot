@@ -3,7 +3,8 @@
 from functools import lru_cache
 from pathlib import Path
 
-from pydantic import Field
+from pydantic import Field, model_validator
+from sqlalchemy.engine import make_url
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 BACKEND_ROOT = Path(__file__).resolve().parents[3]
@@ -15,7 +16,13 @@ DEFAULT_UPLOAD_DIR = BACKEND_ROOT / "uploads"
 class Settings(BaseSettings):
     app_name: str = "OfferPilot API"
     environment: str = "development"
-    database_url: str = DEFAULT_DATABASE_URL
+    database_url: str = Field(default=DEFAULT_DATABASE_URL, repr=False)
+    database_pool_size: int = Field(default=5, ge=1, le=50)
+    database_max_overflow: int = Field(default=5, ge=0, le=50)
+    database_pool_timeout_seconds: int = Field(default=5, ge=1, le=60)
+    database_connect_timeout_seconds: int = Field(default=5, ge=1, le=30)
+    database_statement_timeout_ms: int = Field(default=15000, ge=100, le=120000)
+    database_lock_timeout_ms: int = Field(default=5000, ge=100, le=30000)
     upload_dir: Path = DEFAULT_UPLOAD_DIR
     session_ttl_seconds: int = Field(default=43200, ge=60, le=604800)
     session_cookie_secure: bool | None = None
@@ -40,6 +47,26 @@ class Settings(BaseSettings):
     extraction_max_active_per_user: int = Field(default=3, ge=1, le=10)
     extraction_max_active_total: int = Field(default=20, ge=1, le=100)
 
+    @model_validator(mode="after")
+    def validate_database(self) -> "Settings":
+        try:
+            url = make_url(self.database_url)
+        except Exception:
+            raise ValueError("数据库配置无效") from None
+        if url.drivername == "postgresql":
+            url = url.set(drivername="postgresql+psycopg")
+            self.database_url = url.render_as_string(hide_password=False)
+        if url.drivername not in {"sqlite", "postgresql+psycopg"}:
+            raise ValueError("仅支持 SQLite 或 PostgreSQL psycopg 驱动")
+        if self.environment != "development":
+            if url.drivername != "postgresql+psycopg":
+                raise ValueError("非开发环境必须显式配置 PostgreSQL")
+            if not all((url.host, url.database, url.username, url.password)):
+                raise ValueError("非开发环境数据库配置不完整")
+            if url.username == "postgres":
+                raise ValueError("应用不得使用数据库超级用户")
+        return self
+
     @property
     def mock_extraction_available(self) -> bool:
         return self.environment == "development" and self.mock_extraction_enabled
@@ -57,6 +84,7 @@ class Settings(BaseSettings):
         env_file=BACKEND_ROOT / ".env",
         env_file_encoding="utf-8",
         extra="ignore",
+        hide_input_in_errors=True,
     )
 
 

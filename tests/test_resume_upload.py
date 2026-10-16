@@ -126,10 +126,9 @@ class ResumeUploadTests(unittest.TestCase):
 
     def test_upload_is_unavailable_outside_development(self) -> None:
         self.client.app.dependency_overrides[get_settings] = lambda: Settings(
-            environment="production",
             upload_dir=self.root / "uploads",
             session_cookie_secure=False,
-        )
+        ).model_copy(update={"environment": "production"})
         response = self.client.post(
             "/resume/upload",
             files={"file": ("resume.pdf", make_pdf("Python internship"), "application/pdf")},

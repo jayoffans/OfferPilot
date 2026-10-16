@@ -25,7 +25,7 @@ from offerpilot_api.agent_runtime.byok import SessionKeyVault
 from offerpilot_api.agent_runtime.extraction_runs import ExtractionRunError, extraction_dispatcher, mock_provider_factory
 from offerpilot_api.core.config import get_settings
 from offerpilot_api.identity.services import IdentityError
-from offerpilot_api.db.session import SessionLocal, engine
+from offerpilot_api.db.session import SessionLocal, engine, verify_runtime_database_role
 from offerpilot_api.resume_ingestion.lifecycle import ResumeLifecycleError
 from offerpilot_api.profile.services import ProfileError
 from offerpilot_api.job_catalog.services import JobError
@@ -35,7 +35,10 @@ from offerpilot_api.job_intelligence.match_services import MatchError
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
     dispatcher = None
-    if get_settings().mock_extraction_available or get_settings().deepseek_extraction_available:
+    settings = get_settings()
+    if settings.environment != "development":
+        await asyncio.to_thread(verify_runtime_database_role, engine)
+    if settings.mock_extraction_available or settings.deepseek_extraction_available:
         dispatcher = asyncio.create_task(extraction_dispatcher(_app, SessionLocal))
     try:
         yield

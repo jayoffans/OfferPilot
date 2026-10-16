@@ -15,7 +15,7 @@ from typing import Callable
 from uuid import UUID, uuid4
 
 from sqlalchemy import func, select, update
-from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from offerpilot_api.agent_runtime.extraction_schemas import (
@@ -168,8 +168,12 @@ def _enabled(settings: Settings) -> None:
 
 
 def _admission(db: Session, user_id: UUID, settings: Settings, *, paid: bool = False) -> None:
-    # SQLite's writer lock (held through resume mutation) serializes admission
-    # checks. PostgreSQL admission/concurrency remains a separate release gate.
+    # The resume mutation already holds SQLite's writer lock. PostgreSQL row
+    # locks on different resumes do not serialize a shared capacity check, so
+    # use a server-defined transaction advisory lock for this short admission
+    # section. Commit/rollback releases it; provider calls never hold it.
+    if db.get_bind().dialect.name == "postgresql":
+        db.execute(select(func.pg_advisory_xact_lock(0x4F50455854524143)))
     count = db.scalar(select(func.count()).select_from(ResumeExtractionRun).where(ResumeExtractionRun.status.in_(ACTIVE))) or 0
     owned = db.scalar(select(func.count()).select_from(ResumeExtractionRun).where(
         ResumeExtractionRun.user_id == user_id, ResumeExtractionRun.status.in_(ACTIVE),
@@ -239,6 +243,19 @@ def create_extraction_run(db: Session, *, user_id: UUID, resume_id: UUID, payloa
         result = _response(run)
         db.commit()
         return result
+    except IntegrityError:
+        # Different resume rows may race with one owner/request key. The
+        # unique constraint decides the winner; expose a domain conflict
+        # rather than a misleading storage outage (and never the SQL error).
+        db.rollback()
+        prior = db.scalar(select(ResumeExtractionRun.id).where(
+            ResumeExtractionRun.user_id == user_id,
+            ResumeExtractionRun.idempotency_key == payload.idempotency_key,
+        ))
+        db.rollback()
+        if prior is not None:
+            raise ExtractionRunError("extraction_idempotency_conflict", "该请求键已用于不同简历版本", 409) from None
+        raise
     except Exception:
         db.rollback()
         raise

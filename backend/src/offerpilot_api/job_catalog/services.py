@@ -12,7 +12,7 @@ from sqlalchemy import delete, exists, func, or_, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from offerpilot_api.db.models import JobCreateReceipt, JobJDSnapshot, JobRequirement, SavedJob
+from offerpilot_api.db.models import JobCreateReceipt, JobJDSnapshot, JobRequirement, SavedJob, User
 from offerpilot_api.job_catalog.schemas import (
     MAX_REVISION, JobCreateRequest, JobDetailResponse, JobFavoriteRequest,
     JobListItem, JobListResponse, JobRequirementInput, JobRequirementResponse,
@@ -135,14 +135,18 @@ def list_jobs(db: Session, *, user_id: UUID, q=None, work_type=None, is_favorite
         filters.append(pending if review_status == "pending" else any_requirement & ~pending)
     ordering = {"updated_desc": SavedJob.updated_at.desc(), "created_desc": SavedJob.created_at.desc(), "title_asc": SavedJob.title.asc()}[sort]
     total = db.scalar(select(func.count()).select_from(SavedJob).where(*filters))
-    rows = db.scalars(select(SavedJob).where(*filters).order_by(ordering, SavedJob.id).offset((page - 1) * page_size).limit(page_size))
+    rows = list(db.scalars(select(SavedJob).where(*filters).order_by(ordering, SavedJob.id).offset((page - 1) * page_size).limit(page_size)))
+    summaries = {job_id: (total, confirmed, stale) for job_id, total, confirmed, stale in db.execute(
+        select(JobRequirement.job_id, func.count(JobRequirement.id),
+            func.count(JobRequirement.id).filter(JobRequirement.review_status == "confirmed", JobJDSnapshot.version == SavedJob.jd_version),
+            func.count(JobRequirement.id).filter(JobJDSnapshot.version != SavedJob.jd_version))
+        .join(JobJDSnapshot, JobJDSnapshot.id == JobRequirement.snapshot_id)
+        .join(SavedJob, SavedJob.id == JobRequirement.job_id)
+        .where(SavedJob.user_id == user_id, SavedJob.id.in_([row.id for row in rows]),
+               JobJDSnapshot.job_id == SavedJob.id).group_by(JobRequirement.job_id)
+    )} if rows else {}
     def summary_item(row):
-        counts = db.execute(select(func.count(JobRequirement.id),
-            func.count(JobRequirement.id).filter(JobRequirement.review_status == "confirmed", JobJDSnapshot.version == row.jd_version),
-            func.count(JobRequirement.id).filter(JobJDSnapshot.version != row.jd_version))
-            .join(JobJDSnapshot, JobJDSnapshot.id == JobRequirement.snapshot_id)
-            .where(JobRequirement.job_id == row.id, JobJDSnapshot.job_id == row.id)).one()
-        total, confirmed, stale = counts
+        total, confirmed, stale = summaries.get(row.id, (0, 0, 0))
         return JobListItem(id=row.id, **{key: getattr(row, key) for key in BASIC_FIELDS},
             source_kind=row.source_kind, revision=row.revision, jd_version=row.jd_version,
             is_favorite=row.is_favorite, created_at=row.created_at, updated_at=row.updated_at,
@@ -234,10 +238,19 @@ def _duplicate_matches(db, job, payload):
 
 def create_job(db: Session, *, user_id: UUID, payload: JobCreateRequest) -> JobDetailResponse:
     digest = _digest(payload.model_dump(mode="json", exclude={"idempotency_key"}))
-    receipt = _receipt(db, user_id, payload.idempotency_key)
-    if receipt:
-        return _replay(db, receipt, digest, user_id)
     try:
+        # Different new jobs have no common job row to lock. Serialize the
+        # owner's quota check and insert on a persistent row on PostgreSQL,
+        # rather than relying on SQLite's database-wide writer lock.
+        locked = db.execute(update(User).where(User.id == user_id, User.is_active.is_(True))
+            .values(is_active=User.is_active).execution_options(synchronize_session=False))
+        if locked.rowcount != 1:
+            raise JobError("authentication_required", "会话已失效，请重新登录", 401)
+        receipt = _receipt(db, user_id, payload.idempotency_key)
+        if receipt:
+            result = _replay(db, receipt, digest, user_id)
+            db.commit()
+            return result
         content_digest = _content_digest(payload)
         job = db.scalar(select(SavedJob).where(SavedJob.user_id == user_id, SavedJob.content_digest == content_digest))
         if job is None:

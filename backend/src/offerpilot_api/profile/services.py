@@ -63,14 +63,28 @@ def _claim_revision(db: Session, *, user_id: UUID, revision: int | None, rollbac
     ).execution_options(synchronize_session=False))
     if changed.rowcount == 1:
         return db.scalar(select(CareerProfile).where(CareerProfile.user_id == user_id).execution_options(populate_existing=True))
-    if revision not in (None, 0) or db.scalar(select(CareerProfile.id).where(CareerProfile.user_id == user_id)):
+    if revision is not None and (
+        revision != 0 or db.scalar(select(CareerProfile.id).where(CareerProfile.user_id == user_id))
+    ):
         raise _conflict()
     profile = CareerProfile(user_id=user_id, revision=1, schema_version="1.0", updated_at=_now())
-    db.add(profile)
     try:
-        db.flush()
+        # Separate resumes may finish their first extraction concurrently.
+        # Preserve the caller's resume/run transaction if UNIQUE(user_id) is
+        # won by another PostgreSQL transaction, then claim its committed row.
+        with db.begin_nested():
+            db.add(profile)
+            db.flush()
     except IntegrityError:
-        # Another writer initialized the UNIQUE(user_id) row first.
+        if revision is None:
+            changed = db.execute(update(CareerProfile).where(
+                CareerProfile.user_id == user_id, CareerProfile.revision <= MAX_PROFILE_REVISION,
+            ).values(revision=CareerProfile.revision + 1, updated_at=_now())
+                .execution_options(synchronize_session=False))
+            if changed.rowcount == 1:
+                return _profile(db, user_id)
+        # Explicit revision=0 is still an optimistic conflict, never a retry
+        # that could overwrite a separately initialized user profile.
         if rollback_on_error:
             db.rollback()
         raise _conflict() from None

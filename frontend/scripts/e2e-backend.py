@@ -34,11 +34,26 @@ def run() -> None:
         raise ValueError("Invalid isolated test ports")
     with socket.socket() as reservation:
         reservation.bind(("127.0.0.1", api_port))
-    with tempfile.TemporaryDirectory(prefix="offerpilot-web-e2e-") as temporary:
+    with contextlib.ExitStack() as resources, tempfile.TemporaryDirectory(prefix="offerpilot-web-e2e-") as temporary:
         private_root = Path(temporary).resolve()
         storage_root = private_root / "objects"
+        postgres = os.environ.get("OFFERPILOT_E2E_POSTGRES") == "true"
+        test_database = None
+        if postgres:
+            sys.path.insert(0, str(ROOT))
+            sys.path.insert(0, str(BACKEND / "src"))
+            # The helper always creates a new S5 database; supplied databases
+            # are never migrated or emptied. Browser traffic uses DML-only app.
+            os.environ["OFFERPILOT_DATABASE_URL"] = "sqlite:///:memory:"
+            os.environ["OFFERPILOT_ENVIRONMENT"] = "development"
+            from tests.postgres.support import isolated_database
+            test_database = resources.enter_context(isolated_database("chromium"))
+            from offerpilot_api.db import session as db_session
+            db_session.engine.dispose()
+            db_session.engine = test_database.engine
+            db_session.SessionLocal.configure(bind=test_database.engine)
         os.environ.update({
-            "OFFERPILOT_DATABASE_URL": f"sqlite:///{(private_root / 'e2e.db').as_posix()}",
+            "OFFERPILOT_DATABASE_URL": test_database.database_url if postgres else f"sqlite:///{(private_root / 'e2e.db').as_posix()}",
             "OFFERPILOT_UPLOAD_DIR": str(storage_root),
             "OFFERPILOT_ENVIRONMENT": "development",
             "OFFERPILOT_SESSION_COOKIE_SECURE": "false",
@@ -49,6 +64,8 @@ def run() -> None:
             "OFFERPILOT_DEEPSEEK_EXTRACTION_ENABLED": "true",
         })
         sys.path.insert(0, str(BACKEND / "src"))
+        from offerpilot_api.core.config import get_settings
+        get_settings.cache_clear()
         import pymupdf
         import uvicorn
         from alembic import command
@@ -65,8 +82,9 @@ def run() -> None:
         from offerpilot_api.identity.services import create_invitation
         from offerpilot_api.main import create_app
 
-        with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
-            command.upgrade(Config(str(BACKEND / "alembic.ini")), "head")
+        if not postgres:
+            with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+                command.upgrade(Config(str(BACKEND / "alembic.ini")), "head")
         with engine.connect() as connection:
             revision = connection.exec_driver_sql("SELECT version_num FROM alembic_version").scalar()
         if revision != "0009_application_tracker":

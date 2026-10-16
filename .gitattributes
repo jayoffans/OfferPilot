@@ -1,0 +1,2 @@
+# Docker entrypoint scripts must stay executable by /bin/sh on Windows clones.
+scripts/postgres/*.sh text eol=lf

@@ -2,7 +2,9 @@
 
 当前交付为 **S1 中文账户/私有 PDF + S2 可信画像与受控解析 + S3 私有职位、JD 审核与可信规则匹配 + S4 申请管理与求职工作台**。首页展示真实的逾期、今日、未来七天及未设日期行动，提供申请进展、待处理职位、近期活动和按已有进度给出的下一步入口。收藏、匹配建议与实际投递相互独立，收到 Offer 不表示接受。实际结果、截图及未完成发布条件见 [S4-2 验收](docs/S4-2-acceptance.md)、[PLAN](docs/PLAN.md)。仅本地验收，不代表生产就绪或公开上线。
 
-**MVP 功能闭环已完成本地验收（2026-10-16）：** 后端 554/554、前端 125/125、真实 Chromium 33/33，OpenAPI/类型/ESLint/生产构建及 HTTP 文件生命周期通过。完整旅程只用真实本机后端、隔离 SQLite 和合成资料，未调用真实模型或招募外部用户。本轮完成 S4-2 后停止，不自动进入 S5。
+**S4-2 历史基线（2026-10-16）：** 后端 554/554、前端 125/125、真实 Chromium 33/33；当时仅 SQLite。当前 S5-1 只做 PostgreSQL 适配和可靠性验证，结果与未完成发布条件见 [S5-1 验收](docs/S5-1-acceptance.md)。不新增产品功能、不部署、不推送，完成后停止，不进入 S5-2。
+
+**S5-1 PostgreSQL 本地集成验收完成（2026-10-17）：** 真实 PG API 255/255、PG 专项 47/47、真实 HTTP 13/13、PG Chromium 33/33；SQLite 561 项、前端 125 项、契约/lint/build/类型通过。旧 0001～0009 保留，100 用户合成基准和独立备份恢复通过；正式生产部署和备份策略仍未验收，不代表生产就绪。
 
 S3 匹配为有界、可测试的确定性规则，不调用模型、不抓取招聘网站，不把未经确认的候选当事实。本轮真实模型请求0次；S2历史已单独完成一次正常合成样本请求，字段19/19、证据21/21且候选全部待审核，不能代表总体质量，见 [单样本报告](docs/S2-2B-single-real-evaluation-2026-10-14.md)。S2其余真实评测没有继续，生产真实模式仍关闭，既有供应商与上线条件继续保留。此前批次的准备说明及“0调用”记录为历史。
 
@@ -13,7 +15,7 @@ S2-2B-Fix 已将评测入口接到实际合成 PDF、正式上传/私有存储/�
 
 ## 本地启动（Windows PowerShell，两个终端）
 
-需要 Python 3.11、uv 和 Node.js 22.12+（本机使用 22.16）。按锁文件安装；S4-2 没有新增依赖或迁移。现有 cryptography 50.0.2 用于 Fernet 内存密钥加密，无 Redis。后端 head 仍为 0009（独立申请、历史和幂等回执）；前端继续使用生成 OpenAPI 契约。
+需要 Python 3.11、uv 和 Node.js 22.12+（本机使用 22.16）。按锁文件安装；S5-1 新增锁定的 `psycopg[binary]==3.3.3`，不新增迁移。现有 cryptography 50.0.2 用于 Fernet 内存密钥加密，无 Redis。后端 head 仍为 0009（独立申请、历史和幂等回执）；前端继续使用生成 OpenAPI 契约。
 
 **终端 A：后端。** 显式使用一个本机开发库。相对 SQLite 文件路径固定解析到 `backend/`；以下命令不会迁移默认旧库。新库升级到 0009；已有本机库应先备份再执行同一向前升级命令，可复用私有目录。不要切换为生产地址。本批只迁移隔离测试库，没有替你修改现有开发或生产库。
 
@@ -158,6 +160,29 @@ Key 在后端受控密文内存中最长一小时，同时受登录期限限制�
 
 评测只在系统临时目录创建新 SQLite/合成账户/私有存储，经0001～0006实际迁移；不接触默认开发库。每个样本独立隔离，退出销毁库、Key与原件，仅保留显式输出的公开合成报告。可查看 [首份PDF](backend/evaluations/fixtures/normal_chinese.synthetic.pdf) 和 [完整Mock审核报告](backend/evaluations/s2-2b-pdf-mock-report.json)。`--demonstrate-review` 是免费Mock预设的显式确认/拒绝演示；真实模式不允许该标志，候选只保持pending。不要在聊天、参数或环境中提供真实 Key；通过现有Web BYOK或经验证的原生终端安全输入。
 
+## S5-1：隔离 PostgreSQL 验证（Windows + Docker Desktop）
+
+数据库固定为官方 `postgres:18.6-bookworm` 和镜像 SHA-256，只有 PostgreSQL 一个服务。卷保留在 Docker，端口仅绑定 `127.0.0.1:55432`。第一次运行生成忽略的 `.env.s5-postgres` 随机凭据；不要提交、输出或重建已有卷的密码文件。初始化迁移角色 `s5_migrator`（非超级用户、有建库权限）和运行角色 `s5_app`（无建库、建表、角色管理及迁移版本写权限）。它们只服务本轮隔离合成环境。
+
+```powershell
+uv sync --project backend --locked
+& ./scripts/postgres/start.ps1
+. ./scripts/postgres/env.ps1
+& ./backend/.venv/Scripts/python.exe -B -m unittest discover -s tests/postgres -t . -v
+& ./backend/.venv/Scripts/python.exe -B scripts/postgres/regression.py
+# 每次使用一个新的输出目录，避免覆盖已有恢复证据。
+& ./backend/.venv/Scripts/python.exe -B scripts/postgres/quality.py --users 100 --backup --output frontend/artifacts/s5-1/my-new-run
+$env:OFFERPILOT_E2E_POSTGRES='true'
+npm.cmd --prefix frontend run test:e2e
+Remove-Item Env:OFFERPILOT_E2E_POSTGRES
+```
+
+测试工具只接受显式的本机 S5 管理/应用 URL，每次另建随机测试库，Alembic 迁移后用受限应用角色执行业务，结束仅删除本次新库；不迁移传入的基础库或默认开发库。合成私有 PDF/恢复件和报告在忽略的 artifacts 目录保留。`quality.py --backup` 使用同镜像内 `pg_dump/pg_restore`，以二进制管道写入文件，恢复到另一个新库；不使用 PowerShell 文本重定向传输数据库备份。连接秘密仅经子进程环境注入。
+
+`scripts/postgres/verify.ps1` 按顺序执行完整检查并保留逐项退出码；首次运行需已安装两端锁定依赖及 Chromium。E2E 和 build 共用 `.next`，不能同时运行。仅停止数据库而保留卷：`docker compose --env-file .env.s5-postgres -f compose.postgres.yml stop`。不要对已有业务库运行这些测试；生产角色、TLS、秘密注入和恢复政策仍须 S5-3 独立审核。
+
+应用与 Alembic 共用 `OFFERPILOT_DATABASE_URL` 和受校验的连接配置；普通 `postgresql://` 显式归一到 psycopg 3。开发可选 SQLite；非 development 缺失 PostgreSQL 配置立即失败，应用启动只读核查实际角色/继承权限，拒绝超级用户、DDL 权限和业务表所有者。迁移由独立操作身份执行。默认连接池 5 + 最多 5 overflow、等待/连接各 5 秒、statement 15 秒、lock 5 秒、idle-in-transaction 30 秒，连接会话为 UTC；故障返回安全 503，不改用 SQLite，不自动重放写操作。
+
 ## 前端验证与真实浏览器验收
 
 ```powershell
@@ -244,7 +269,7 @@ Mock 模式 lifespan 执行器读取持久 queued；关闭服务不丢排队记�
 
 删除先提交 deleting、清正文及旧 profiles/profile_facts，并清除新候选与原文证据、推进相关画像 revision；普通文件接口立即隐藏。保留用户已确认的正式值并标来源已删除，独立手工资料保留。再删 PDF/part/claim，最后硬删文档。物理删除或最后数据库提交失败均返回 **503 + 安全 code/message + Location**，不伪装 204；可查询 lifecycle 并重试同一 DELETE。同 owner 已完成 DELETE 重复为 204，其他用户/NULL-owner/未知仍 404。完成记录只留 owner、简历 ID、状态、时间和次数，清所有对象引用；保留期限与账户删除政策尚待决定。
 
-已缓冲的下载可完成，删除意图提交后的新下载被拒绝；文件句柄在生成响应前已关闭，避免 Windows 锁妨碍删除。本机数据库写锁覆盖受限保存/解析/下载/删除，迟到完成须 CAS 校验 active 状态；当前无异步 Worker。多用户规模与解析超时隔离须在上线批次验证。
+已缓冲的下载可完成，删除意图提交后的新下载被拒绝；文件句柄在生成响应前已关闭，避免 Windows 锁妨碍删除。SQLite 使用写事务、PostgreSQL 使用资源行锁和 CAS 覆盖受限保存/解析/下载/删除；迟到完成须校验 active 状态。当前没有生产独立 Worker，解析隔离仍待上线批次验证。
 
 **显式运维恢复（development，本轮没有后台守护进程）：** 先确认环境变量指向需要恢复的本机库与私有目录，再执行：
 
@@ -271,13 +296,13 @@ git diff --check
 
 S2-2A 当批结果：**222/222 后端、39/39 前端、16/16 完整 Chromium**，真实 HTTP smoke、契约/类型/lint/build、迁移与差异检查通过。合成 PDF 全链中7条候选入库后正式画像仍为空，用户主动确认后才写正式值。并发/取消/删除/旧版本迟到、事务故障、丢提交确认与实际子进程中断/CLI恢复均覆盖；字段错误及定位局限另见 [本批验收](docs/S2-2A-acceptance.md)，不代表真实模型质量。
 
-新迁移 `0003_resume_file_lifecycle` 在 0002 后增加文件元信息、处理/删除状态和独立清理记录；原生 SQLite 加列保留旧 owner、正文及父子关系，旧行默认 active/parsed，不回填对象键或认领 NULL-owner。只在无新元数据/状态/清理记录时允许安全降级；有数据须向前修复或备份恢复。S1-2 未修改 0001、0002；S1-3 未新增迁移，仅升级隔离测试库。PostgreSQL 运行行为尚未验证。
+新迁移 `0003_resume_file_lifecycle` 在 0002 后增加文件元信息、处理/删除状态和独立清理记录；原生 SQLite 加列保留旧 owner、正文及父子关系，旧行默认 active/parsed，不回填对象键或认领 NULL-owner。只在无新元数据/状态/清理记录时允许安全降级；有数据须向前修复或备份恢复。S1-2 未修改 0001、0002；S1-3 未新增迁移，仅升级隔离测试库。这是 S1-2 当时的 SQLite 记录；当前 PostgreSQL 验证见 S5-1 验收。
 
-S2-1 追加0004新建三张独立画像/候选表，0001～0003不变；空库和含旧0003数据快照向前验证通过，原owner/NULL-owner/文本/文件元信息/旧事实保持、不自动确认。新数据存在拒绝有损downgrade，空0004可降回0003；不执行offline破坏性降级。PostgreSQL仍待独立验证。
+S2-1 追加0004新建三张独立画像/候选表，0001～0003不变；空库和含旧0003数据快照向前验证通过，原owner/NULL-owner/文本/文件元信息/旧事实保持、不自动确认。新数据存在拒绝有损downgrade，空0004可降回0003；不执行offline破坏性降级。这是 S2-1 当时的 SQLite 记录；当前 PostgreSQL 验证见 S5-1 验收。
 
 ## 当前边界
 
-当前没有公开生产 BYOK 服务、总体模型质量结论、密码找回/修改、邮箱验证、账户注销、数据导出或生产部署。真实任务只支持一个本机 API 进程；独立 CLI 不处理真实任务。PostgreSQL 兼容与迁移、生产部署及容量、数据导出与账户注销、安全隐私及第三方模型政策、真实用户试点、生产备份恢复及监控仍须独立验收。本轮没有调用真实模型或招募外部用户，S4-2 完成后立即停止，不自动进入 S5。
+当前没有公开生产 BYOK 服务、总体模型质量结论、密码找回/修改、邮箱验证、账户注销、数据导出或生产部署。真实任务只支持一个本机 API 进程；独立 CLI 不处理真实任务。S5-1 的本机 PostgreSQL 迁移、事务及恢复证据见独立验收；生产部署/容量、导出注销、安全隐私及第三方模型政策、真实用户试点、正式备份与监控仍须独立验收。本轮没有调用真实模型或招募外部用户，止于 S5-1，不自动进入 S5-2。
 
 
 S2-2B免费验收：后端255/255，前端49/49，完整Chromium18/18，HTTP、契约/类型/lint/build及旧迁移兼容通过。真实DeepSeek请求0次、费用0元，真实调用/质量待验收。细项与发布阻塞见 [S2-2B验收](docs/S2-2B-acceptance.md)。
