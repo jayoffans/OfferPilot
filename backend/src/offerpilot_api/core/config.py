@@ -24,6 +24,15 @@ class Settings(BaseSettings):
     database_statement_timeout_ms: int = Field(default=15000, ge=100, le=120000)
     database_lock_timeout_ms: int = Field(default=5000, ge=100, le=30000)
     upload_dir: Path = DEFAULT_UPLOAD_DIR
+    export_dir: Path | None = None
+    deletion_ledger_dir: Path | None = None
+    export_ttl_seconds: int = Field(default=86400, ge=60, le=86400)
+    export_max_bytes: int = Field(default=67108864, ge=1048576, le=1073741824)
+    export_max_records: int = Field(default=10000, ge=10, le=100000)
+    export_timeout_seconds: int = Field(default=60, ge=1, le=300)
+    export_max_active_total: int = Field(default=20, ge=1, le=100)
+    export_max_retained_per_user: int = Field(default=2, ge=1, le=10)
+    deletion_max_attempts: int = Field(default=5, ge=1, le=10)
     session_ttl_seconds: int = Field(default=43200, ge=60, le=604800)
     session_cookie_secure: bool | None = None
     trusted_origins: list[str] = ["http://localhost:8000", "http://127.0.0.1:8000"]
@@ -49,6 +58,14 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def validate_database(self) -> "Settings":
+        if self.export_dir is None:
+            self.export_dir = self.upload_dir.parent / (self.upload_dir.name + "-exports")
+        if self.deletion_ledger_dir is None:
+            self.deletion_ledger_dir = self.upload_dir.parent / (self.upload_dir.name + "-deletion-ledger")
+        private_roots = [path.resolve() for path in (self.upload_dir, self.export_dir, self.deletion_ledger_dir)]
+        if any(left.is_relative_to(right) or right.is_relative_to(left)
+               for index, left in enumerate(private_roots) for right in private_roots[index + 1:]):
+            raise ValueError("简历、导出与独立删除清单目录不得重叠")
         try:
             url = make_url(self.database_url)
         except Exception:

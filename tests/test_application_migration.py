@@ -59,7 +59,7 @@ class ApplicationMigrationTests(unittest.TestCase):
 
     def test_migration_is_single_forward_revision_from_0008(self):
         scripts = ScriptDirectory.from_config(self.config)
-        self.assertEqual(scripts.get_current_head(), CURRENT)
+        self.assertEqual(scripts.get_revision("0010_account_lifecycle").down_revision, CURRENT)
         self.assertEqual(scripts.get_revision(CURRENT).down_revision, PREVIOUS)
 
     def test_upgrade_preserves_every_0008_value_owner_revision_evidence_match_and_preference(self):
@@ -67,7 +67,7 @@ class ApplicationMigrationTests(unittest.TestCase):
         self.upgrade()
         with self.engine.connect() as db:
             self.assertEqual(self.snapshot(db, tables), original)
-            self.assertEqual(db.scalar(text("SELECT version_num FROM alembic_version")), CURRENT)
+            self.assertEqual(db.scalar(text("SELECT version_num FROM alembic_version")), ScriptDirectory.from_config(self.config).get_current_head())
             self.assertEqual(db.execute(text("PRAGMA foreign_key_check")).all(), [])
             for name in TABLES:
                 self.assertEqual(db.scalar(select(text("count(*)")).select_from(Base.metadata.tables[name])), 0)

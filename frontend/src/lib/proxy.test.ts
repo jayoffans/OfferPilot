@@ -5,6 +5,40 @@ import { allowedRoute, proxyApi } from './proxy';
 const id = '9e9bff19-a61d-4857-b128-e6225e2832cc';
 afterEach(() => { vi.unstubAllGlobals(); vi.unstubAllEnvs(); });
 describe('same-origin API boundary', () => {
+  it('bounds export response bytes even when upstream omits its content length', async () => {
+    vi.stubEnv('OFFERPILOT_EXPORT_MAX_BYTES', '1048576');
+    const canceled = vi.fn();
+    const body = new ReadableStream<Uint8Array>({
+      start(controller) { controller.enqueue(new Uint8Array(1048577)); }, cancel: canceled,
+    });
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(body, { headers: { 'Content-Type': 'application/zip' } })));
+    const response = await proxyApi(new Request(`http://127.0.0.1:3000/api/v1/me/export/${id}/download`), ['me', 'export', id, 'download']);
+    expect(response.status).toBe(413); expect(canceled).toHaveBeenCalled();
+    expect(await response.text()).toContain('export_resource_limit');
+  });
+  it('exposes only own-account export and read-only deletion status routes, without user or token queries', async () => {
+    for (const path of ['me/exports', `me/export/${id}`, `me/export/${id}/download`, 'me/deletion/status']) expect(allowedRoute('GET', path)).toBe(true);
+    for (const path of ['me/export', 'me/deletion']) expect(allowedRoute('POST', path)).toBe(true);
+    for (const path of ['me/export/other', `me/deletion/${id}`, 'me/deletion/retry', `me/export/${id}/retry`]) expect(allowedRoute('POST', path)).toBe(false);
+    for (const method of ['POST', 'PUT', 'DELETE']) expect(allowedRoute(method, 'me/deletion/status')).toBe(false);
+    const fetcher = vi.fn().mockResolvedValue(Response.json({})); vi.stubGlobal('fetch', fetcher);
+    for (const query of ['user_id=other', 'token=secret', 'url=http://localhost']) expect((await proxyApi(new Request(`http://127.0.0.1:3000/api/v1/me/deletion/status?${query}`), ['me', 'deletion', 'status'])).status).toBe(404);
+    expect(fetcher).not.toHaveBeenCalled();
+  });
+  it('forwards the short-lived deletion cookie only for minimal status and whitelists its response cookie', async () => {
+    const fetcher = vi.fn(async (_url, init) => {
+      const headers = new Headers(init.headers);
+      return new Response('{}', { headers: { 'Content-Type': 'application/json', 'Set-Cookie': 'offerpilot_deletion_status=status-token; Path=/; HttpOnly; SameSite=Strict; Max-Age=3600', 'X-Observed-Cookie': headers.get('cookie') || '' } });
+    });
+    vi.stubGlobal('fetch', fetcher);
+    const cookie = 'analytics=unrelated; offerpilot_session=session_123; offerpilot_deletion_status=status-token';
+    const response = await proxyApi(new Request('http://127.0.0.1:3000/api/v1/me/deletion/status', { headers: { Cookie: cookie } }), ['me', 'deletion', 'status']);
+    expect(new Headers(fetcher.mock.calls[0][1].headers).get('cookie')).toBe('offerpilot_session=session_123; offerpilot_deletion_status=status-token');
+    expect(response.headers.get('set-cookie')).toContain('HttpOnly');
+    const normal = await proxyApi(new Request('http://127.0.0.1:3000/api/v1/me', { headers: { Cookie: cookie } }), ['me']);
+    expect(new Headers(fetcher.mock.calls[1][1].headers).get('cookie')).toBe('offerpilot_session=session_123');
+    expect(normal.headers.get('set-cookie')).toBeNull();
+  });
   it('exposes read-only dashboard aggregation and forwards only its bounded query', async () => {
     expect(allowedRoute('GET', 'dashboard')).toBe(true);
     for (const method of ['POST', 'PUT', 'PATCH', 'DELETE']) expect(allowedRoute(method, 'dashboard')).toBe(false);

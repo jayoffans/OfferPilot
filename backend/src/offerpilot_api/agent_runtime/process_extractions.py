@@ -25,7 +25,7 @@ def main() -> int:
             with SessionLocal() as db:
                 result = {"recovered": recover_expired_runs(db, limit=args.limit)}
         else:
-            result = process_extraction_batch(SessionLocal, limit=args.limit)
+            result = process_extraction_batch(SessionLocal, limit=args.limit, settings=get_settings())
         print(json.dumps(result))
         return 0
     except SQLAlchemyError:

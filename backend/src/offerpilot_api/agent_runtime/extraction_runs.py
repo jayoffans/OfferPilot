@@ -24,7 +24,7 @@ from offerpilot_api.agent_runtime.extraction_schemas import (
 )
 from offerpilot_api.agent_runtime.llm_provider import LLMProvider, LLMProviderError
 from offerpilot_api.core.config import Settings
-from offerpilot_api.db.models import ProfileCandidate, ResumeDocument, ResumeExtractionRun
+from offerpilot_api.db.models import ProfileCandidate, ResumeDocument, ResumeExtractionRun, User
 from offerpilot_api.agent_runtime.byok import SessionKeyVault, MODEL, CONSENT_VERSION, redact_resume, input_token_upper
 from offerpilot_api.profile.services import get_profile, ingest_profile_candidates
 
@@ -85,6 +85,20 @@ def source_version(document: ResumeDocument) -> str:
 
 def _document(db: Session, user_id: UUID, resume_id: UUID, *, lock: bool = False) -> ResumeDocument:
     if lock:
+        # Account erasure locks this row before cancelling tasks. All late
+        # candidate writes and call reservations share the same lock order.
+        active = db.execute(update(User).where(User.id == user_id, User.is_active.is_(True))
+                            .values(is_active=User.is_active))
+        if active.rowcount != 1:
+            raise ExtractionRunError("account_deleted", "账户已进入注销流程，结果已丢弃", 409)
+        if db.info.get("account_settings"):
+            from offerpilot_api.account_lifecycle.guards import check_registry
+            from offerpilot_api.identity.services import IdentityError
+            try:
+                check_registry(user_id, db.info["account_settings"])
+            except IdentityError as exc:
+                raise ExtractionRunError("account_deleted" if exc.status_code == 401 else "account_safety_unavailable",
+                                         "账户数据安全检查未通过，任务已停止", 409) from None
         result = db.execute(update(ResumeDocument).where(
             ResumeDocument.id == resume_id, ResumeDocument.user_id == user_id,
             ResumeDocument.processing_status == "parsed", ResumeDocument.lifecycle_status == "active",
@@ -381,13 +395,16 @@ def claim_extraction_run(db: Session, *, run_id: UUID, now: datetime | None = No
 
 
 class _BudgetedProvider:
-    def __init__(self, factory: Callable[[], Session], claim: ClaimedExtractionRun, provider: LLMProvider, byok_vault=None):
+    def __init__(self, factory: Callable[[], Session], claim: ClaimedExtractionRun, provider: LLMProvider, byok_vault=None, settings=None):
         self.factory, self.claim, self.provider = factory, claim, provider
         self.vault = byok_vault
+        self.settings = settings
 
     def generate_json(self, *, system_prompt: str, user_prompt: str) -> str:
         now = _now()
         with self.factory() as db:
+            db.info["account_settings"] = self.settings
+            _document(db, self.claim.user_id, self.claim.resume_id, lock=True)
             if self.claim.mode == "deepseek":
                 if not self.vault or not self.vault.credential(db, user_id=self.claim.user_id, session_id=self.claim.session_id, reference=self.claim.key_reference):
                     raise LLMProviderError("Credential unavailable", code="key_unavailable", billing_status="not_sent")
@@ -494,6 +511,7 @@ def execute_extraction_run(session_factory: Callable[[], Session], *, run_id: UU
     from offerpilot_api.resume_ingestion.extractor import ExtractionDiagnostics
     from offerpilot_api.resume_ingestion.extractor_v2 import extract_student_profile_v2
     with session_factory() as db:
+        db.info["account_settings"] = settings
         claim = claim_extraction_run(db, run_id=run_id)
     if claim is None:
         return False
@@ -507,8 +525,10 @@ def execute_extraction_run(session_factory: Callable[[], Session], *, run_id: UU
                 api_key = byok_vault.resolve(db, user_id=claim.user_id, session_id=claim.session_id, reference=claim.key_reference)
             if not api_key:
                 raise ExtractionRunError("key_unavailable", "当前会话 Key 已失效", 409)
-            from offerpilot_api.agent_runtime.providers.deepseek import DeepSeekProvider
-            actual_provider = (deepseek_provider_factory or DeepSeekProvider)(api_key=api_key, model=MODEL, timeout_seconds=10, max_output_tokens=4096)
+            if deepseek_provider_factory is None:
+                from offerpilot_api.agent_runtime.providers.deepseek import DeepSeekProvider
+                deepseek_provider_factory = DeepSeekProvider
+            actual_provider = deepseek_provider_factory(api_key=api_key, model=MODEL, timeout_seconds=10, max_output_tokens=4096)
             api_key = None
             model_text = redact_resume(claim.raw_text)
             if hashlib.sha256(model_text.encode()).hexdigest() != claim.sent_text_sha256:
@@ -518,12 +538,13 @@ def execute_extraction_run(session_factory: Callable[[], Session], *, run_id: UU
             # Keep the free protocol path on the same minimization boundary
             # as DeepSeek, so a Spy can verify the disclosed input precisely.
             model_text = redact_resume(claim.raw_text)
-        provider = _BudgetedProvider(session_factory, claim, actual_provider, byok_vault)
+        provider = _BudgetedProvider(session_factory, claim, actual_provider, byok_vault, settings)
         result = extract_student_profile_v2(claim.raw_text, provider, text_layout=claim.text_layout, diagnostics=diagnostics,
                                             max_attempts=1 if claim.mode == "deepseek" else 2, model_input_text=model_text)
         if claim.mode == "deepseek" and result.batch is None:
             raise ExtractionRunError("empty_extraction", "模型未返回候选事实，可手工填写或核对发送范围", 422)
         with session_factory() as db:
+            db.info["account_settings"] = settings
             completed = finish_extraction_run(db, claim=claim, result=result, byok_vault=byok_vault)
         if not completed:
             with session_factory() as db:

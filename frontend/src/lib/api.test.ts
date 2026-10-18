@@ -3,6 +3,21 @@ import { api, ApiError, clearSession, SESSION_EXPIRED_EVENT } from './api';
 const user = { id: 'test', email: 'synthetic@example.com', created_at: '2026-10-11T00:00:00' };
 beforeEach(() => clearSession());
 afterEach(() => vi.unstubAllGlobals());
+it('account data writes carry CSRF and explicit intent while deletion status 401 stays on the result page', async () => {
+  const expired = vi.fn(); window.addEventListener(SESSION_EXPIRED_EVENT, expired);
+  const bodies: unknown[] = [];
+  vi.stubGlobal('fetch', vi.fn((url: string, init?: RequestInit) => {
+    if (url.endsWith('/auth/csrf')) return Promise.resolve(Response.json({ csrf_token: 'account-csrf' }));
+    if (url.endsWith('/me/deletion/status')) return Promise.resolve(Response.json({}, { status: 401 }));
+    expect(new Headers(init?.headers).get('X-CSRF-Token')).toBe('account-csrf');
+    bodies.push(JSON.parse(String(init?.body))); return Promise.resolve(Response.json({ id: 'synthetic' }));
+  }));
+  await api.createExport({ password: 'Synthetic-password', idempotency_key: 'export-key' });
+  await api.createDeletion({ password: 'Synthetic-password', confirmation: '注销账户', idempotency_key: 'delete-key' });
+  await expect(api.deletionStatus()).rejects.toMatchObject({ status: 401 });
+  expect(bodies).toEqual([{ password: 'Synthetic-password', idempotency_key: 'export-key' }, { password: 'Synthetic-password', confirmation: '注销账户', idempotency_key: 'delete-key' }]);
+  expect(expired).not.toHaveBeenCalled(); window.removeEventListener(SESSION_EXPIRED_EVENT, expired);
+});
 it('dashboard reads are bounded, uncached and expire a rejected session without retry', async () => {
   const expired = vi.fn(); window.addEventListener(SESSION_EXPIRED_EVENT, expired);
   const fetcher = vi.fn().mockResolvedValue(Response.json({}, { status: 401 })); vi.stubGlobal('fetch', fetcher);

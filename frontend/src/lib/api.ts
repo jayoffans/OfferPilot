@@ -37,6 +37,8 @@ export type ApplicationUpdate = Schemas['ApplicationUpdateRequest'];
 export type ApplicationDelete = Schemas['ApplicationDeleteRequest'];
 export type ApplicationEvents = Schemas['ApplicationEventListResponse'];
 export type DashboardData = Schemas['DashboardResponse'];
+export type AccountExport = Schemas['ExportStatus'];
+export type AccountDeletion = Schemas['AccountDeletionResponse'];
 type MatchCreate = Schemas['JobMatchCreateRequest'];
 type MatchHistory = Schemas['JobMatchHistoryResponse'];
 type LoginResponse = Schemas['LoginResponse'];
@@ -149,12 +151,29 @@ async function getCsrf(): Promise<string> {
   }
   return csrfPending.promise;
 }
-async function write<T>(path: string, method: string, data?: unknown, signal?: AbortSignal): Promise<T> {
+async function write<T>(path: string, method: string, data?: unknown, signal?: AbortSignal, notifyUnauthorized = true): Promise<T> {
   const token = await getCsrf();
-  return request<T>(path, { method, signal, headers: { 'X-CSRF-Token': token, ...(data ? { 'Content-Type': 'application/json' } : {}) }, body: data ? JSON.stringify(data) : undefined });
+  return request<T>(path, { method, signal, headers: { 'X-CSRF-Token': token, ...(data ? { 'Content-Type': 'application/json' } : {}) }, body: data ? JSON.stringify(data) : undefined }, notifyUnauthorized);
 }
 
 export const api = {
+  createExport: (data: Schemas['ExportCreateRequest'], signal?: AbortSignal) => write<AccountExport>('/me/export', 'POST', data, signal),
+  accountExports: (signal?: AbortSignal) => request<AccountExport[]>('/me/exports', { signal }),
+  accountExport: (id: string, signal?: AbortSignal) => request<AccountExport>(`/me/export/${encodeURIComponent(id)}`, { signal }),
+  createDeletion: (data: Schemas['AccountDeletionRequest'], signal?: AbortSignal) => write<AccountDeletion>('/me/deletion', 'POST', data, signal, false),
+  deletionStatus: (signal?: AbortSignal) => request<AccountDeletion>('/me/deletion/status', { signal }, false),
+  async downloadExport(id: string, signal?: AbortSignal): Promise<void> {
+    const generation = sessionGeneration;
+    const response = await fetch(`/api/v1/me/export/${encodeURIComponent(id)}/download`, { signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(60_000)]) : AbortSignal.timeout(60_000), credentials: 'same-origin', cache: 'no-store' });
+    if (!response.ok) {
+      if (response.status === 401) expireSession(generation);
+      throw errorFrom(response.status, await response.json().catch(() => null), null);
+    }
+    const url = URL.createObjectURL(await response.blob());
+    const link = document.createElement('a');
+    link.href = url; link.download = `offerpilot-data-${id}.zip`; document.body.appendChild(link); link.click(); link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  },
   dashboard: (signal?: AbortSignal) => request<DashboardData>('/dashboard?limit=5', { signal }),
   applications: (query: URLSearchParams, signal?: AbortSignal) => request<ApplicationList>(`/applications?${query.toString()}`, { signal }),
   application: (id: string, signal?: AbortSignal) => request<Application>(`/applications/${encodeURIComponent(id)}`, { signal }),

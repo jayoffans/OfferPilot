@@ -27,7 +27,9 @@ def get_current_session(
     settings: Annotated[Settings, Depends(get_settings)],
 ) -> AuthSession:
     token = request.cookies.get(SESSION_COOKIE_NAME)
+    db.info["account_settings"] = settings
     session = authenticated_session(db, token)
+    db.info["account_user_id"] = session.user_id
     if request.method not in {"GET", "HEAD", "OPTIONS"}:
         check_origin(request, settings)
         supplied = request.headers.get("x-csrf-token", "")

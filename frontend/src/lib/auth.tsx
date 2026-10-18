@@ -7,6 +7,13 @@ type AuthStatus = 'loading' | 'authenticated' | 'anonymous' | 'error';
 type AuthContextValue = { user: User | null; status: AuthStatus; error: string | null; reload(): Promise<void>; signIn(user: User): void; signOut(): Promise<void> };
 const AuthContext = createContext<AuthContextValue | null>(null);
 
+export function navigateToDeletionStatus() {
+  clearSession();
+  // A full navigation discards the old authenticated tree before any /me
+  // refresh can redirect the revoked session away from the status receipt.
+  window.location.replace('/account-deletion');
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [status, setStatus] = useState<AuthStatus>('loading');
@@ -37,7 +44,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const timer = setTimeout(() => { void reload(); }, 0);
     const expired = () => {
       pending.current?.abort(); setUser(null); setError(null); setStatus('anonymous');
-      if (!['/login', '/register'].includes(window.location.pathname)) window.location.replace('/login?reason=expired');
+      if (!['/login', '/register', '/account-deletion'].includes(window.location.pathname)) window.location.replace('/login?reason=expired');
     };
     window.addEventListener(SESSION_EXPIRED_EVENT, expired);
     return () => { clearTimeout(timer); pending.current?.abort(); window.removeEventListener(SESSION_EXPIRED_EVENT, expired); };

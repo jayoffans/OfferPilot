@@ -15,7 +15,7 @@ from tests.postgres.support import PostgresTestCase, isolated_database, migrate
 class PostgreSQLMigrationTests(PostgresTestCase):
     def test_empty_database_model_constraints_indexes_and_native_types(self):
         with self.engine.connect() as conn:
-            self.assertEqual(conn.scalar(text("SELECT version_num FROM alembic_version")), "0009_application_tracker")
+            self.assertEqual(conn.scalar(text("SELECT version_num FROM alembic_version")), "0010_account_lifecycle")
             self.assertEqual(compare_metadata(MigrationContext.configure(conn), Base.metadata), [])
             self.assertEqual(conn.scalar(text("SHOW timezone")), "UTC")
             inspector = inspect(conn)
@@ -69,7 +69,7 @@ class PostgreSQLMigrationTests(PostgresTestCase):
             self.addCleanup(migration_engine.dispose)
             revisions = ["0001_resume_intelligence", "0002_identity_ownership", "0003_resume_file_lifecycle",
                          "0004_trusted_career_profile", "0005_resume_extraction_runs", "0006_deepseek_byok",
-                         "0007_private_jobs", "0008_trusted_job_matches", "0009_application_tracker"]
+                         "0007_private_jobs", "0008_trusted_job_matches", "0009_application_tracker", "0010_account_lifecycle"]
             uid, rid, pid, fid, cid, candidate, runid = [uuid4() for _ in range(7)]
             jobid, snapshotid, matchid = [uuid4() for _ in range(3)]
             now = datetime.now(timezone.utc)

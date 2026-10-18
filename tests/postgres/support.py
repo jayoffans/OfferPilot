@@ -129,4 +129,8 @@ class PostgresTestCase(unittest.TestCase):
                                  trusted_origins=["http://testserver"],
                                  auth_login_attempt_limit=100, auth_ip_attempt_limit=1000,
                                  auth_registration_attempt_limit=100)
+        # This fixture has just created a new empty database/private directory.
+        # Explicit initialization must never be copied into a restore path.
+        from offerpilot_api.account_lifecycle.ledger import DeletionLedger
+        DeletionLedger(self.settings.deletion_ledger_dir).initialize()
         self.storage = LocalResumeStorage(self.settings.upload_dir)

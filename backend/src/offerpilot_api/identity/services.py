@@ -7,7 +7,7 @@ from sqlalchemy import delete, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from offerpilot_api.core.config import Settings
+from offerpilot_api.core.config import Settings, get_settings
 from offerpilot_api.db.models import AuthSession, AuthThrottle, RegistrationInvitation, User
 from offerpilot_api.identity.security import (
     hash_password,
@@ -113,6 +113,17 @@ def register_user(
     client_host: str,
     settings: Settings,
 ) -> User:
+    from offerpilot_api.account_lifecycle.ledger import DeletionLedger, LedgerError
+    from sqlalchemy import func
+    registry = DeletionLedger(settings.deletion_ledger_dir)
+    try:
+        # Bootstrap only a genuinely empty new database. Existing installations
+        # explicitly provision the independent registry before enabling access.
+        if not settings.deletion_ledger_dir.exists() and db.scalar(select(func.count()).select_from(User)) == 0:
+            registry.initialize()
+        registry._check()
+    except (LedgerError, OSError):
+        raise IdentityError("deletion_registry_unavailable", "数据安全检查暂不可用，请联系维护者", 503) from None
     _take_attempt(
         db,
         key=f"register-ip:{client_host}",
@@ -180,6 +191,10 @@ def login_user(
     matched = verify_password(user.password_hash if user else None, password)
     if not matched or user is None or not user.is_active:
         raise IdentityError("invalid_credentials", "邮箱或密码不正确", 401)
+    from offerpilot_api.account_lifecycle.guards import require_active_account
+    require_active_account(db, user.id, settings)
+    db.info["account_user_id"] = user.id
+    db.info["account_settings"] = settings
     if needs_rehash(user.password_hash):
         user.password_hash = hash_password(password)
     if previous_token and valid_token(previous_token):
@@ -220,6 +235,8 @@ def authenticated_session(db: Session, token: str | None) -> AuthSession:
     )
     if session is None:
         raise IdentityError("authentication_required", "会话已失效，请重新登录", 401)
+    from offerpilot_api.account_lifecycle.guards import check_registry
+    check_registry(session.user_id, db.info.get("account_settings") or get_settings())
     return session
 
 

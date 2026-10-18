@@ -6,6 +6,7 @@ passes its random control secret to the parent through a private stdout pipe.
 Closing stdin gracefully stops HTTP and removes this launcher's temporary root.
 """
 
+import asyncio
 import contextlib
 import hmac
 import io
@@ -55,6 +56,8 @@ def run() -> None:
         os.environ.update({
             "OFFERPILOT_DATABASE_URL": test_database.database_url if postgres else f"sqlite:///{(private_root / 'e2e.db').as_posix()}",
             "OFFERPILOT_UPLOAD_DIR": str(storage_root),
+            "OFFERPILOT_EXPORT_DIR": str(private_root / "exports"),
+            "OFFERPILOT_DELETION_LEDGER_DIR": str(private_root / "deletion-ledger"),
             "OFFERPILOT_ENVIRONMENT": "development",
             "OFFERPILOT_SESSION_COOKIE_SECURE": "false",
             "OFFERPILOT_TRUSTED_ORIGINS": json.dumps([f"http://127.0.0.1:{web_port}"]),
@@ -87,7 +90,7 @@ def run() -> None:
                 command.upgrade(Config(str(BACKEND / "alembic.ini")), "head")
         with engine.connect() as connection:
             revision = connection.exec_driver_sql("SELECT version_num FROM alembic_version").scalar()
-        if revision != "0009_application_tracker":
+        if revision != "0010_account_lifecycle":
             raise RuntimeError("E2E migration baseline changed; review the harness")
 
         app = create_app()
@@ -312,6 +315,37 @@ def run() -> None:
                     "operation_has_reference": bool(operation and (operation.object_key or operation.legacy_path)),
                     "lifecycle_status": document.lifecycle_status if document else None,
                 }
+
+        @app.post("/__e2e/lifecycle-dispatcher", include_in_schema=False)
+        async def lifecycle_dispatcher_control(request: Request):
+            controlled(request)
+            enabled = (await request.json()).get("enabled")
+            if not isinstance(enabled, bool):
+                raise HTTPException(status_code=400)
+            app.state.lifecycle_dispatcher_enabled = enabled
+            return {"ok": True}
+
+        @app.post("/__e2e/export/{export_id}/expire", include_in_schema=False)
+        async def expire_export(export_id: UUID, request: Request):
+            controlled(request)
+            from offerpilot_api.db.models import AccountExport
+            with Session(engine) as db:
+                row = db.get(AccountExport, export_id)
+                if row is None or row.status != "ready":
+                    raise HTTPException(status_code=409)
+                row.expires_at = datetime.now(timezone.utc) - timedelta(seconds=1)
+                db.commit()
+            return {"ok": True}
+
+        @app.post("/__e2e/deletion/{deletion_id}/process", include_in_schema=False)
+        async def process_account_deletion(deletion_id: UUID, request: Request):
+            controlled(request)
+            from offerpilot_api.account_lifecycle.deletion import process_deletion
+            from offerpilot_api.resume_ingestion.storage import LocalResumeStorage
+            with Session(engine) as db:
+                completed = await asyncio.to_thread(process_deletion, db,
+                    deletion_id=deletion_id, settings=get_settings(), storage=LocalResumeStorage(storage_root))
+            return {"completed": completed}
 
         @app.post("/__e2e/resume/{resume_id}/fault", include_in_schema=False)
         async def fault(resume_id: UUID, request: Request):

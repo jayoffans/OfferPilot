@@ -31,6 +31,7 @@ MODULES = (
     "test_trusted_profile", "test_extraction_runs", "test_byok_security",
     "test_deepseek_preview_consistency", "test_job_catalog", "test_job_matches",
     "test_applications", "test_dashboard",
+    "test_account_exports", "test_account_deletion",
 )
 
 class PostgreSQLResult(unittest.TextTestResult):

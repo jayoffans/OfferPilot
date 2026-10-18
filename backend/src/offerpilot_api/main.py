@@ -20,6 +20,10 @@ from offerpilot_api.api.routes.jobs import router as jobs_router
 from offerpilot_api.api.routes.job_matches import router as job_matches_router
 from offerpilot_api.api.routes.applications import router as applications_router
 from offerpilot_api.api.routes.dashboard import router as dashboard_router
+from offerpilot_api.api.routes.account_deletion import router as account_deletion_router
+from offerpilot_api.api.routes.account_exports import router as account_exports_router
+from offerpilot_api.account_lifecycle.exports import ExportError, export_dispatcher
+from offerpilot_api.account_lifecycle.deletion import deletion_dispatcher
 from offerpilot_api.application_tracker.services import ApplicationError
 from offerpilot_api.agent_runtime.byok import SessionKeyVault
 from offerpilot_api.agent_runtime.extraction_runs import ExtractionRunError, extraction_dispatcher, mock_provider_factory
@@ -40,9 +44,16 @@ async def lifespan(_app: FastAPI):
         await asyncio.to_thread(verify_runtime_database_role, engine)
     if settings.mock_extraction_available or settings.deepseek_extraction_available:
         dispatcher = asyncio.create_task(extraction_dispatcher(_app, SessionLocal))
+    lifecycle_tasks = [asyncio.create_task(export_dispatcher(_app, SessionLocal)),
+                       asyncio.create_task(deletion_dispatcher(_app, SessionLocal))]
     try:
         yield
     finally:
+        for task in lifecycle_tasks:
+            task.cancel()
+        for task in lifecycle_tasks:
+            with suppress(asyncio.CancelledError):
+                await task
         if dispatcher is not None:
             dispatcher.cancel()
             with suppress(asyncio.CancelledError):
@@ -67,11 +78,20 @@ def create_app() -> FastAPI:
     app.include_router(job_matches_router)
     app.include_router(applications_router)
     app.include_router(dashboard_router)
+    app.include_router(account_deletion_router)
+    app.include_router(account_exports_router)
+    app.state.lifecycle_settings = settings
+    app.state.lifecycle_dispatcher_enabled = True
     app.state.byok_vault = SessionKeyVault()
     app.state.extraction_settings = settings
     app.state.deepseek_provider_factory = None
     app.state.extraction_provider_factory = mock_provider_factory
     app.state.extraction_dispatcher_enabled = True
+
+    @app.exception_handler(ExportError)
+    async def export_error(_request: Request, exc: ExportError) -> JSONResponse:
+        return JSONResponse(status_code=exc.status_code, content={"detail": {"code": exc.code, "message": exc.message}},
+                            headers={"Cache-Control": "no-store"})
 
     @app.exception_handler(ApplicationError)
     async def application_error(_request: Request, exc: ApplicationError) -> JSONResponse:
