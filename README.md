@@ -183,4 +183,8 @@ docs/        当前说明、截图、面试稿与 S1～S5-2 历史验收
 .github/     GitHub Actions 与贡献模板
 ```
 
-本仓库仍需维护者确认项目 LICENSE；公开源码不自动授予再许可权。PyMuPDF 采用 AGPLv3 / 商业双许可，发布前必须确定相容方案，不能默认用 MIT 覆盖第三方义务。[安全审查](docs/SECURITY_REVIEW.md) · [第三方许可](docs/THIRD_PARTY_LICENSES.md) · [最终发布检查表](docs/GITHUB-RELEASE-CHECKLIST.md) · [贡献说明](CONTRIBUTING.md)
+**许可证状态：AGPLv3 方案待负责人最终批准。** [LICENSE.candidate](LICENSE.candidate) 是完整标准文本候选，尚未作为项目授权生效；本仓库当前没有正式 `LICENSE`。建议保留 PyMuPDF，按 AGPLv3 相容方式公开自有应用源码，并保留第三方原有许可与版权声明。公开源码不自动授予再许可权，也不能用项目许可覆盖依赖的许可。
+
+项目用于本地学习、GitHub 作品展示和技术面试，当前不部署公网服务；这是维护范围说明，**不是禁止商业使用的附加许可条款**。最终采用 AGPLv3 后，商业使用仍受其正文允许及义务约束。依赖版本、PyMuPDF 文件级标识差异、源码提供及再分发义务见[第三方许可审查](docs/THIRD_PARTY_LICENSES.md)、[完整依赖清单](docs/DEPENDENCY-LICENSE-INVENTORY.json)和[第三方版权原文](docs/THIRD_PARTY_NOTICES.txt)。
+
+[安全审查](docs/SECURITY_REVIEW.md) · [最终发布检查表](docs/GITHUB-RELEASE-CHECKLIST.md) · [贡献说明](CONTRIBUTING.md)
