@@ -70,7 +70,7 @@ def create_postgres(config: dict) -> None:
     from sqlalchemy.engine import URL
     values = postgres_credentials()
     run(["docker", "compose", "--env-file", str(ROOT / ".env.s5-postgres"),
-         "-f", str(ROOT / "compose.postgres.yml"), "up", "-d", "--wait"])
+         "-f", str(ROOT / "compose.postgres.yml"), "up", "-d", "--wait", "--wait-timeout", "90"])
     port = int(values.get("S5_POSTGRES_PORT", "55432"))
     name = "offerpilot_portfolio_" + uuid4().hex[:16]
     migrator = URL.create("postgresql+psycopg", username="s5_migrator", password=values["S5_MIGRATOR_PASSWORD"],

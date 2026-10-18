@@ -28,7 +28,7 @@ uv run --project backend --locked python scripts/local/manage.py seed
 uv run --project backend --locked python scripts/local/manage.py status
 ```
 
-`init` 使用已固定版本和镜像摘要的 `compose.postgres.yml`，仅监听 `127.0.0.1:55432`。首次生成忽略的 `.env.s5-postgres` 随机凭据；已有文件和 Docker 卷不覆盖、不重置。随后创建全新随机命名的 `offerpilot_portfolio_*` 库，由 `s5_migrator` 向前迁移至 Alembic head（当前 `0010_account_lifecycle`），给 `s5_app` 必要 DML 权限，并初始化这套新环境的独立删除清单。应用始终使用 `s5_app`，不以超级用户或迁移角色运行。
+`init` 使用已固定版本和镜像摘要的 `compose.postgres.yml`，仅监听 `127.0.0.1:55432`，健康等待最多90秒。首次生成忽略的 `.env.s5-postgres` 随机凭据；已有文件和 Docker 卷不覆盖、不重置。随后创建全新随机命名的 `offerpilot_portfolio_*` 库，由 `s5_migrator` 向前迁移至 Alembic head（当前 `0010_account_lifecycle`），给 `s5_app` 必要 DML 权限，并初始化这套新环境的独立删除清单。应用始终使用 `s5_app`，不以超级用户或迁移角色运行。
 
 不想安装 Docker 时，可用 SQLite 体验相同产品流程：
 

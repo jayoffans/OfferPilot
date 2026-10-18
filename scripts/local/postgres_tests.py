@@ -18,7 +18,7 @@ def main():
     args = parser.parse_args()
     values = postgres_credentials()
     run(["docker", "compose", "--env-file", str(ROOT / ".env.s5-postgres"), "-f",
-         str(ROOT / "compose.postgres.yml"), "up", "-d", "--wait"])
+         str(ROOT / "compose.postgres.yml"), "up", "-d", "--wait", "--wait-timeout", "90"])
     common = dict(drivername="postgresql+psycopg", host="127.0.0.1",
                   port=int(values.get("S5_POSTGRES_PORT", "55432")), database="offerpilot_s5_test")
     env = dict(os.environ)

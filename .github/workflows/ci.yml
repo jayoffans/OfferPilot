@@ -3,7 +3,7 @@ name: CI
 on:
   pull_request:
   push:
-    branches: [main, master]
+    branches: [main, master, "codex/**"]
   workflow_dispatch:
 
 permissions:
@@ -73,6 +73,9 @@ jobs:
           uv run --project backend --locked python scripts/local/manage.py init --database postgres
           uv run --project backend --locked python scripts/local/manage.py seed
           uv run --project backend --locked python scripts/local/manage.py status
+      - name: PostgreSQL failure diagnostics (status only)
+        if: ${{ failure() }}
+        run: docker compose --env-file .env.s5-postgres -f compose.postgres.yml ps --all
 
   frontend:
     name: Frontend / contract / build / Chromium

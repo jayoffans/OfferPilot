@@ -30,6 +30,8 @@
 
 旧报告中的绝对本机路径属于开发环境信息，不能用于认证，但可能暴露目录/账户习惯；未发现其夹带真实简历或秘密。最终复核定位到 `docs/PLAN-history.md`、`docs/README-history.md`、`docs/S1-3-acceptance.md`、`docs/S2-2B-real-evaluation.md`、`docs/S2-2B-single-real-evaluation-2026-10-14.md` 及 `backend/.env.example` 中的旧路径。**当前文档已改为 `<repo>` / `<用户目录>` 或通用私有路径示例，版本与验收结果保持；Git 历史中的旧路径仍存在，由所有者决定是否接受公开。** 本轮没有重写历史。
 
+另按 Windows 盘符与 Unix 常见数据目录形态补查绝对路径（本机脱敏盘点：`frontend/artifacts/security/absolute-path-review.json`）。当前 `backend/evaluations/s2-2b-single-real-{launch,direct-launch,continued-launch,safety-audit}-2026-10-14.json` 中仍保留当时报告/合成 PDF 的本地仓库绝对路径，属于可识别工作目录习惯的历史评测元数据，不是认证信息，也未指向真实简历；为保持原始验收记录，此次未改写。`backend/evaluations/evaluation.md`、环境示例及 ownership 反例里的通用私有路径属于示例/测试；容器目录、前端路由、导入路径和包下载路径亦不作为秘密。负责人需确认接受公开历史中的开发目录信息，不能将“无用户 home 路径命中”误解为“仓库不存在任何绝对路径”。
+
 ## 最终演示截图复核
 
 本轮已逐张以原始分辨率复查 `docs/images/demo/` 的 **11 张 PNG**：登录、桌面/移动工作台、简历详情、Mock 候选、手工画像、职位列表、JD 审核、匹配证据、投递详情及导出页面。截图来源固定在 `scripts/collect_demo.py`，生成路线与本轮 Chromium 测试见 [演示路线](DEMO.md)；图片清单及 SHA-256 见 [manifest](images/demo/manifest.json)。

@@ -77,7 +77,9 @@ npm --prefix frontend run api:check
 2. `postgres`：Compose 真实 PostgreSQL 专项及原 API 回归、全新 PostgreSQL 本地种子和状态检查。
 3. `frontend`：OpenAPI 契约、ESLint、Vitest、Next build、TypeScript、Chromium 全套。**CI 的浏览器层默认使用 SQLite**；PostgreSQL 浏览器检查保留上述可复现的本地入口，不在每个 PR 中重复整套浏览器工作。
 
-工作流仅为 PR、main/master 的未来 push 和手动触发配置，没有部署、发布或推送步骤；Actions 固定到官方仓库已核实的提交 SHA，uv 固定0.12.19。采用的 action 依据：[checkout](https://github.com/actions/checkout)、[setup-python](https://github.com/actions/setup-python)、[setup-node](https://github.com/actions/setup-node)、[setup-uv](https://github.com/astral-sh/setup-uv)。维护时应连同 Node/Python 运行要求检查 SHA 更新。
+工作流为 PR、`main` / `master` / `codex/**` 的未来 push 和手动触发配置，没有部署、发布或推送步骤；首次推送当前功能分支即可触发。手动触发要求工作流已存在于默认分支，不能作为当前首次运行入口。Actions 固定到官方仓库已核实的提交 SHA，uv 固定0.12.19。采用的 action 依据：[checkout](https://github.com/actions/checkout)、[setup-python](https://github.com/actions/setup-python)、[setup-node](https://github.com/actions/setup-node)、[setup-uv](https://github.com/astral-sh/setup-uv)。维护时应连同 Node/Python 运行要求检查 SHA 更新。
+
+本地/CI PostgreSQL 启动的健康等待上限为90秒；失败时工作流只输出 `docker compose ps --all` 状态，不打印容器配置、凭据或数据库日志。浏览器关闭 trace/自动截图/录像，避免在失败时收集登录秘密；复现时只主动截取经审阅的合成页面。最终发布顺序与本轮复验见 [GITHUB-RELEASE-CHECKLIST](GITHUB-RELEASE-CHECKLIST.md)。
 
 本轮没有推送，**GitHub 托管 CI 尚未执行**。本机对应命令通过只能证明当前本机环境，不能提前给远程 CI 标绿；Linux 首次安装、网络、Docker镜像和浏览器系统依赖仍以实际 Actions 结果为准。既有更重的100用户合成查询及独立备份/删除重放演练继续保留在 `scripts/postgres/quality.py`、`backup_restore.py`、`lifecycle_restore.py`，不作为此次作品集上手的必要步骤。
 
