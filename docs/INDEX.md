@@ -14,6 +14,7 @@
 | [THIRD_PARTY_LICENSES](THIRD_PARTY_LICENSES.md) | PyMuPDF 与第三方依赖许可 |
 | [PORTFOLIO-acceptance](PORTFOLIO-acceptance.md) | 本轮实际验证、Git 差异与审阅事项 |
 | [GITHUB-RELEASE-CHECKLIST](GITHUB-RELEASE-CHECKLIST.md) | 最终本地提交、许可/历史审查、复验及待授权发布顺序 |
+| [GITHUB-FINAL-RELEASE-REVIEW](GITHUB-FINAL-RELEASE-REVIEW.md) | 最新 AGPLv3 候选、历史隐私复核、免费测试及未放行事项 |
 
 ## 产品与设计依据
 

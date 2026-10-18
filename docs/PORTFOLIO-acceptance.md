@@ -1,5 +1,7 @@
 # GitHub 作品集交付验收
 
+> 最新一轮独立审查与实际重跑结果见 [GITHUB-FINAL-RELEASE-REVIEW](GITHUB-FINAL-RELEASE-REVIEW.md)。下文和旧检查表的数量、停止点均保留为历史快照；最新许可证候选与历史隐私尚未最终放行。
+
 > 本文保留上一轮作品集整理的工作树状态、测试和停止点。后续同日“GitHub 发布前最终审查”已按新授权完成三个本地提交；最新 Git 差异、安全补查、许可证决策准备、复验与发布顺序以 [GITHUB-RELEASE-CHECKLIST](GITHUB-RELEASE-CHECKLIST.md) 为准。下文“未提交/不提交”及14提交扫描数字均是当时快照，不表示当前状态；远程未推送、Actions未执行的边界继续有效。
 
 日期：2026-10-18（Asia/Shanghai）。目标为 GitHub 展示、简历介绍与技术面试，完成本地作品交付整理。没有公网部署、购买服务器、域名操作、真实付费 DeepSeek 请求、GitHub 推送或 Git 历史重写。本轮没有创建提交，全部内容留在工作树供维护者审阅。
