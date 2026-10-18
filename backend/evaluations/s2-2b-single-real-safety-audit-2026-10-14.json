@@ -1,5 +1,5 @@
 {
-  "fixture_path": "D:\\agent 项目\\OfferPilot\\backend\\evaluations\\fixtures\\normal_chinese.synthetic.pdf",
+  "fixture_path": "backend/evaluations/fixtures/normal_chinese.synthetic.pdf",
   "fixture_bytes": 2081,
   "fixture_sha256": "cd6e8940637829abaa911fd22689db0f43573a24328f50574300af2f36711567",
   "fixture_equals_pipeline_bytes": true,

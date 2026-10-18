@@ -4,7 +4,7 @@
   "process_id": 360804,
   "max_output_tokens": 4096,
   "max_total_real_calls": 1,
-  "report_path": "D:\\agent 项目\\OfferPilot\\backend\\evaluations\\s2-2b-single-real-continued-report-2026-10-14.json",
+  "report_path": "backend/evaluations/s2-2b-single-real-continued-report-2026-10-14.json",
   "key_input": "native_getpass_only",
   "status": "native_python_console_opened_do_not_replay",
   "authorization_record": "S2-2B-user-authorized-single-2026-10-14",

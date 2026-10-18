@@ -6,7 +6,7 @@
   "prior_actual_calls": 0,
   "max_total_real_calls": 1,
   "max_output_tokens": 4096,
-  "report_path": "D:\\agent 项目\\OfferPilot\\backend\\evaluations\\s2-2b-single-real-continued-report-2026-10-14.json",
+  "report_path": "backend/evaluations/s2-2b-single-real-continued-report-2026-10-14.json",
   "continuation_authorized_by_user": true,
   "process_id": 355428,
   "estimated_upper_cny": "0.065864",
