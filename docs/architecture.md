@@ -1,13 +1,15 @@
 # OfferPilot 系统架构与技术方案
 
+> **当前作品集边界（2026-10-18）：** 继续使用 Next.js + FastAPI 模块化单体、SQLAlchemy/Alembic、PostgreSQL 或 development SQLite，以及本机私有文件和主库外删除清单。当前组件图与代码阅读入口见 [ARCHITECTURE_GUIDE](ARCHITECTURE_GUIDE.md)。不新增 Redis/Celery、云对象存储、独立真实 Worker、Browser Runner 或监控平台。本地运行见 [LOCAL_SETUP](LOCAL_SETUP.md)，优先级见 [PLAN](PLAN.md)。下文各批记录保留；第 1～7 节中的高级组件是早期目标设计，不代表已实现，也不再是作品集待办。
+
 ### S5-2 生命周期编排边界
 
 `account_lifecycle` 编排身份、简历现有清理、画像、职位/匹配和申请数据，不增加求职功能。导出使用持久租约/额度、白名单流式 JSON、私有 ZIP、显式版本/遗漏/哈希和最多一天下载窗口。注销先写主库外 fsync 删除清单，再提交身份停用、全部会话/Key/任务撤销，最后复用文件 journal 补偿和显式依赖清理；只有全部完成才标记成功。
 
 已认证 Session 的写入/flush/commit 与后台抽取结果共享 User 外层锁及活跃/删除清单围栏。清单缺失或损坏失败关闭，不能随数据库旧快照回滚；恢复必须隔离、迁移、重放、验证后才开放。两张持久表由0010追加，0001～0009不变。没有新增broker；lifespan按有限批次处理，CLI提供有界恢复。短期状态Cookie不授予业务权限，前端沿OpenAPI生成类型和严格代理白名单。完整行为和实测见 [S5-2验收](S5-2-acceptance.md)；下文历史边界保留。
 
-**版本：** 1.3（S5-2 用户数据生命周期）
-**日期：** 2026-10-17
+**版本：** 1.4（本地作品集交付）
+**日期：** 2026-10-18
 
 ### S5-1 数据库适配与事务边界（2026-10-16～17）
 
@@ -92,7 +94,7 @@ Phase 1-2 上传接口仅在 `development` 环境可用，默认上传目录为�
 
 S2-2B-Fix的独立评测CLI通过 `evaluations/pdf_evaluation.py`装配系统临时DB/Storage及真实身份/API，实际生成/读回合成PDF后调用同一上传/parser、create/execute/finish/ingest/review；不建第二套领域逻辑。Mock运行也复用正式脱敏，Spy验证实际Provider参数。真实评测仅未来明确授权的一次合成请求，复用会话Vault/正式预览，默认不审核；评测结束销毁临时DB和Key。仅固定合成报告可存公开正文/候选/证据，普通生产日志规则不变。见 [修复验收](S2-2B-first-real-preflight-fix.md)。原有限批处理Worker CLI仍仅处理Mock，生产真实配置不变。
 
-## 1. 架构决策摘要
+## 1. 历史目标态架构决策摘要（非当前交付清单）
 
 **待决策说明：** Next.js 前端已由 S1-3 实施并延续验证；PostgreSQL 18.6 / psycopg 3.3.3 由 S5-1 在本机隔离选定，生产托管、Celery/Redis、对象存储和观测供应商仍待决策。保持模块化单体，Worker 在后续真实长任务需要时再决定，Browser 独立 S7，DOCX/OCR 和通知首发后评估。MVP 岗位来源为粘贴/手动输入，不访问保存的 URL。具体容量、数据期限与部署许可需相应批次验证。
 
@@ -103,7 +105,7 @@ S2-2B-Fix的独立评测CLI通过 `evaluations/pdf_evaluation.py`装配系统临
 - Agent 采用显式、可恢复的工作流状态机和窄权限工具；模型只负责提取、归纳、解释，不拥有申请提交权限。
 - 第一阶段岗位匹配以可解释规则为主；向量搜索属于后续可选能力，不作为推荐正确性的唯一依据。
 
-## 2. 系统上下文
+## 2. 历史目标态系统上下文（当前图见架构导读）
 
 ```mermaid
 flowchart LR
@@ -203,7 +205,7 @@ HTTP 路由只处理会话/CSRF、Schema、附件头与安全错误；`services/
 - Browser Agent 的高风险动作通过权限设计直接禁用，而不是依赖提示词要求模型“不要提交”。
 - 重要操作写入审计事件；生产可观测性默认脱敏，禁止将整份简历、Cookie、密码或申请答案写入普通日志。
 
-## 6. 技术选型
+## 6. 历史目标态技术选型（实施情况以顶部和验收为准）
 
 | 层 | 建议 | 采用原因 / 说明 |
 |---|---|---|
@@ -231,7 +233,7 @@ HTTP 路由只处理会话/CSRF、Schema、附件头与安全错误；`services/
 
 版本、许可、托管支持和安全公告在实际开工时重新确认；本方案不锁定未验证的具体补丁版本。
 
-## 7. 运行与部署建议
+## 7. 历史公网部署建议（已从当前排期取消）
 
 - 环境至少划分 local、staging、production；各自独立数据库、对象存储桶和模型凭据。
 - API、Worker 与 Browser Runner 用不同服务身份和最小权限；Browser Runner 不读取生产数据库凭据。

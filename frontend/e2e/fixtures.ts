@@ -51,6 +51,10 @@ export async function uploadUI(page: Page, pdf: Buffer, name = "synthetic-resume
   expect(response.status()).toBe(201);
   const result = await response.json() as { id: string; file_name: string };
   await expect(dialog).toBeHidden();
+  // Closing the dialog precedes the router transition. Wait for the actual
+  // destination before later menu clicks can race with the old page unmount.
+  await expect(page).toHaveURL(new RegExp(`/resumes/${result.id}$`));
+  await expect(page.getByRole("heading", { name: result.file_name, exact: true })).toBeVisible();
   return result;
 }
 

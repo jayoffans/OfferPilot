@@ -1,0 +1,129 @@
+{
+  "schema_version": "offerpilot-demo-screenshots/1.0",
+  "source_files_modified_at_utc": {
+    "screenshots/login-1440.png": "2026-10-17T16:11:15.090147+00:00",
+    "s4-2/dashboard-today-1440.png": "2026-10-17T16:10:03.283587+00:00",
+    "s4-2/mvp-resume-1440.png": "2026-10-17T16:09:56.819262+00:00",
+    "screenshots/extraction-candidates-1440.png": "2026-10-17T16:08:05.651335+00:00",
+    "s4-2/mvp-profile-manual-1440.png": "2026-10-17T16:09:58.278338+00:00",
+    "screenshots/jobs-list-1440.png": "2026-10-17T16:08:41.449092+00:00",
+    "s4-2/mvp-jd-reviewed-1440.png": "2026-10-17T16:09:59.577213+00:00",
+    "s4-2/mvp-match-evidence-1440.png": "2026-10-17T16:10:00.661687+00:00",
+    "s4-2/mvp-application-1440.png": "2026-10-17T16:10:02.555918+00:00",
+    "s5-2/export-ready-1440.png": "2026-10-17T16:06:55.333667+00:00",
+    "s4-2/dashboard-today-390.png": "2026-10-17T16:10:03.578596+00:00"
+  },
+  "data": "synthetic-only; Mock candidates are not DeepSeek outputs",
+  "screenshots": [
+    {
+      "file": "login.png",
+      "source": "frontend/artifacts/screenshots/login-1440.png",
+      "test": "frontend/e2e/workspace.spec.ts",
+      "description": "登录，凭据未填入",
+      "sha256": "61091401998850bbf4ed5131ae8c31a2f1573e8f5a2102d0e2a038fc42697ebf",
+      "bytes": 57683,
+      "width": 1440,
+      "height": 1000
+    },
+    {
+      "file": "workbench.png",
+      "source": "frontend/artifacts/s4-2/dashboard-today-1440.png",
+      "test": "frontend/e2e/workbench.spec.ts",
+      "description": "工作台，合成申请与今日行动",
+      "sha256": "adc8f23a7ff0bb518a7142122fce400242f85c51c58452690a5f1bcf4cc9fa56",
+      "bytes": 113930,
+      "width": 1440,
+      "height": 1492
+    },
+    {
+      "file": "resumes.png",
+      "source": "frontend/artifacts/s4-2/mvp-resume-1440.png",
+      "test": "frontend/e2e/workbench.spec.ts",
+      "description": "合成简历详情与文本解析状态",
+      "sha256": "63ebe7950bf036011971eb3a4f06dd9abeef9411c4568020b38d78468d7b044d",
+      "bytes": 122481,
+      "width": 1440,
+      "height": 1488
+    },
+    {
+      "file": "candidates-mock.png",
+      "source": "frontend/artifacts/screenshots/extraction-candidates-1440.png",
+      "test": "frontend/e2e/extraction.spec.ts",
+      "description": "Mock 候选、服务器定位及证据，非真实模型输出",
+      "sha256": "cbd1f663e092a7ffbf990e1757612ff6f7f9f234e8d0f7b7779a62394cf3e61a",
+      "bytes": 340873,
+      "width": 1440,
+      "height": 4109
+    },
+    {
+      "file": "profile.png",
+      "source": "frontend/artifacts/s4-2/mvp-profile-manual-1440.png",
+      "test": "frontend/e2e/workbench.spec.ts",
+      "description": "手工保存的合成正式画像",
+      "sha256": "a55801aacda8be6b72f0b19dbbbeb15b21884dea3851684ec9f0a68134bd45c7",
+      "bytes": 238931,
+      "width": 1440,
+      "height": 3516
+    },
+    {
+      "file": "jobs.png",
+      "source": "frontend/artifacts/screenshots/jobs-list-1440.png",
+      "test": "frontend/e2e/jobs.spec.ts",
+      "description": "合成职位列表与审核状态",
+      "sha256": "0b487921ae585b593872c28007ed6caf1c122bcd0f9632d100e446f4056d3eef",
+      "bytes": 59862,
+      "width": 1440,
+      "height": 1000
+    },
+    {
+      "file": "jd-review.png",
+      "source": "frontend/artifacts/s4-2/mvp-jd-reviewed-1440.png",
+      "test": "frontend/e2e/workbench.spec.ts",
+      "description": "用户审核后的 JD 条件",
+      "sha256": "df22c0d2a32755b3fe7dbffd8f73cad5a1fff2a77eed18d4f2308a196b69eab4",
+      "bytes": 164829,
+      "width": 1440,
+      "height": 2663
+    },
+    {
+      "file": "matching.png",
+      "source": "frontend/artifacts/s4-2/mvp-match-evidence-1440.png",
+      "test": "frontend/e2e/workbench.spec.ts",
+      "description": "纯规则匹配与双侧证据",
+      "sha256": "383a9e2669287dbbe8f4da618672664888e09fa8ddccb492ba4019b161af8acc",
+      "bytes": 244671,
+      "width": 1440,
+      "height": 3600
+    },
+    {
+      "file": "application.png",
+      "source": "frontend/artifacts/s4-2/mvp-application-1440.png",
+      "test": "frontend/e2e/workbench.spec.ts",
+      "description": "合成申请、日期行动和时间线",
+      "sha256": "95f8c02003e735515b2c37370dab8b78deb4e88031a4de05034a07a00a8c7eb4",
+      "bytes": 154217,
+      "width": 1440,
+      "height": 2205
+    },
+    {
+      "file": "export.png",
+      "source": "frontend/artifacts/s5-2/export-ready-1440.png",
+      "test": "frontend/e2e/account-lifecycle.spec.ts",
+      "description": "导出就绪，密码框已清空",
+      "sha256": "554e63809b01ab1732c06a82a823f5924d17ae4b1ee4048de1482b5c3751ccc4",
+      "bytes": 134286,
+      "width": 1440,
+      "height": 1241
+    },
+    {
+      "file": "workbench-mobile.png",
+      "source": "frontend/artifacts/s4-2/dashboard-today-390.png",
+      "test": "frontend/e2e/workbench.spec.ts",
+      "description": "390px 工作台",
+      "sha256": "ca3b67f9b6f6767d7e209fb3c9e3d2ae35fc1de3e2ffaf453108916ad31efb18",
+      "bytes": 90141,
+      "width": 390,
+      "height": 2200
+    }
+  ]
+}

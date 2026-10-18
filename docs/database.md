@@ -1,5 +1,7 @@
 # OfferPilot 数据库设计
 
+> **当前作品集口径（2026-10-18）：** 实际 Schema 以 `backend/migrations/versions/0001`～`0010` 和 ORM 为准，当前 head 为 `0010_account_lifecycle`，共 23 张业务/支撑表，另有 Alembic 版本表。本轮不新增持久化字段或迁移。PostgreSQL 与 development SQLite 保留；本机合成演示单独建库/私有目录，不改已有开发数据。下文各阶段是历史快照，第 1～4 节通用 ER/字段是早期逻辑目标，包含尚未实施的实体，不能据此宣称当前存在提醒、Browser 或审计表。当前删除/保留边界见 S5-2；不将取消公网商业化误解为取消数据安全义务。
+
 ## S5-2 数据生命周期（0010）
 
 只新增 `account_exports` 与 `account_deletions`，不修改0001～0009。导出表保存owner、唯一幂等键、状态、两次执行额度/令牌/租约、大小/哈希、TTL和最多五次物理清理次数；不保存ZIP正文、密码或本地路径。本人历史回执最多100项，注销时清除。
@@ -8,9 +10,9 @@
 
 主库外 `deletion_ledger_dir` 仅保留user/deletion UUID与意图时间，独立于数据库及原件备份；登录与会话均检查，缺失/损坏失败关闭。注销清全部owner表、父链派生、原件与导出文件，NULL-owner legacy保持。最小清单/回执当前持续保留，不能早于所有可恢复副本退出；正式保留期限、备份淘汰及适用义务仍须上线前批准。逻辑硬删不等于磁盘/备份安全擦除。详见 [依赖清单](S5-2-data-inventory.md) 和 [验收报告](S5-2-acceptance.md)。
 
-**版本：** 1.5（S5-2 用户数据生命周期）
+**版本：** 1.6（本地作品集交付）
 
-**日期：** 2026-10-17
+**日期：** 2026-10-18
 
 ## S5-1 PostgreSQL 本地适配（2026-10-16～17）
 
@@ -161,7 +163,7 @@ SQLite 使用原生 nullable `ALTER TABLE ... ADD COLUMN ... REFERENCES users`�
 
 2026-10-12 正式模型准备没有新增持久化字段或迁移。新运行的 Prompt/抽取版本分别为 `resume_extract_v2.1` / `resume-extraction-v2.1`；来源 JSON 兼容已保存的 `resume_extract_v2`。旧模板 queued 任务不构造 Provider、不增加调用数；历史候选及正式值不改写。评测账本只记录合成样本 ID/hash、版本、错误路径和计量，不保存 Key、原文、完整 Prompt 或原始模型 JSON；实际账单保持未知，免费协议桩明确标测试。详见 [准备报告](S2-2B-readiness-review.md)。
 
-## 1. 设计原则
+## 1. 历史逻辑目标设计原则（非当前物理 Schema）
 
 - PostgreSQL 保存业务事实和工作流状态；简历原件存私有对象存储，数据库保留对象键。
 - 所有用户数据表带 `user_id` 或通过受约束的父关系归属用户；查询必须校验当前身份，不能信任客户端传入的 `user_id`。
@@ -170,7 +172,7 @@ SQLite 使用原生 nullable `ALTER TABLE ... ADD COLUMN ... REFERENCES users`�
 - 简历、邮箱、电话、答案等敏感字段最小化收集；加密/访问控制和删除政策作为字段设计的一部分。
 - JSONB 用于版本化的模型输出或低频扩展属性；稳定查询字段应保持关系列，不把全部业务实体塞进 JSON。
 
-## 2. ER 关系
+## 2. 历史目标 ER 关系（非当前实现）
 
 ```mermaid
 erDiagram
@@ -193,7 +195,7 @@ erDiagram
     USER ||--o{ AUDIT_EVENT : generates
 ```
 
-## 3. 核心实体
+## 3. 历史目标核心实体（实际列以迁移为准）
 
 字段为逻辑设计，具体列类型、命名与加密实现由迁移定义。
 

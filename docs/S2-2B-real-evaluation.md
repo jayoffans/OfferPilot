@@ -25,7 +25,7 @@
 仓库根目录执行：
 
 ```powershell
-Set-Location 'D:\agent 项目\OfferPilot'
+Set-Location '<repo>'
 # 默认只规划首份，不构造 Provider、不读取 Key，0 次网络请求。
 & .\backend\.venv\Scripts\python.exe -B backend/evaluations/evaluate_deepseek_v2.py
 # 显示五份样本的免费计划。

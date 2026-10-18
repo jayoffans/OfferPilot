@@ -15,6 +15,8 @@ venv/
 *.db-*
 data/
 uploads/
+*-exports/
+*-deletion-ledger/
 
 # Tooling
 .pytest_cache/
@@ -29,3 +31,30 @@ frontend/artifacts/
 frontend/test-results/
 frontend/playwright-report/
 frontend/coverage/
+
+# Private local demo state, generated credentials and runtime material
+/.local/
+*.log
+*.zip
+*.dump
+*.bak
+*.backup
+*.sql.gz
+*.db3
+*.sqlite
+*.sqlite3
+*.sqlite-*
+*.sqlite3-*
+*.pem
+*.key
+*.p12
+*.pfx
+backups/
+coverage/
+.coverage
+htmlcov/
+
+# Resumes stay private; the committed evaluation fixture is synthetic.
+*.pdf
+!backend/evaluations/fixtures/normal_chinese.synthetic.pdf
+# Reviewed synthetic screenshots in docs/images/demo/ are intentionally public.

@@ -90,7 +90,11 @@ def interpreter_environment(database_url: str, upload_dir: Path, port: int) -> d
 
 @contextlib.contextmanager
 def running_server(environment: dict[str, str], port: int):
-    command = [getattr(sys, "_base_executable", sys.executable), "-u", "-c", SERVER_RUNNER, str(port)]
+    # Windows needs the base interpreter plus the explicit venv package path
+    # above. POSIX must retain the venv interpreter so installed dependencies
+    # remain available; its base interpreter does not share those packages.
+    interpreter = getattr(sys, "_base_executable", sys.executable) if os.name == "nt" else sys.executable
+    command = [interpreter, "-u", "-c", SERVER_RUNNER, str(port)]
     process = subprocess.Popen(
         command,
         cwd=BACKEND_ROOT,

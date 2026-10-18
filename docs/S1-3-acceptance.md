@@ -1,6 +1,6 @@
 # S1-3 中文 Web 工作台验收记录
 
-日期：2026-10-11。仓库：`D:\agent 项目\OfferPilot`；分支：`feature/resume-agent`；开发前 HEAD：`9ec576d06867a3d44eeaa255e03302f80d9faf8e`。保持当前分支和原有未提交内容，没有创建提交或推送远程。
+日期：2026-10-11。仓库：`<repo>`；分支：`feature/resume-agent`；开发前 HEAD：`9ec576d06867a3d44eeaa255e03302f80d9faf8e`。保持当前分支和原有未提交内容，没有创建提交或推送远程。
 
 **结论：S1-3 达到本机开发验收标准。** 用户可通过真实中文页面完成邀请注册、登录、工作台引导、PDF 上传/查询/改名/原件下载/删除及失败恢复、退出。业务连接现有 FastAPI，正式页面没有演示数据。文件保存、文本解析和尚未开放的 AI 画像分别说明。完整 MVP 与生产上线条件仍未完成。
 
@@ -55,7 +55,7 @@ App Router 管路由，组件管交互，`src/lib` 统一 API、认证和同源�
 可复现验证入口：
 
 ```powershell
-Set-Location 'D:\agent 项目\OfferPilot\frontend'
+Set-Location '<repo>\frontend'
 npm.cmd ci
 npm.cmd run api:check
 npm.cmd run typecheck

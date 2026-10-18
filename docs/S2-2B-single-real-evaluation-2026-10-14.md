@@ -185,7 +185,7 @@ usage 来自真实供应商返回，并经原始类型/总量校验；输入和�
 
 交付新增本机评测安全输入辅助、启动/失败账本和本报告，并在PRD/架构/数据库/路线图追加本次结果链接；业务代码、依赖及迁移未修改。
 
-**收尾限制：** 所有本轮评测进程均已退出。检查发现早期关闭getpass输入进程后留下 `C:\Users\13432\AppData\Local\Temp\offerpilot-pdf-evaluation-4fhuj5wt`；创建时间比本轮对应启动晚2.53秒。只读核验其PDF hash及正文与同一合成样本完全一致，resume_extraction_runs/profile_candidates/career_profile_entries行数均为0，停止点在Key输入完成前。删除请求被自动审批拒绝，工具仅给出 `blocked by policy`，没有更具体理由。没有改用其他命令绕过，目录仍保留；该限制不影响唯一成功模型运行的结果、其正常退出清理或请求额度，但不能宣称全部早期临时目录已清零。
+**收尾限制：** 所有本轮评测进程均已退出。检查发现早期关闭getpass输入进程后留下 `<用户目录>\AppData\Local\Temp\offerpilot-pdf-evaluation-4fhuj5wt`；创建时间比本轮对应启动晚2.53秒。只读核验其PDF hash及正文与同一合成样本完全一致，resume_extraction_runs/profile_candidates/career_profile_entries行数均为0，停止点在Key输入完成前。删除请求被自动审批拒绝，工具仅给出 `blocked by policy`，没有更具体理由。没有改用其他命令绕过，目录仍保留；该限制不影响唯一成功模型运行的结果、其正常退出清理或请求额度，但不能宣称全部早期临时目录已清零。
 
 ## 8. 原始记录与最终停止点
 
