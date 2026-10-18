@@ -4,13 +4,20 @@
 
 ## 结论与候选状态
 
-**推荐保留 PyMuPDF，优先采用 AGPLv3 相容开源方案。当前核查未发现足以否定该方向的明确许可证冲突，但项目许可证、权利归属与发布告知尚待负责人最终确认，不能标记“许可已批准”或“可发布”。** 本次没有替换解析器、购买商业授权、改变第三方授权或授予项目许可。
+**负责人已选择保留 PyMuPDF，并优先采用 AGPL-3.0-only。当前核查未发现阻止这一源码发布方案的明确依赖许可证冲突；原创代码、文档、截图及贡献的授权权利来源仍待负责人确认，正式 LICENSE 尚未启用，不能标记“许可已生效”或“可发布”。** 本次没有替换解析器、购买商业授权或改变第三方授权。
 
 - [LICENSE.candidate](../LICENSE.candidate)：标准 AGPLv3 全文，未加注、未删节，候选而非正式 `LICENSE`。来源是 [PyMuPDF 1.28.2 官方 COPYING](https://raw.githubusercontent.com/pymupdf/PyMuPDF/1.28.2/COPYING)，34,520 字节，SHA-256 为 `57c8ff33c9c0cfc3ef00e650a1cc910d7ee479a8bc509f6c9209a7c2a11399d6`。
 - [DEPENDENCY-LICENSE-INVENTORY.json](DEPENDENCY-LICENSE-INVENTORY.json)：55 个 Python 与 636 个 npm 锁条目、版本、许可、已装/未装及许可证文件指纹；不含本机绝对路径或安装凭据。
 - [THIRD_PARTY_NOTICES.txt](THIRD_PARTY_NOTICES.txt)：本机已安装锁定依赖的版权/许可/NOTICE 原文补充，保留原文，按相同字节去重并注明原始包路径；不等于未来二进制制品的完整告知或源码要约。
+- [PYMUPDF-1.28.2-NOTICES.txt](PYMUPDF-1.28.2-NOTICES.txt)：本轮新增的 8 个 PyMuPDF 文件头原文补充，保留 GPL、AGPL 及 pdfplumber 派生部分的 MIT 版权与条款，列出原文件和提取片段的 SHA-256、行数及官方固定版本来源；不改动既有原文集合或清单指纹。
 
-候选文本只给出了标准条款，不自动决定 `AGPL-3.0-only` / `AGPL-3.0-or-later`、适用文件及版权人。建议自有应用选择明确的 **AGPL-3.0-only** 表达，待负责人批准；不能因为全文末尾“如何采用”的示例含 later，就推断当前应用或全部依赖已按 or-later 授权。README 中的“本地作品展示、当前不商业化”只是维护范围；不能给 AGPL 增加“禁止商用”或“只限求职”的使用限制。
+候选文本只给出了标准条款，不自动决定 `AGPL-3.0-only` / `AGPL-3.0-or-later`、适用文件及版权人。负责人已选定的应用授权版本为 **AGPL-3.0-only**，实际授予仍以权利来源确认及后续正式声明为准；不能因为全文末尾“如何采用”的示例含 later，就推断当前应用或全部依赖已按 or-later 授权。README 中的“本地作品展示、当前不商业化”只是维护范围；不能给 AGPL 增加“禁止商用”或“只限求职”的使用限制。
+
+### 本轮增量复核
+
+两个锁文件的 SHA-256 与既有清单完全一致，55 个 Python、636 个 npm 锁条目的名称、版本逐项一致；54 个已安装 Python 版本、512 个已安装 npm 版本没有漂移。695 个原文文件指纹引用均通过核对，既有 384 个不同原文的哈希标记均在告知文件中。没有重跑既有业务测试，也没有把本轮许可核对描述为新一轮功能验收。
+
+保留原有审查边界：Windows 未安装 uvloop，124 个 npm 可选平台条目未安装；另有 25 个已安装 npm 包没有独立的许可文件可供本集合采集，不能把锁元数据或继承自上游项目的许可声明说成已经收到全部制品原文。这些组件未随本次源码 Git 仓库分发，不构成已发现的许可证冲突；未来分发依赖包或构建制品时仍需补足对应告知与源码义务。
 
 ## PyMuPDF 的实际组合关系
 
@@ -28,7 +35,9 @@
 
 同时，[同一 1.28.2 tag 的 `src/__init__.py`](https://github.com/pymupdf/PyMuPDF/blob/1.28.2/src/__init__.py)与安装源码首部另有 `GPL-3.0-only` 标识。MuPDF [1.28.2 源码文件头](https://github.com/ArtifexSoftware/mupdf/blob/1.28.2/source/fitz/document.c)则明确 AGPLv3 或后续版本。应保留这些文件级条件，不能把三者悄悄统一成一个 SPDX 标识。
 
-GPLv3 / AGPLv3 第 13 条允许相应 GPLv3 与 AGPLv3 代码组合并传递，原组件各自条款继续有效；因此该标识差异本身尚未显示阻止 AGPLv3 方案的冲突。**差异没有由 OfferPilot 解决。** 负责人需确认按原有条款保留该情况；若需要上游统一授权解释、后续闭源授权或超出本次源码发布范围，应向 Artifex 取得明确答复。[AGPLv3 正式文本](https://www.gnu.org/licenses/agpl-3.0.html)及[官方上游全文副本](https://raw.githubusercontent.com/pymupdf/PyMuPDF/1.28.2/COPYING)
+本轮还核对了 [PyMuPDF `src/table.py`](https://github.com/pymupdf/PyMuPDF/blob/1.28.2/src/table.py)：Artifex 部分声明 AGPLv3 或后续版本，移植自 pdfplumber 的部分保留 Jeremy Singer-Vine 2015 年 MIT 版权及完整条款。`_table_headers.py`、`_table_refine.py`、`_table_spans.py`、`_table_union.py` 亦保留 Artifex AGPLv3 或后续版本文件头；`utils.py`、`__main__.py` 保留 Harald Lieder 2020～2022 年版权和 AGPLv3 声明。8 个文件头均与官方 1.28.2 tag 的相应片段逐字节一致，原文见 [独立补充](PYMUPDF-1.28.2-NOTICES.txt)。这些原有条款分别保留；可选择上游允许的版本 3，不因此给 OfferPilot 增加 or-later 授权。
+
+GPLv3 / AGPLv3 第 13 条允许相应 GPLv3 与 AGPLv3 代码组合并传递，原组件各自条款继续有效；因此该标识差异本身尚未显示阻止 AGPLv3 方案的冲突。**差异没有由 OfferPilot 解决。** 本次按原有条款保留这些标识和版权；若需要上游统一授权解释、后续闭源授权或超出本次源码发布范围，应向 Artifex 取得明确答复。[AGPLv3 正式文本](https://www.gnu.org/licenses/agpl-3.0.html)及[官方上游全文副本](https://raw.githubusercontent.com/pymupdf/PyMuPDF/1.28.2/COPYING)
 
 GNU 官网本轮浏览与直连请求均超时，未将访问失败说成成功；条款正文使用 PyMuPDF 官方固定版本副本阅读并保存，GNU 页面保留为正式文本入口。
 
@@ -172,7 +181,7 @@ PyMuPDF wheel 内 MuPDF 的第三方库（上游 [thirdparty 目录说明](https
 ## 负责人待确认与后续动作
 
 1. 确认有权给自有代码、文档、截图及贡献授予公开许可；现有 Git 作者身份不自动证明权利链。
-2. 最终批准 AGPLv3、only / or-later 的准确版本及适用范围；确认 PyMuPDF 文件级标识差异的处理，必要时向 Artifex 核实。本轮只推荐 AGPL-3.0-only，不替负责人选定。
-3. 批准后才能把候选作为正式 LICENSE、补齐真实版权及适用界面告知/对应源码入口，并同步软件包项目元数据；不能提前把候选状态写成已授权。
+2. 已选择保留 PyMuPDF、优先采用 AGPL-3.0-only；保持上游文件级许可和版权原文。若需要消除上游标识差异、后续闭源授权或分发原生制品，向 Artifex 核实相应范围。
+3. 权利来源确认、适用范围明确后才能把候选作为正式 LICENSE、补齐有依据的版权及适用界面告知/对应源码入口，并同步软件包项目元数据；不能提前把候选状态写成已授权。
 4. 保留依赖原有文本和 NOTICE；版本、素材或分发方式变化时重审。直接/传递依赖没有因应用采用 AGPL 而被自动重标。
-5. 本轮只准备源码仓库发布；历史隐私和最终远程写入授权是另外的必要发布前置，见 [最终审核](GITHUB-FINAL-RELEASE-REVIEW.md)。
+5. 本轮只准备源码仓库发布；普通历史路径已经获准保留，真实凭据扫描继续执行，远程写入仍须后续明确授权，见 [本轮发布准备](GITHUB-RELEASE-READY.md)。

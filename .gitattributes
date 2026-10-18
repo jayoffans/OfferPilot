@@ -5,3 +5,4 @@ scripts/postgres/*.sh text eol=lf
 LICENSE.candidate text eol=lf
 docs/DEPENDENCY-LICENSE-INVENTORY.json text eol=lf
 docs/THIRD_PARTY_NOTICES.txt -text
+docs/PYMUPDF-1.28.2-NOTICES.txt -text

@@ -164,7 +164,7 @@ uv run --locked --project backend python scripts/local/manage.py web
 | 契约 / 静态检查 | `npm --prefix frontend run api:check`、`lint`、`build`、`typecheck`（逐条执行） |
 | Git 公开前扫描 | `uv run --locked --project backend python scripts/security_scan.py`；候选需人工复核，见[安全审查](docs/SECURITY_REVIEW.md) |
 
-E2E 自动创建独立数据库、合成账户与文件，启动真实 API / Web，结束清理。不要同时运行 E2E 和 build，它们共用 `.next`。CI 覆盖锁定依赖、SQLite、PostgreSQL、前端和 Chromium，使用无网络模型夹具；GitHub Actions 的实际远程结果须推送后才能获得，本轮没有推送。最新本机结果及测试环境统一记录在[作品集验收](docs/PORTFOLIO-acceptance.md)，历史数字只在各批验收中解释。
+E2E 自动创建独立数据库、合成账户与文件，启动真实 API / Web，结束清理。不要同时运行 E2E 和 build，它们共用 `.next`。CI 覆盖锁定依赖、SQLite、PostgreSQL、前端和 Chromium，使用无网络模型夹具；GitHub Actions 的实际远程结果须推送后才能获得，本轮没有推送。本轮许可与启动检查见[发布准备报告](docs/GITHUB-RELEASE-READY.md)，此前完整回归及测试环境见[作品集验收](docs/PORTFOLIO-acceptance.md)，历史数字不计为本轮新通过。
 
 ## 当前限制与后续计划
 
@@ -183,8 +183,10 @@ docs/        当前说明、截图、面试稿与 S1～S5-2 历史验收
 .github/     GitHub Actions 与贡献模板
 ```
 
-**许可证状态：AGPLv3 方案待负责人最终批准。** [LICENSE.candidate](LICENSE.candidate) 是完整标准文本候选，尚未作为项目授权生效；本仓库当前没有正式 `LICENSE`。建议保留 PyMuPDF，按 AGPLv3 相容方式公开自有应用源码，并保留第三方原有许可与版权声明。公开源码不自动授予再许可权，也不能用项目许可覆盖依赖的许可。
+**许可证状态：已选定 AGPL-3.0-only，授权权利来源仍待确认，尚未正式生效。** [LICENSE.candidate](LICENSE.candidate) 是已核对的完整标准全文；当前没有正式 `LICENSE`，不能据此宣称项目已授予开源许可。计划范围为有权授权的 OfferPilot 原创代码、配套文档和合成演示素材；第三方库、图标、工具模板及其原文告知保留各自许可，不由 OfferPilot 重新授权。具体待确认范围见[本轮发布准备报告](docs/GITHUB-RELEASE-READY.md)。
 
-项目用于本地学习、GitHub 作品展示和技术面试，当前不部署公网服务；这是维护范围说明，**不是禁止商业使用的附加许可条款**。最终采用 AGPLv3 后，商业使用仍受其正文允许及义务约束。依赖版本、PyMuPDF 文件级标识差异、源码提供及再分发义务见[第三方许可审查](docs/THIRD_PARTY_LICENSES.md)、[完整依赖清单](docs/DEPENDENCY-LICENSE-INVENTORY.json)和[第三方版权原文](docs/THIRD_PARTY_NOTICES.txt)。
+PDF 校验和文本提取保留 PyMuPDF 1.28.2 / MuPDF 1.28.2，按上游 AGPL 路径评估，不因本地作品展示而免除许可义务。正式授权后，使用、修改和再分发须遵守完整条款，保留版权、许可及无担保声明，并履行适用的对应源码与网络交互告知义务。标准全文末尾的 “or later” 使用示例不改变项目选定的仅版本 3。当前不部署公网服务，这是维护范围说明，**不是禁止商业使用的附加条款**。
+
+依赖版本、文件级许可差异及分发边界见[第三方许可审查](docs/THIRD_PARTY_LICENSES.md)、[完整依赖清单](docs/DEPENDENCY-LICENSE-INVENTORY.json)、[第三方版权原文](docs/THIRD_PARTY_NOTICES.txt)和[PyMuPDF 文件头补充](docs/PYMUPDF-1.28.2-NOTICES.txt)。
 
 [安全审查](docs/SECURITY_REVIEW.md) · [最终发布检查表](docs/GITHUB-RELEASE-CHECKLIST.md) · [贡献说明](CONTRIBUTING.md)

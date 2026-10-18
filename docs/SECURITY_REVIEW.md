@@ -1,5 +1,7 @@
 # GitHub 作品集发布前安全审查
 
+> 本轮收口见 [GITHUB-RELEASE-READY](GITHUB-RELEASE-READY.md)。负责人已明确接受历史数字型 Windows 用户目录、普通开发路径和保留完整历史；它们不再是发布阻塞。真实凭据和个人数据仍需扫描，下文历史计数和当时待确认决定保留为原始记录。
+
 > 最新复核见 [GITHUB-FINAL-RELEASE-REVIEW](GITHUB-FINAL-RELEASE-REVIEW.md)。本文保留上一轮扫描快照；其中四份评测 JSON 的本机仓库路径已在新普通提交中改为相对路径，历史版本仍存在。新的候选许可和第三方原文告知不代表负责人已经批准开源授权。
 
 日期：2026-10-18（Asia/Shanghai）。本轮目标为本地可复现作品集；没有购买服务器、公网部署、收费模型请求、GitHub 推送或历史重写。
