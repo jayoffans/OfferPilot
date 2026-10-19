@@ -1,6 +1,6 @@
 # GitHub 公开展示前最终检查表
 
-> 最新发布状态以 [GITHUB-RELEASE-READY](GITHUB-RELEASE-READY.md) 为准。AGPL-3.0-only 路线及保留历史路径已经由负责人决定；尚未完成原创内容的权利来源确认，不再要求重新选择许可路线或清理普通路径。本文其余内容是旧轮次快照，远程操作步骤仅供未来授权后参考。
+> 最新发布状态以 [GITHUB-RELEASE-READY](GITHUB-RELEASE-READY.md) 为准。负责人已确认原创内容授权来源，正式采用 AGPL-3.0-only，并接受普通历史路径及完整历史。本文其余候选状态、计数和待确认项是旧轮次快照；远程操作步骤仅供未来明确授权后参考。
 
 > 本文保存上一轮本地整理快照。最新的独立复核、许可证候选、路径脱敏、测试及发布阻塞见 [GITHUB-FINAL-RELEASE-REVIEW](GITHUB-FINAL-RELEASE-REVIEW.md)。下文提交数和“未准备许可文件”是当时状态；本轮只准备候选，未最终授权、未推送、未改写历史。
 

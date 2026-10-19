@@ -1,6 +1,6 @@
 # OfferPilot GitHub 正式发布前最终审核
 
-> 本文保留上一轮完整审核和回归记录。最新决定与本轮检查见 [GITHUB-RELEASE-READY](GITHUB-RELEASE-READY.md)：负责人已选定 AGPL-3.0-only、保留 PyMuPDF，接受普通历史路径并保留完整 Git 历史；权利来源确认仍待完成。下文旧的路径/方案待决定状态不覆盖新报告。本轮仍禁止任何远程写入。
+> 本文保留上一轮完整审核和回归记录。最新决定与本轮检查见 [GITHUB-RELEASE-READY](GITHUB-RELEASE-READY.md)：负责人已确认授权来源，正式采用 AGPL-3.0-only、保留 PyMuPDF，接受普通历史路径并保留完整 Git 历史。下文旧的候选/权利待确认状态不覆盖新报告；原候选全文现见根目录正式 LICENSE。仍禁止任何远程写入。
 
 日期：2026-10-18（Asia/Shanghai）。用途：GitHub 作品展示、本地复现、简历和技术面试。
 
@@ -44,7 +44,7 @@
 
 **明确的不一致：** 安装包 METADATA/短 COPYING 与官方许可页声明 AGPLv3/商业双许可，但安装源码以及[官方同 tag 的 `src/__init__.py`](https://github.com/pymupdf/PyMuPDF/blob/1.28.2/src/__init__.py)另含 `GPL-3.0-only` SPDX 标识。GPLv3 与 AGPLv3 第 13 条允许相应组合，未据此发现 AGPL 方向的明显阻塞；原文件许可仍应保留，不能统一改标。若负责人要求消除上游标识解释的不确定性，应向 Artifex 确认，不能把本报告当成其书面答复。
 
-已准备 [LICENSE.candidate](../LICENSE.candidate)，是未经改写的标准完整 AGPLv3 文本，34,520 字节，SHA-256 `57c8ff33c9c0cfc3ef00e650a1cc910d7ee479a8bc509f6c9209a7c2a11399d6`。**没有建立正式 `LICENSE`，没有在项目元数据中宣称授权已生效。** README 明确候选、第三方边界及作品集定位；没有增加“禁止商用”等与开源许可抵触的用途限制。AGPL-3.0-only / or-later 的最终表述、版权主体、贡献范围和生效决定尚由负责人确认，候选正文自身不完成这些决定。
+当时已准备 `LICENSE.candidate`（原文现见正式 [LICENSE](../LICENSE)），是未经改写的标准完整 AGPLv3 文本，34,520 字节，SHA-256 `57c8ff33c9c0cfc3ef00e650a1cc910d7ee479a8bc509f6c9209a7c2a11399d6`。**当时没有建立正式 `LICENSE`，没有在项目元数据中宣称授权已生效。** README 明确候选、第三方边界及作品集定位；没有增加“禁止商用”等与开源许可抵触的用途限制。AGPL-3.0-only / or-later 的最终表述、版权主体、贡献范围和生效决定当时尚由负责人确认，候选正文自身不完成这些决定。
 
 ## 3. 第三方依赖、素材与对应源码
 

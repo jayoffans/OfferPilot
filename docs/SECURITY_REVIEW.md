@@ -1,6 +1,6 @@
 # GitHub 作品集发布前安全审查
 
-> 本轮收口见 [GITHUB-RELEASE-READY](GITHUB-RELEASE-READY.md)。负责人已明确接受历史数字型 Windows 用户目录、普通开发路径和保留完整历史；它们不再是发布阻塞。真实凭据和个人数据仍需扫描，下文历史计数和当时待确认决定保留为原始记录。
+> 本轮收口见 [GITHUB-RELEASE-READY](GITHUB-RELEASE-READY.md)。负责人已确认授权来源，正式 LICENSE 已启用；历史数字型 Windows 用户目录、普通开发路径和完整历史已获准保留。真实凭据和个人数据仍需扫描，下文历史计数、候选状态和当时待确认决定保留为旧轮次记录。
 
 > 最新复核见 [GITHUB-FINAL-RELEASE-REVIEW](GITHUB-FINAL-RELEASE-REVIEW.md)。本文保留上一轮扫描快照；其中四份评测 JSON 的本机仓库路径已在新普通提交中改为相对路径，历史版本仍存在。新的候选许可和第三方原文告知不代表负责人已经批准开源授权。
 

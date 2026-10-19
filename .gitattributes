@@ -1,8 +1,9 @@
 # Docker entrypoint scripts must stay executable by /bin/sh on Windows clones.
 scripts/postgres/*.sh text eol=lf
 
-# Preserve upstream license bytes and stable candidate/inventory fingerprints.
-LICENSE.candidate text eol=lf
+# Preserve upstream license bytes and stable license/inventory fingerprints.
+LICENSE text eol=lf
+frontend/public/LICENSE.txt text eol=lf
 docs/DEPENDENCY-LICENSE-INVENTORY.json text eol=lf
 docs/THIRD_PARTY_NOTICES.txt -text
 docs/PYMUPDF-1.28.2-NOTICES.txt -text

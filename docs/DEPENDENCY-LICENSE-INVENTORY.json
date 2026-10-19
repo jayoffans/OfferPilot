@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
-  "review_date": "2026-10-18",
+  "review_date": "2026-10-19",
   "timezone": "Asia/Shanghai",
   "scope": "Source-only Git repository; locked Python/npm dependency declarations and available installed license texts. No dependency wheels, node_modules, Chromium, database images or binaries are distributed here.",
-  "project_license_status": "AGPLv3 candidate only; not approved; no project license grant is made by this inventory.",
+  "project_license_status": "AGPL-3.0-only for original OfferPilot content; authorized by the project owner. Third-party materials retain their own licenses; see COPYRIGHT.md and LICENSE.",
   "lock_files": {
     "backend/uv.lock": "62a97ac3586d138df2d3f772507fc40ba32b0f5bf00a3a08a42e1e247e63c92b",
-    "frontend/package-lock.json": "58ef70d1e4a2385d993f372e59e8bc6bcdfba269acff941643f5d1576e3b3710"
+    "frontend/package-lock.json": "775e3ad11cb8efe0f914b68f294e100ae96a4d809e9186fcf86606cd2959fb40"
   },
   "counts": {
     "python_locked": 55,
@@ -527,7 +527,7 @@
           "sha256": "40e60697600535eabfb5ae05f72829d88cfe8d02dd4792f5a754f6f51dabe55b"
         }
       ],
-      "notes": "Installed COPYING is a 64-byte dual-license summary, not the full AGPL. The official 1.28.2 COPYING is preserved in LICENSE.candidate. The official 1.28.2 src/__init__.py GPL-3.0-only header differs from package documentation; preserve upstream terms and do not infer or-later."
+      "notes": "Installed COPYING is a 64-byte dual-license summary, not the full AGPL. The official 1.28.2 COPYING is preserved unchanged in the formal root LICENSE. The official 1.28.2 src/__init__.py GPL-3.0-only header differs from package documentation; preserve upstream terms and do not infer or-later."
     },
     {
       "name": "python-dotenv",

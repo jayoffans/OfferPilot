@@ -15,7 +15,7 @@
 | [PORTFOLIO-acceptance](PORTFOLIO-acceptance.md) | 本轮实际验证、Git 差异与审阅事项 |
 | [GITHUB-RELEASE-CHECKLIST](GITHUB-RELEASE-CHECKLIST.md) | 最终本地提交、许可/历史审查、复验及待授权发布顺序 |
 | [GITHUB-FINAL-RELEASE-REVIEW](GITHUB-FINAL-RELEASE-REVIEW.md) | 上一轮 AGPLv3 候选、历史隐私复核及完整免费回归记录 |
-| [GITHUB-RELEASE-READY](GITHUB-RELEASE-READY.md) | 最新许可证正式化审查、已确认决策、本轮验证与剩余权利来源阻塞 |
+| [GITHUB-RELEASE-READY](GITHUB-RELEASE-READY.md) | 最新正式许可证、权利来源确认、本轮验证及待授权远程步骤 |
 
 ## 产品与设计依据
 

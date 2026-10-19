@@ -183,9 +183,9 @@ docs/        当前说明、截图、面试稿与 S1～S5-2 历史验收
 .github/     GitHub Actions 与贡献模板
 ```
 
-**许可证状态：已选定 AGPL-3.0-only，授权权利来源仍待确认，尚未正式生效。** [LICENSE.candidate](LICENSE.candidate) 是已核对的完整标准全文；当前没有正式 `LICENSE`，不能据此宣称项目已授予开源许可。计划范围为有权授权的 OfferPilot 原创代码、配套文档和合成演示素材；第三方库、图标、工具模板及其原文告知保留各自许可，不由 OfferPilot 重新授权。具体待确认范围见[本轮发布准备报告](docs/GITHUB-RELEASE-READY.md)。
+**OfferPilot 原创代码、配套文档、测试和合成演示素材采用 AGPL-3.0-only。** 完整条款见 [LICENSE](LICENSE)，版权及适用范围见 [COPYRIGHT](COPYRIGHT.md)。负责人已确认相应授权来源；第三方库、图标、工具模板及其原文告知保留各自许可，不由 OfferPilot 重新授权。
 
-PDF 校验和文本提取保留 PyMuPDF 1.28.2 / MuPDF 1.28.2，按上游 AGPL 路径评估，不因本地作品展示而免除许可义务。正式授权后，使用、修改和再分发须遵守完整条款，保留版权、许可及无担保声明，并履行适用的对应源码与网络交互告知义务。标准全文末尾的 “or later” 使用示例不改变项目选定的仅版本 3。当前不部署公网服务，这是维护范围说明，**不是禁止商业使用的附加条款**。
+PDF 校验和文本提取保留 PyMuPDF 1.28.2 / MuPDF 1.28.2，按上游 AGPL 路径使用。使用、修改和再分发须遵守完整条款，保留版权、许可及无担保声明，并履行适用的对应源码与网络交互告知义务。标准全文末尾的 “or later” 使用示例不改变本项目仅版本 3 的授权选择。当前不部署公网服务，这是维护范围说明，**不是禁止商业使用的附加条款**。本地正式化与验证结果见[发布准备报告](docs/GITHUB-RELEASE-READY.md)，远程发布仍须另行批准。
 
 依赖版本、文件级许可差异及分发边界见[第三方许可审查](docs/THIRD_PARTY_LICENSES.md)、[完整依赖清单](docs/DEPENDENCY-LICENSE-INVENTORY.json)、[第三方版权原文](docs/THIRD_PARTY_NOTICES.txt)和[PyMuPDF 文件头补充](docs/PYMUPDF-1.28.2-NOTICES.txt)。
 

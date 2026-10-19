@@ -1,5 +1,5 @@
 OfferPilot third-party license and copyright notices
-Review date: 2026-10-18 (Asia/Shanghai)
+Review date: 2026-10-19 (Asia/Shanghai)
 
 This file preserves license/notice texts from the installed locked Python and
 npm packages and Next.js bundled dependencies inspected on this Windows machine.
@@ -8,9 +8,9 @@ The SHA-256 is of each original upstream file, before the surrounding separators
 Public upstream copyright names and addresses below belong to their licensors.
 
 These third-party terms remain in force under their original licenses.
-This file neither adopts the proposed OfferPilot AGPLv3 project license nor
-relicenses third-party software. LICENSE.candidate is a separate, unapproved
-copy of the AGPLv3 text from the official PyMuPDF 1.28.2 source distribution.
+OfferPilot original content is licensed under AGPL-3.0-only; see LICENSE
+and COPYRIGHT.md for its scope. This collection does not relicense third-party
+software. The full standard license text is preserved unchanged in LICENSE.
 
 Uninstalled optional platform packages and native-library dependency notices are
 not fully covered. See THIRD_PARTY_LICENSES.md and the inventory JSON for scope.
