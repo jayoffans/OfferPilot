@@ -22,6 +22,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
+from offerpilot_api.account_lifecycle.ledger import DeletionLedger
 from offerpilot_api.agent_runtime.byok import (
     ExtractionPreview, MODEL, OUTPUT_TOKENS, REDACTION_VERSION,
     input_token_upper, redact_resume,
@@ -196,6 +197,7 @@ class PdfEvaluationSession:
             self.settings = Settings(_env_file=None, environment="development",
                 database_url=f"sqlite:///{(self.root / 'evaluation.db').as_posix()}",
                 upload_dir=self.root / "private-uploads", session_cookie_secure=False,
+                deletion_ledger_dir=self.root / "deletion-ledger",
                 mock_extraction_enabled=True, deepseek_extraction_enabled=False,
                 extraction_max_calls=1, extraction_max_attempts=1)
             config = Config(str(BACKEND_ROOT / "alembic.ini"))
@@ -203,6 +205,7 @@ class PdfEvaluationSession:
             # Pin migrations to our settings, never a developer environment DB.
             with patch("offerpilot_api.core.config.get_settings", return_value=self.settings):
                 command.upgrade(config, "head")
+            DeletionLedger(self.settings.deletion_ledger_dir).initialize()
             self.engine = build_engine(self.settings.database_url)
             with patch("offerpilot_api.main.get_settings", return_value=self.settings):
                 self.app = create_app()

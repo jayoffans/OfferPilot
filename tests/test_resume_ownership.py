@@ -10,6 +10,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from offerpilot_api.account_lifecycle.ledger import DeletionLedger
 from offerpilot_api.core.config import Settings, get_settings
 from offerpilot_api.db.base import Base
 from offerpilot_api.db.models import Profile, ProfileFact, ResumeDocument
@@ -39,8 +40,10 @@ class ResumeOwnershipTests(unittest.TestCase):
         self.settings = Settings(
             database_url=database_url,
             upload_dir=self.root / "uploads",
+            deletion_ledger_dir=self.root / "deletion-ledger",
             session_cookie_secure=False,
         )
+        DeletionLedger(self.settings.deletion_ledger_dir).initialize()
         app = create_app()
 
         def test_db():

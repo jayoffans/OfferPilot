@@ -12,6 +12,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from offerpilot_api.account_lifecycle.ledger import DeletionLedger
 from offerpilot_api.core.config import Settings, get_settings
 from offerpilot_api.db.base import Base
 from offerpilot_api.db.models import JobCreateReceipt, JobJDSnapshot, JobRequirement, SavedJob
@@ -40,7 +41,9 @@ class JobCatalogTests(unittest.TestCase):
         self.engine = build_engine(url)
         self.addCleanup(self.engine.dispose)
         Base.metadata.create_all(self.engine)
-        settings = Settings(database_url=url, upload_dir=root / "uploads", session_cookie_secure=False)
+        settings = Settings(database_url=url, upload_dir=root / "uploads", session_cookie_secure=False,
+                            deletion_ledger_dir=root / "deletion-ledger")
+        DeletionLedger(settings.deletion_ledger_dir).initialize()
         self.app = create_app()
         def test_db():
             with Session(self.engine) as db:

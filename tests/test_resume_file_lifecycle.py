@@ -21,6 +21,7 @@ from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from offerpilot_api.account_lifecycle.ledger import DeletionLedger
 from offerpilot_api.api.routes import resume as resume_routes
 from offerpilot_api.core.config import Settings, get_settings
 from offerpilot_api.db.base import Base
@@ -94,8 +95,10 @@ class ResumeFileLifecycleTests(unittest.TestCase):
         self.settings = Settings(
             database_url=database_url,
             upload_dir=self.root / "private-objects",
+            deletion_ledger_dir=self.root / "deletion-ledger",
             session_cookie_secure=False,
         )
+        DeletionLedger(self.settings.deletion_ledger_dir).initialize()
         self.storage = ControlledStorage(LocalResumeStorage(self.settings.upload_dir))
         self.addCleanup(self.storage.release.set)
         self.app = create_app()

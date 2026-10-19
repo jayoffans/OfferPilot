@@ -35,6 +35,7 @@ def run():
             from alembic import command
             from alembic.config import Config
             from sqlalchemy.orm import Session
+            from offerpilot_api.account_lifecycle.ledger import DeletionLedger
             from offerpilot_api.core.config import get_settings
             from offerpilot_api.db.session import build_engine, engine as module_engine
             from offerpilot_api.db.models import User, AccountDeletion
@@ -42,6 +43,7 @@ def run():
             get_settings.cache_clear()
             with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
                 command.upgrade(Config(str(BACKEND_ROOT / "alembic.ini")), "head")
+            DeletionLedger(get_settings().deletion_ledger_dir).initialize()
             engine = build_engine(environment["OFFERPILOT_DATABASE_URL"])
             with Session(engine) as db:
                 invitations = [create_invitation(db, email=email) for email in ("account-a@example.com", "account-b@example.com")]

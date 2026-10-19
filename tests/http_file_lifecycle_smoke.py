@@ -81,6 +81,7 @@ def interpreter_environment(database_url: str, upload_dir: Path, port: int) -> d
         "PYTHONPATH": os.pathsep.join(package_paths),
         "OFFERPILOT_DATABASE_URL": database_url,
         "OFFERPILOT_UPLOAD_DIR": str(upload_dir),
+        "OFFERPILOT_DELETION_LEDGER_DIR": str(upload_dir.parent / "deletion-ledger"),
         "OFFERPILOT_ENVIRONMENT": "development",
         "OFFERPILOT_SESSION_COOKIE_SECURE": "false",
         "OFFERPILOT_TRUSTED_ORIGINS": f'["http://127.0.0.1:{port}"]',
@@ -170,6 +171,7 @@ def run() -> None:
             from alembic.config import Config
             from sqlalchemy import select
             from sqlalchemy.orm import Session
+            from offerpilot_api.account_lifecycle.ledger import DeletionLedger
             from offerpilot_api.core.config import get_settings
             from offerpilot_api.db.models import Profile, ProfileFact, ResumeDocument
             from offerpilot_api.db.session import build_engine, engine as module_engine
@@ -178,6 +180,7 @@ def run() -> None:
             get_settings.cache_clear()
             with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
                 command.upgrade(Config(str(BACKEND_ROOT / "alembic.ini")), "head")
+            DeletionLedger(get_settings().deletion_ledger_dir).initialize()
             engine = build_engine(database_url)
             with Session(engine) as db:
                 first_invite = create_invitation(db, email="http-owner@example.com")

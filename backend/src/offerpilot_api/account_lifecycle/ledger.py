@@ -6,6 +6,7 @@ registry fails closed; initialize is an explicit new-environment operation.
 import json
 import os
 import stat
+import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
 from uuid import UUID
@@ -20,27 +21,43 @@ class DeletionLedger:
         self.root = Path(root)
 
     def initialize(self):
-        self.root.mkdir(parents=True, exist_ok=True, mode=0o700)
-        marker = self.root / "registry-v1"
-        if marker.exists():
-            self._check()
-            return
-        if any(self.root.iterdir()):
-            raise LedgerError("Registry initialization requires an empty directory")
+        """Trusted new-environment setup; never called by a request or restore.
+
+        Publish a complete marker without replacing an existing one. A sibling
+        staging directory keeps temporary files out of deletion replay, and the
+        hard link is atomic on both NTFS and Linux filesystems. Unsupported file
+        systems fail closed; no partial-marker or overwrite fallback is used.
+        """
         try:
-            with marker.open("x", encoding="ascii") as stream:
-                stream.write("offerpilot-deletions/1\n")
-                stream.flush()
-                os.fsync(stream.fileno())
+            self.root.mkdir(parents=True, exist_ok=True, mode=0o700)
+            self._check_directory()
+            if any(self.root.iterdir()):
+                self._check()
+                return
+            marker = self.root / "registry-v1"
+            with tempfile.TemporaryDirectory(prefix=".registry-init-", dir=self.root.parent) as staging:
+                staged = Path(staging) / "registry-v1"
+                with staged.open("x", encoding="ascii") as stream:
+                    stream.write("offerpilot-deletions/1\n")
+                    stream.flush()
+                    os.fsync(stream.fileno())
+                try:
+                    os.link(staged, marker)
+                except FileExistsError:
+                    # Another trusted initializer won. Validate, never replace.
+                    self._check()
             self._sync_directory()
         except OSError:
             raise LedgerError("Deletion registry unavailable") from None
 
+    def _check_directory(self):
+        for ancestor in (self.root, *self.root.parents):
+            if ancestor.is_symlink() or getattr(ancestor.lstat(), "st_file_attributes", 0) & getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0x400):
+                raise LedgerError("Deletion registry unavailable")
+
     def _check(self):
         try:
-            for ancestor in (self.root, *self.root.parents):
-                if ancestor.is_symlink() or getattr(ancestor.lstat(), "st_file_attributes", 0) & getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0x400):
-                    raise LedgerError("Deletion registry unavailable")
+            self._check_directory()
             marker = self.root / "registry-v1"
             if marker.is_symlink() or marker.read_text(encoding="ascii") != "offerpilot-deletions/1\n":
                 raise LedgerError("Deletion registry unavailable")

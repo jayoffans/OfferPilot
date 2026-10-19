@@ -9,22 +9,25 @@ import unittest
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from threading import Barrier
+from threading import Barrier, Event
+from unittest.mock import patch
 from uuid import UUID, uuid4
 
 from argon2 import PasswordHasher
 from fastapi.testclient import TestClient
-from sqlalchemy import select, text, update
+from sqlalchemy import event, select, text, update
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from offerpilot_api.core.config import Settings, get_settings
+from offerpilot_api.account_lifecycle.ledger import DeletionLedger
 from offerpilot_api.core.api_errors import ErrorResponse
 from offerpilot_api.db.base import Base
 from offerpilot_api.db.models import AuthSession, AuthThrottle, RegistrationInvitation, User
 from offerpilot_api.db.session import build_engine, get_db
 from offerpilot_api.identity.security import SESSION_COOKIE_NAME, new_token, token_hash
 from offerpilot_api.identity.services import create_invitation
+from offerpilot_api.identity import services as identity_services
 from offerpilot_api.main import create_app
 
 PASSWORD = "Synthetic-auth-password-2026"
@@ -47,6 +50,8 @@ class AuthenticationTests(unittest.TestCase):
             auth_ip_attempt_limit=100,
             auth_registration_attempt_limit=40,
         )
+        # Trusted preparation of this newly created database/private directory.
+        DeletionLedger(self.settings.deletion_ledger_dir).initialize()
         self.clients: list[TestClient] = []
         self.client = self.make_client()
 
@@ -444,20 +449,168 @@ class AuthenticationTests(unittest.TestCase):
         token = self.invitation("concurrent@example.com")
         clients = [self.make_client() for _ in range(2)]
         start = Barrier(len(clients))
+        prepared = Barrier(len(clients))
+        encode = identity_services.hash_password
+
+        def encode_before_consumption(password):
+            encoded = encode(password)
+            # Both requests have selected the unused invitation before either
+            # attempts the conditional UPDATE and user INSERT transaction.
+            prepared.wait(timeout=10)
+            return encoded
 
         def register_concurrently(client):
             start.wait(timeout=10)
             return self.register("concurrent@example.com", client=client, token=token)
 
-        with ThreadPoolExecutor(max_workers=len(clients)) as pool:
+        with patch.object(identity_services, "hash_password", encode_before_consumption), ThreadPoolExecutor(max_workers=len(clients)) as pool:
             responses = list(pool.map(register_concurrently, clients))
-        statuses = [response.status_code for response in responses]
-        self.assertEqual(statuses.count(201), 1, statuses)
-        self.assertTrue(all(status in (201, 400, 409) for status in statuses), statuses)
+        outcomes = [(response.status_code, response.json().get("detail", {}).get("code")) for response in responses]
+        statuses = [status for status, _ in outcomes]
+        self.assertEqual(statuses.count(201), 1, outcomes)
+        self.assertTrue(all(status in (201, 400, 409) for status in statuses), outcomes)
         with Session(self.engine) as db:
             self.assertEqual(len(db.scalars(select(User)).all()), 1)
-            self.assertIsNotNone(db.scalar(select(RegistrationInvitation)).consumed_at)
+            consumed_at = db.scalar(select(RegistrationInvitation)).consumed_at
+            self.assertIsNotNone(consumed_at)
+        reused = self.register("concurrent@example.com", token=token)
+        self.assertEqual((reused.status_code, reused.json().get("detail", {}).get("code")), (400, "invalid_invitation"))
+        with Session(self.engine) as db:
+            self.assertEqual(len(db.scalars(select(User)).all()), 1)
+            self.assertEqual(db.scalar(select(RegistrationInvitation)).consumed_at, consumed_at)
         self.login("concurrent@example.com")
+
+    def test_concurrent_unprovisioned_registration_never_initializes_registry(self) -> None:
+        root = self.settings.deletion_ledger_dir
+        (root / "registry-v1").unlink()
+        root.rmdir()
+        token = self.invitation("concurrent@example.com")
+        clients = [self.make_client(), self.make_client()]
+        ready, release = Event(), Event()
+        initialize = DeletionLedger.initialize
+        sql_errors = []
+
+        def capture_error(context):
+            # Only exception classes/codes, never SQL parameters or messages.
+            sql_errors.append((type(context.original_exception).__name__,
+                               getattr(context.original_exception, "sqlite_errorname", None)))
+
+        def interleaved_initialize(registry):
+            # Deterministically expose the old request bootstrap window:
+            # directory visible, marker not yet created, second request enters.
+            registry.root.mkdir(parents=True, exist_ok=True)
+            ready.set()
+            self.assertTrue(release.wait(timeout=10))
+            initialize(registry)
+
+        def first_request():
+            try:
+                return self.register("concurrent@example.com", client=clients[0], token=token)
+            finally:
+                ready.set()
+
+        event.listen(self.engine, "handle_error", capture_error)
+        try:
+            with patch.object(DeletionLedger, "initialize", interleaved_initialize), ThreadPoolExecutor(2) as pool:
+                first = pool.submit(first_request)
+                try:
+                    self.assertTrue(ready.wait(timeout=10))
+                    second = pool.submit(self.register, "concurrent@example.com", client=clients[1], token=token).result(timeout=10)
+                finally:
+                    release.set()
+                responses = [first.result(timeout=10), second]
+        finally:
+            event.remove(self.engine, "handle_error", capture_error)
+        outcomes = [(r.status_code, r.json().get("detail", {}).get("code")) for r in responses]
+        self.assertEqual(outcomes, [(503, "deletion_registry_unavailable")] * 2, (outcomes, sql_errors))
+        self.assertEqual(sql_errors, [])
+        self.assertFalse(root.exists())
+        with Session(self.engine) as db:
+            self.assertEqual(list(db.scalars(select(User))), [])
+            self.assertEqual(list(db.scalars(select(AuthThrottle))), [])
+            self.assertIsNone(db.scalar(select(RegistrationInvitation)).consumed_at)
+
+    def test_missing_or_corrupt_registry_denies_existing_account_and_registration(self) -> None:
+        self.account()
+        self.login()
+        token = self.invitation("new@example.com")
+        root = self.settings.deletion_ledger_dir
+        marker = root / "registry-v1"
+        original = marker.read_bytes()
+        for state in ("missing_directory", "missing_marker", "corrupt_marker"):
+            with self.subTest(registry=state):
+                if state == "missing_directory":
+                    root.rename(self.root / "saved-ledger")
+                elif state == "missing_marker":
+                    marker.unlink()
+                else:
+                    marker.write_bytes(b"untrusted-registry")
+                try:
+                    responses = [self.client.get("/api/v1/me"),
+                                 self.client.post("/api/v1/auth/login", json={"email": "student@example.com", "password": PASSWORD}),
+                                 self.register("new@example.com", token=token)]
+                    outcomes = [(r.status_code, r.json().get("detail", {}).get("code")) for r in responses]
+                    self.assertEqual(outcomes, [(503, "deletion_registry_unavailable")] * 3)
+                    if state == "missing_directory":
+                        self.assertFalse(root.exists())
+                    elif state == "missing_marker":
+                        self.assertFalse(marker.exists())
+                    else:
+                        self.assertEqual(marker.read_bytes(), b"untrusted-registry")
+                    with Session(self.engine) as db:
+                        self.assertEqual(len(list(db.scalars(select(User)))), 1)
+                        self.assertIsNone(db.scalar(select(RegistrationInvitation).where(
+                            RegistrationInvitation.token_hash == token_hash(token))).consumed_at)
+                finally:
+                    if state == "missing_directory":
+                        (self.root / "saved-ledger").rename(root)
+                    else:
+                        marker.write_bytes(original)
+
+    def test_concurrent_registration_cannot_exceed_persistent_limit(self) -> None:
+        self.settings.auth_registration_attempt_limit = 2
+        clients = [self.make_client() for _ in range(4)]
+        start = Barrier(len(clients))
+
+        def attempt(index):
+            start.wait(timeout=10)
+            response = self.register("unknown@example.com", client=clients[index], token=new_token())
+            return response.status_code, response.json().get("detail", {}).get("code")
+
+        with ThreadPoolExecutor(len(clients)) as pool:
+            outcomes = list(pool.map(attempt, range(len(clients))))
+        self.assertEqual(outcomes.count((400, "invalid_invitation")), 2, outcomes)
+        self.assertEqual(outcomes.count((429, "rate_limited")), 2, outcomes)
+        with Session(self.engine) as db:
+            self.assertEqual(db.get(AuthThrottle, token_hash("register-ip:testclient")).attempt_count, 2)
+            self.assertEqual(list(db.scalars(select(User))), [])
+
+    def test_erased_database_with_zero_users_never_recreates_lost_registry(self) -> None:
+        from offerpilot_api.account_lifecycle.deletion import replay_deletion_registry
+        from offerpilot_api.db.models import AccountDeletion
+        from offerpilot_api.resume_ingestion.storage import LocalResumeStorage
+
+        user_id = self.account()
+        self.login()
+        DeletionLedger(self.settings.deletion_ledger_dir).record(user_id, uuid4())
+        with Session(self.engine) as db:
+            result = replay_deletion_registry(db, settings=self.settings,
+                                              storage=LocalResumeStorage(self.settings.upload_dir), limit=10)
+            self.assertEqual(result["failed"], 0)
+            self.assertEqual(list(db.scalars(select(User))), [])
+            self.assertEqual(len(list(db.scalars(select(AccountDeletion)))), 1)
+        token = self.invitation("new@example.com")
+        root = self.settings.deletion_ledger_dir
+        root.rename(self.root / "lost-ledger")
+        response = self.register("new@example.com", token=token)
+        self.assertEqual((response.status_code, response.json().get("detail", {}).get("code")),
+                         (503, "deletion_registry_unavailable"))
+        self.assertFalse(root.exists())
+        with Session(self.engine) as db:
+            self.assertEqual(list(db.scalars(select(User))), [])
+            self.assertEqual(len(list(db.scalars(select(AccountDeletion)))), 1)
+            self.assertIsNone(db.scalar(select(RegistrationInvitation).where(
+                RegistrationInvitation.token_hash == token_hash(token))).consumed_at)
 
     def test_concurrent_login_cannot_exceed_persistent_ip_limit(self) -> None:
         self.settings.auth_ip_attempt_limit = 3

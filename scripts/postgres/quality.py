@@ -67,6 +67,7 @@ def configured_environment(url, storage, port, metrics):
         "PYTHONPATH": os.pathsep.join(paths),
         "OFFERPILOT_DATABASE_URL": url,
         "OFFERPILOT_UPLOAD_DIR": str(storage),
+        "OFFERPILOT_DELETION_LEDGER_DIR": str(storage.parent / "deletion-ledger"),
         "OFFERPILOT_ENVIRONMENT": "development",
         "OFFERPILOT_SESSION_COOKIE_SECURE": "false",
         "OFFERPILOT_TRUSTED_ORIGINS": json.dumps([f"http://127.0.0.1:{port}"]),
@@ -447,6 +448,8 @@ def run_database(database, output, users, backup):
         require(not inspect(engine).get_table_names(), "empty isolated quality database required")
         with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
             migrate(database.migration_url)
+        from offerpilot_api.account_lifecycle.ledger import DeletionLedger
+        DeletionLedger(Path(environment["OFFERPILOT_DELETION_LEDGER_DIR"])).initialize()
         from backup_restore import secure_runtime_role
         runtime_privileges = secure_runtime_role(database)
         with engine.connect() as connection:

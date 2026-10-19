@@ -10,6 +10,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from offerpilot_api.account_lifecycle.ledger import DeletionLedger
 from offerpilot_api.core.config import Settings, get_settings
 from offerpilot_api.db.base import Base
 from offerpilot_api.db.models import ResumeDocument
@@ -35,8 +36,10 @@ class ResumeUploadTests(unittest.TestCase):
         settings = Settings(
             database_url=database_url,
             upload_dir=self.root / "uploads",
+            deletion_ledger_dir=self.root / "deletion-ledger",
             session_cookie_secure=False,
         )
+        DeletionLedger(settings.deletion_ledger_dir).initialize()
         app = create_app()
 
         def test_db():
@@ -127,6 +130,7 @@ class ResumeUploadTests(unittest.TestCase):
     def test_upload_is_unavailable_outside_development(self) -> None:
         self.client.app.dependency_overrides[get_settings] = lambda: Settings(
             upload_dir=self.root / "uploads",
+            deletion_ledger_dir=self.root / "deletion-ledger",
             session_cookie_secure=False,
         ).model_copy(update={"environment": "production"})
         response = self.client.post(

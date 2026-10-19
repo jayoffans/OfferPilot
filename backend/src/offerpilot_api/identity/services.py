@@ -114,13 +114,10 @@ def register_user(
     settings: Settings,
 ) -> User:
     from offerpilot_api.account_lifecycle.ledger import DeletionLedger, LedgerError
-    from sqlalchemy import func
     registry = DeletionLedger(settings.deletion_ledger_dir)
     try:
-        # Bootstrap only a genuinely empty new database. Existing installations
-        # explicitly provision the independent registry before enabling access.
-        if not settings.deletion_ledger_dir.exists() and db.scalar(select(func.count()).select_from(User)) == 0:
-            registry.initialize()
+        # Provision only in trusted new-environment setup, before serving requests.
+        # An empty users table can also be a restored, previously erased database.
         registry._check()
     except (LedgerError, OSError):
         raise IdentityError("deletion_registry_unavailable", "数据安全检查暂不可用，请联系维护者", 503) from None

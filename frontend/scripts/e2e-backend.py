@@ -77,6 +77,7 @@ def run() -> None:
         from fastapi.responses import Response
         from sqlalchemy import delete, func, select, update
         from sqlalchemy.orm import Session
+        from offerpilot_api.account_lifecycle.ledger import DeletionLedger
         from offerpilot_api.db.models import (
             AuthSession, AuthThrottle, Profile, ProfileFact,
             ResumeDocument, ResumeFileOperation, User,
@@ -93,6 +94,8 @@ def run() -> None:
         if revision != "0010_account_lifecycle":
             raise RuntimeError("E2E migration baseline changed; review the harness")
 
+        # Both branches have created a new database and a private temporary root.
+        DeletionLedger(get_settings().deletion_ledger_dir).initialize()
         app = create_app()
         # The paid-mode transport is replaced only inside this isolated test
         # launcher. It cannot create a SDK client or access the provider network.
