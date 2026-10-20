@@ -147,4 +147,4 @@ macOS / Linux 可用同名环境变量的 `export NAME=value` 语法；推荐直
 
 ## 6. 本轮实测口径
 
-2026-10-18，Windows 11 / Python 3.11.5 / uv 0.12.19 / Node 22.16.0 / Docker Desktop / PostgreSQL 18.6：全新 SQLite 和全新 PostgreSQL 环境的初始化、0010 迁移、合成播种、重复播种及初始状态检查通过；PostgreSQL 运行角色权限检查通过。真实 loopback API 启动、health、登录，以及 `manage.py web` 启动、Next 同源代理登录和工作台三条合成申请均通过；自建 API / Web 进程已停止，合成环境保留。完整测试入口及 CI 边界见 [TESTING](TESTING.md)。其他操作系统提供相同脚本入口，仍需远程 CI 首次实跑确认。
+2026-10-18，Windows 11 / Python 3.11.5 / uv 0.12.19 / Node 22.16.0 / Docker Desktop / PostgreSQL 18.6：全新 SQLite 和全新 PostgreSQL 环境的初始化、0010 迁移、合成播种、重复播种及初始状态检查通过；PostgreSQL 运行角色权限检查通过。真实 loopback API 启动、health、登录，以及 `manage.py web` 启动、Next 同源代理登录和工作台三条合成申请均通过；自建 API / Web 进程已停止，合成环境保留。完整测试入口及 CI 边界见 [TESTING](TESTING.md)。2026-10-20，合并后的 main 已通过 Ubuntu 24.04 上的 [GitHub Actions](https://github.com/jayoffans/OfferPilot/actions/runs/39386760528)，包括 SQLite / PostgreSQL 合成环境复现和 Chromium E2E；macOS 尚无实际验证记录。

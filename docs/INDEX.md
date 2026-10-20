@@ -2,6 +2,8 @@
 
 ## 当前作品集入口
 
+2026-10-20 状态：PR #1 已合入公开 main，[合并后 CI](https://github.com/jayoffans/OfferPilot/actions/runs/39386760528)已通过。下列发布准备与验收报告保留各自日期的历史结论；后续远程更新仍需单独授权。
+
 | 文档 | 用途 |
 |---|---|
 | [README](../README.md) | 产品、截图、架构与上手总览 |
@@ -11,11 +13,12 @@
 | [ARCHITECTURE_GUIDE](ARCHITECTURE_GUIDE.md) | 当前落地系统和代码阅读路线 |
 | [INTERVIEW](INTERVIEW.md) | 技术问答、贡献边界及介绍稿 |
 | [SECURITY_REVIEW](SECURITY_REVIEW.md) | 工作树和 Git 历史安全审查 |
+| [GITHUB-DEPENDENCY-REVIEW](GITHUB-DEPENDENCY-REVIEW.md) | Vitest 修复、剩余 5 High、生产依赖审计范围内 0 项及 ESLint peer 警告 |
 | [THIRD_PARTY_LICENSES](THIRD_PARTY_LICENSES.md) | PyMuPDF 与第三方依赖许可 |
 | [PORTFOLIO-acceptance](PORTFOLIO-acceptance.md) | 本轮实际验证、Git 差异与审阅事项 |
 | [GITHUB-RELEASE-CHECKLIST](GITHUB-RELEASE-CHECKLIST.md) | 最终本地提交、许可/历史审查、复验及待授权发布顺序 |
 | [GITHUB-FINAL-RELEASE-REVIEW](GITHUB-FINAL-RELEASE-REVIEW.md) | 上一轮 AGPLv3 候选、历史隐私复核及完整免费回归记录 |
-| [GITHUB-RELEASE-READY](GITHUB-RELEASE-READY.md) | 最新正式许可证、权利来源确认、本轮验证及待授权远程步骤 |
+| [GITHUB-RELEASE-READY](GITHUB-RELEASE-READY.md) | 正式许可与权利来源确认、首次公开前的验证和授权步骤历史 |
 
 ## 产品与设计依据
 
