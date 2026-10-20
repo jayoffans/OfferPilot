@@ -1,14 +1,18 @@
 # OfferPilot
 
-**强调事实、证据与人工确认的中文求职工作台。**
+[![CI](https://github.com/jayoffans/OfferPilot/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/jayoffans/OfferPilot/actions/workflows/ci.yml)
 
-OfferPilot 将文本 PDF 简历、个人画像、岗位条件、匹配依据和投递行动放在同一条流程中。项目用于 GitHub 作品展示、简历介绍与技术面试，支持本地运行；没有公网服务、真实用户规模或生产性能承诺。
+**基于 FastAPI、Next.js / TypeScript 和 PostgreSQL 的中文 AI 求职工作台。**
 
-求职时的困难往往是经历散落在简历里、JD 条件需要反复核对、匹配结论缺少解释、下一步行动容易遗漏。这里把 AI 限定为候选提取助手，让用户核对事实，再用确定性规则解释岗位条件，最后手工管理申请。
+OfferPilot 将文本 PDF 简历、个人画像、岗位条件、匹配依据和投递行动放在同一条流程中，帮助求职者整理经历、核对 JD 条件并管理下一步行动。
+
+**核心流程：AI 辅助提取候选信息 → 用户审核证据 → 正式个人画像 → 基于规则的岗位匹配 → 人工管理求职进度。**
+
+完整项目已在 GitHub `main` 分支公开，可下载源码，选择 SQLite 或 PostgreSQL 在本地运行；不需要公网服务器或 DeepSeek Key 即可体验主要业务流程。项目用于技术作品展示、学习交流与面试，没有公网服务、真实用户规模或生产性能承诺。
 
 **岗位选择、事实确认、声明、申请提交和 Offer 决策始终由用户负责。** 项目不自动海投，也不生成未经确认的经历。
 
-[本地启动](docs/LOCAL_SETUP.md) · [演示路线](docs/DEMO.md) · [测试说明](docs/TESTING.md) · [当前架构](docs/ARCHITECTURE_GUIDE.md) · [面试材料](docs/INTERVIEW.md) · [交付验收](docs/PORTFOLIO-acceptance.md)
+[系统截图](#系统截图) · [本地启动](docs/LOCAL_SETUP.md) · [演示路线](docs/DEMO.md) · [测试说明](docs/TESTING.md) · [当前架构](docs/ARCHITECTURE_GUIDE.md) · [面试材料](docs/INTERVIEW.md) · [交付验收](docs/PORTFOLIO-acceptance.md)
 
 ## 核心功能
 
@@ -109,7 +113,7 @@ flowchart LR
 3. 模型结果通过严格 V2 Schema，再检查引文、页段位置、字段值和同条经历归属；否定、学习计划、冲突或缺证据会阻止直接确认。词法校验不证明履历真实，也不保证完整语义理解。
 4. 候选全部先进入 `pending`。只有用户确认或明确修订后才能写入正式画像；来源、版本和测试身份持续保留。
 
-真实请求最多一次，SDK/HTTP 不自动重试；取消仍可能已产生供应商费用。退出、换 Key、删除、版本变化和租约失效都会阻止迟到事实写回。2026-10-14 仅完成过一份正常合成 PDF 的授权真实评测，不能推断总体准确率；详见[单样本记录](docs/S2-2B-single-real-evaluation-2026-10-14.md)。本轮与 CI 均不调用真实付费模型。
+真实请求最多一次，SDK/HTTP 不自动重试；取消仍可能已产生供应商费用。退出、换 Key、删除、版本变化和租约失效都会阻止迟到事实写回。2026-10-14 仅完成过一份正常合成 PDF 的授权真实评测，不能推断总体准确率；详见[单样本记录](docs/S2-2B-single-real-evaluation-2026-10-14.md)。本地演示与 CI 均不调用真实付费模型。
 
 ## 可信岗位匹配
 
@@ -164,11 +168,15 @@ uv run --locked --project backend python scripts/local/manage.py web
 | 契约 / 静态检查 | `npm --prefix frontend run api:check`、`lint`、`build`、`typecheck`（逐条执行） |
 | Git 公开前扫描 | `uv run --locked --project backend python scripts/security_scan.py`；候选需人工复核，见[安全审查](docs/SECURITY_REVIEW.md) |
 
-E2E 自动创建独立数据库、合成账户与文件，启动真实 API / Web，结束清理。不要同时运行 E2E 和 build，它们共用 `.next`。CI 覆盖锁定依赖、SQLite、PostgreSQL、前端和 Chromium，使用无网络模型夹具；GitHub Actions 的实际远程结果须推送后才能获得，本轮没有推送。本轮许可与启动检查见[发布准备报告](docs/GITHUB-RELEASE-READY.md)，此前完整回归及测试环境见[作品集验收](docs/PORTFOLIO-acceptance.md)，历史数字不计为本轮新通过。
+E2E 自动创建独立数据库、合成账户与文件，启动真实 API / Web，结束清理。不要同时运行 E2E 和 build，它们共用 `.next`。CI 覆盖锁定依赖、SQLite、PostgreSQL、前端和 Chromium，使用无网络模型夹具；浏览器层默认使用 SQLite，PostgreSQL Chromium 保留独立本地入口。
+
+2026-10-20，合并后的 `main`（`c341eb6`）已通过 GitHub Actions 的后端、PostgreSQL、前端 / Chromium 三项任务，见[实际运行结果](https://github.com/jayoffans/OfferPilot/actions/runs/39386760528)。许可与启动的历史检查见[发布准备报告](docs/GITHUB-RELEASE-READY.md)，完整本地回归环境见[作品集验收](docs/PORTFOLIO-acceptance.md)。
 
 ## 当前限制与后续计划
 
 仅支持文本 PDF；没有 OCR/DOCX、密码找回/邮箱验证、自动岗位抓取、简历重写、通知派发或浏览器代填。真实 BYOK 仅单进程；模型质量只验证过一个真实合成样本，规则证据检查与 JD 整理都有语义局限。开发 SQLite 不能替代真实 PostgreSQL 的并发测试。
+
+2026-10-19 的[依赖安全审查](docs/GITHUB-DEPENDENCY-REVIEW.md)仍记录 5 项 High 开发依赖告警，生产依赖审计范围内为 0 项；ESLint peer dependency 兼容警告仍在。第三方许可证库存仍需补齐后续锁文件变动，见[许可审查的当前边界](docs/THIRD_PARTY_LICENSES.md)。
 
 后续聚焦仓库规范、技术说明、本地复现、合成演示、测试与面试材料。公网云部署、域名备案、大规模容量、多节点高可用、复杂生产监控、商业化隐私政策和线上试点从当前计划取消；已有安全、隔离与许可要求继续保留。[PLAN](docs/PLAN.md) · [路线图](docs/roadmap.md)
 
@@ -185,7 +193,7 @@ docs/        当前说明、截图、面试稿与 S1～S5-2 历史验收
 
 **OfferPilot 原创代码、配套文档、测试和合成演示素材采用 AGPL-3.0-only。** 完整条款见 [LICENSE](LICENSE)，版权及适用范围见 [COPYRIGHT](COPYRIGHT.md)。负责人已确认相应授权来源；第三方库、图标、工具模板及其原文告知保留各自许可，不由 OfferPilot 重新授权。
 
-PDF 校验和文本提取保留 PyMuPDF 1.28.2 / MuPDF 1.28.2，按上游 AGPL 路径使用。使用、修改和再分发须遵守完整条款，保留版权、许可及无担保声明，并履行适用的对应源码与网络交互告知义务。标准全文末尾的 “or later” 使用示例不改变本项目仅版本 3 的授权选择。当前不部署公网服务，这是维护范围说明，**不是禁止商业使用的附加条款**。本地正式化与验证结果见[发布准备报告](docs/GITHUB-RELEASE-READY.md)，远程发布仍须另行批准。
+PDF 校验和文本提取保留 PyMuPDF 1.28.2 / MuPDF 1.28.2，按上游 AGPL 路径使用。使用、修改和再分发须遵守完整条款，保留版权、许可及无担保声明，并履行适用的对应源码与网络交互告知义务。标准全文末尾的 “or later” 使用示例不改变本项目仅版本 3 的授权选择。当前不部署公网服务，这是维护范围说明，**不是禁止商业使用的附加条款**。许可正式化的历史验证结果见[发布准备报告](docs/GITHUB-RELEASE-READY.md)。
 
 依赖版本、文件级许可差异及分发边界见[第三方许可审查](docs/THIRD_PARTY_LICENSES.md)、[完整依赖清单](docs/DEPENDENCY-LICENSE-INVENTORY.json)、[第三方版权原文](docs/THIRD_PARTY_NOTICES.txt)和[PyMuPDF 文件头补充](docs/PYMUPDF-1.28.2-NOTICES.txt)。
 

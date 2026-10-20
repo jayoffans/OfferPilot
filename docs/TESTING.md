@@ -77,10 +77,12 @@ npm --prefix frontend run api:check
 2. `postgres`：Compose 真实 PostgreSQL 专项及原 API 回归、全新 PostgreSQL 本地种子和状态检查。
 3. `frontend`：OpenAPI 契约、ESLint、Vitest、Next build、TypeScript、Chromium 全套。**CI 的浏览器层默认使用 SQLite**；PostgreSQL 浏览器检查保留上述可复现的本地入口，不在每个 PR 中重复整套浏览器工作。
 
-工作流为 PR、`main` / `master` / `codex/**` 的未来 push 和手动触发配置，没有部署、发布或推送步骤；首次推送当前功能分支即可触发。手动触发要求工作流已存在于默认分支，不能作为当前首次运行入口。Actions 固定到官方仓库已核实的提交 SHA，uv 固定0.12.19。采用的 action 依据：[checkout](https://github.com/actions/checkout)、[setup-python](https://github.com/actions/setup-python)、[setup-node](https://github.com/actions/setup-node)、[setup-uv](https://github.com/astral-sh/setup-uv)。维护时应连同 Node/Python 运行要求检查 SHA 更新。
+工作流由 PR、`main` / `master` / `codex/**` 的 push 或手动操作触发，没有部署、发布或推送步骤；其他分支的 push 不在触发范围内。工作流已随 PR #1 合入默认 `main`，可从 Actions 手动触发。Actions 固定到官方仓库已核实的提交 SHA，uv 固定0.12.19。采用的 action 依据：[checkout](https://github.com/actions/checkout)、[setup-python](https://github.com/actions/setup-python)、[setup-node](https://github.com/actions/setup-node)、[setup-uv](https://github.com/astral-sh/setup-uv)。维护时应连同 Node/Python 运行要求检查 SHA 更新。
 
 本地/CI PostgreSQL 启动的健康等待上限为90秒；失败时工作流只输出 `docker compose ps --all` 状态，不打印容器配置、凭据或数据库日志。浏览器关闭 trace/自动截图/录像，避免在失败时收集登录秘密；复现时只主动截取经审阅的合成页面。最终发布顺序与本轮复验见 [GITHUB-RELEASE-CHECKLIST](GITHUB-RELEASE-CHECKLIST.md)。
 
-本轮没有推送，**GitHub 托管 CI 尚未执行**。本机对应命令通过只能证明当前本机环境，不能提前给远程 CI 标绿；Linux 首次安装、网络、Docker镜像和浏览器系统依赖仍以实际 Actions 结果为准。既有更重的100用户合成查询及独立备份/删除重放演练继续保留在 `scripts/postgres/quality.py`、`backup_restore.py`、`lifecycle_restore.py`，不作为此次作品集上手的必要步骤。
+2026-10-20 已核实合并后的 `main`（`c341eb643d13dd1775d750c8b9581a183eb8b96e`）在 Ubuntu 24.04 上的 [Actions 运行 39386760528](https://github.com/jayoffans/OfferPilot/actions/runs/39386760528)成功，三项任务均通过：后端 / SQLite / 本地演示、PostgreSQL / 迁移 / 并发 / 隔离、前端 / 契约 / 构建 / Chromium。这是该提交的实际远程结果，不代替后续运行代码变更的 CI。
 
-历史重型演练以 S5-1/S5-2 的 Windows 实测为依据，`quality.py` 的服务子进程仍有 Windows venv 路径假设，不属于本轮 Linux CI 入口。当前新增跨平台快速启动/PG测试入口与 CI 使用的 HTTP、E2E 解释器路径已区分平台；其他平台仍须实际运行确认。
+本轮未改动运行代码，沿用已验证的 main 分支 CI；本轮完成文档专项检查。既有更重的100用户合成查询及独立备份/删除重放演练继续保留在 `scripts/postgres/quality.py`、`backup_restore.py`、`lifecycle_restore.py`，不作为此次作品集上手的必要步骤。
+
+历史重型演练以 S5-1/S5-2 的 Windows 实测为依据，`quality.py` 的服务子进程仍有 Windows venv 路径假设，不属于 Linux CI 入口。跨平台快速启动/PG测试入口与 CI 使用的 HTTP、E2E 解释器路径已区分平台；已验证 Windows 和上述 Ubuntu CI 环境，macOS 等其他平台仍须实际运行确认。
