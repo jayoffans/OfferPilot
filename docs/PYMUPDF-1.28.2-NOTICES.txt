@@ -1,0 +1,311 @@
+PyMuPDF 1.28.2 file-level copyright and license notices
+Review date: 2026-10-18 (Asia/Shanghai)
+
+This supplement preserves original leading notice blocks from the installed
+locked PyMuPDF 1.28.2 Python source files. Each extracted block was compared
+byte-for-byte with the corresponding official fixed-tag source URL below.
+The hashes identify the installed complete file and the exact extracted bytes.
+Package-relative paths do not expose a local installation path.
+
+The original GPL-3.0-only, AGPLv3, AGPLv3-or-later and ported MIT notices remain
+under their respective terms. These are upstream notices, not an OfferPilot
+copyright claim or an attempt to relicense PyMuPDF. The table.py block includes
+the complete retained Jeremy Singer-Vine MIT notice for pdfplumber-derived code.
+This is supplemental evidence; it is not a complete license/source offer for
+MuPDF or native dependencies, a wheel, container or other binary distribution.
+See THIRD_PARTY_LICENSES.md for scope and the package-level licensing evidence.
+
+==============================================================================
+Source: python/pymupdf/__init__.py
+Official fixed source: https://raw.githubusercontent.com/pymupdf/PyMuPDF/1.28.2/src/__init__.py
+Original lines: 1-7
+Full installed file SHA-256: e8cdb45ed0afa21f919cec30e69b7b572c3db7bc80d203e4e07e4c7ea2b19cce
+Extracted notice bytes: 114
+Extracted notice SHA-256: b2db02907d77473c1a38d67e554c181df568839ea81b6ce71b968010de86c7b7
+------------------------------------------------------------------------------
+'''
+PyMuPDF implemented on top of MuPDF Python bindings.
+
+License:
+
+    SPDX-License-Identifier: GPL-3.0-only
+'''
+
+==============================================================================
+Source: python/pymupdf/table.py
+Official fixed source: https://raw.githubusercontent.com/pymupdf/PyMuPDF/1.28.2/src/table.py
+Original lines: 1-73
+Full installed file SHA-256: c6523e32da763bd2b84e7b0cb3d221c9938ff1dc06c19a2d0d97d3635999d6ca
+Extracted notice bytes: 3314
+Extracted notice SHA-256: d090e835c58dbfa00c30e3c7d1789e35cdc427977bb883bd0429dd269d70e1d9
+------------------------------------------------------------------------------
+"""
+Copyright (C) 2023 Artifex Software, Inc.
+
+This file is part of PyMuPDF.
+
+PyMuPDF is free software: you can redistribute it and/or modify it under the
+terms of the GNU Affero General Public License as published by the Free
+Software Foundation, either version 3 of the License, or (at your option)
+any later version.
+
+PyMuPDF is distributed in the hope that it will be useful, but WITHOUT ANY
+WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more
+details.
+
+You should have received a copy of the GNU Affero General Public License
+along with MuPDF. If not, see <https://www.gnu.org/licenses/agpl-3.0.en.html>
+
+Alternative licensing terms are available from the licensor.
+For commercial licensing, see <https://www.artifex.com/> or contact
+Artifex Software, Inc., 39 Mesa Street, Suite 108A, San Francisco,
+CA 94129, USA, for further information.
+
+---------------------------------------------------------------------
+Portions of this code have been ported from pdfplumber, see
+https://pypi.org/project/pdfplumber/.
+
+The ported code is under the following MIT license:
+
+---------------------------------------------------------------------
+The MIT License (MIT)
+
+Copyright (c) 2015, Jeremy Singer-Vine
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+---------------------------------------------------------------------
+Also see here: https://github.com/jsvine/pdfplumber/blob/stable/LICENSE.txt
+---------------------------------------------------------------------
+
+The porting mainly pertains to files "table.py" and relevant parts of
+"utils/text.py" within pdfplumber's repository on Github.
+With respect to "text.py", we have removed functions or features that are not
+used by table processing. Examples are:
+
+* the text search function
+* simple text extraction
+* text extraction by lines
+
+Original pdfplumber code does neither detect, nor identify table headers.
+This PyMuPDF port adds respective code to the 'Table' class as method '_get_header'.
+This is implemented as new class TableHeader with the properties:
+* bbox: A tuple for the header's bbox
+* cells: A tuple for each bbox of a column header
+* names: A list of strings with column header text
+* external: A bool indicating whether the header is outside the table cells.
+
+"""
+
+==============================================================================
+Source: python/pymupdf/_table_headers.py
+Official fixed source: https://raw.githubusercontent.com/pymupdf/PyMuPDF/1.28.2/src/_table_headers.py
+Original lines: 1-32
+Full installed file SHA-256: 881a63053ebcb2ce48c87689380774391bbe09eb0996a14b8df7f0b2465e9215
+Extracted notice bytes: 1406
+Extracted notice SHA-256: 70f7bc5943094048a61eb3ef17f6f3dd4ef4376d6ba2c54ffb2c87f19080a0e2
+------------------------------------------------------------------------------
+"""
+Copyright (C) 2023 Artifex Software, Inc.
+
+This file is part of PyMuPDF.
+
+PyMuPDF is free software: you can redistribute it and/or modify it under the
+terms of the GNU Affero General Public License as published by the Free
+Software Foundation, either version 3 of the License, or (at your option)
+any later version.
+
+PyMuPDF is distributed in the hope that it will be useful, but WITHOUT ANY
+WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more
+details.
+
+You should have received a copy of the GNU Affero General Public License
+along with MuPDF. If not, see <https://www.gnu.org/licenses/agpl-3.0.en.html>
+
+Alternative licensing terms are available from the licensor.
+For commercial licensing, see <https://www.artifex.com/> or contact
+Artifex Software, Inc., 39 Mesa Street, Suite 108A, San Francisco,
+CA 94129, USA, for further information.
+
+---------------------------------------------------------------------
+
+PyMuPDF table header detection and HTML serialization (opt-in extension).
+
+Pure text-grid module (no pymupdf import): the header-region rules operate on a
+row-major ``[[cell text]]`` grid, and the serializer turns a tagged placement
+grid into an HTML ``<table>``. Used only by find_tables(refine=True) (via
+pymupdf.table) and Table.to_html(); never runs on the default detection path.
+"""
+
+==============================================================================
+Source: python/pymupdf/_table_refine.py
+Official fixed source: https://raw.githubusercontent.com/pymupdf/PyMuPDF/1.28.2/src/_table_refine.py
+Original lines: 1-32
+Full installed file SHA-256: 37e9f101c3285633a4d62181f008fa36daba1efde30eda1bb7395908aa3af5d2
+Extracted notice bytes: 1308
+Extracted notice SHA-256: 55be50b7495446faf802974cbc0cf32a582e5b41c94146c68263bb15e7b2845a
+------------------------------------------------------------------------------
+"""
+Copyright (C) 2023 Artifex Software, Inc.
+
+This file is part of PyMuPDF.
+
+PyMuPDF is free software: you can redistribute it and/or modify it under the
+terms of the GNU Affero General Public License as published by the Free
+Software Foundation, either version 3 of the License, or (at your option)
+any later version.
+
+PyMuPDF is distributed in the hope that it will be useful, but WITHOUT ANY
+WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more
+details.
+
+You should have received a copy of the GNU Affero General Public License
+along with MuPDF. If not, see <https://www.gnu.org/licenses/agpl-3.0.en.html>
+
+Alternative licensing terms are available from the licensor.
+For commercial licensing, see <https://www.artifex.com/> or contact
+Artifex Software, Inc., 39 Mesa Street, Suite 108A, San Francisco,
+CA 94129, USA, for further information.
+
+---------------------------------------------------------------------
+
+PyMuPDF table grid refinement (opt-in extension).
+
+Provides the refine_grid / refine_grid_structure / refine_grid_rows API that
+refines a detected table's cell grid using page text and vector-graphics
+geometry. Re-exported by pymupdf.table; never runs on the default
+find_tables() path.
+"""
+
+==============================================================================
+Source: python/pymupdf/_table_spans.py
+Official fixed source: https://raw.githubusercontent.com/pymupdf/PyMuPDF/1.28.2/src/_table_spans.py
+Original lines: 1-32
+Full installed file SHA-256: caec10e8e755984e14f3b27463b9e725897d7b98c22e4b447951a9c563b5f949
+Extracted notice bytes: 1357
+Extracted notice SHA-256: 90cf74ffd4389240d82bf3662ccc78e311bf137c8acb9594e0dcb9f269385743
+------------------------------------------------------------------------------
+"""
+Copyright (C) 2023 Artifex Software, Inc.
+
+This file is part of PyMuPDF.
+
+PyMuPDF is free software: you can redistribute it and/or modify it under the
+terms of the GNU Affero General Public License as published by the Free
+Software Foundation, either version 3 of the License, or (at your option)
+any later version.
+
+PyMuPDF is distributed in the hope that it will be useful, but WITHOUT ANY
+WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more
+details.
+
+You should have received a copy of the GNU Affero General Public License
+along with MuPDF. If not, see <https://www.gnu.org/licenses/agpl-3.0.en.html>
+
+Alternative licensing terms are available from the licensor.
+For commercial licensing, see <https://www.artifex.com/> or contact
+Artifex Software, Inc., 39 Mesa Street, Suite 108A, San Francisco,
+CA 94129, USA, for further information.
+
+---------------------------------------------------------------------
+
+PyMuPDF table cell-span resolution (opt-in extension).
+
+Provides SpanCell and resolve_spans (plus the _span_* helpers), which
+reconstruct a detected table's merged-cell (colspan / rowspan) structure.
+Re-exported by pymupdf.table; never runs on the default find_tables() path.
+Reuses the word-selection helpers of pymupdf._table_refine.
+"""
+
+==============================================================================
+Source: python/pymupdf/_table_union.py
+Official fixed source: https://raw.githubusercontent.com/pymupdf/PyMuPDF/1.28.2/src/_table_union.py
+Original lines: 1-29
+Full installed file SHA-256: efd332e5b513c758425a53c8b8f6b5b99c15bdda7f884818ee62e406d9265592
+Extracted notice bytes: 1245
+Extracted notice SHA-256: 452391d2e6b792023a74f0f300e8262348d626f67e4f431acfd23ae253539b28
+------------------------------------------------------------------------------
+"""
+Copyright (C) 2023 Artifex Software, Inc.
+
+This file is part of PyMuPDF.
+
+PyMuPDF is free software: you can redistribute it and/or modify it under the
+terms of the GNU Affero General Public License as published by the Free
+Software Foundation, either version 3 of the License, or (at your option)
+any later version.
+
+PyMuPDF is distributed in the hope that it will be useful, but WITHOUT ANY
+WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more
+details.
+
+You should have received a copy of the GNU Affero General Public License
+along with MuPDF. If not, see <https://www.gnu.org/licenses/agpl-3.0.en.html>
+
+Alternative licensing terms are available from the licensor.
+For commercial licensing, see <https://www.artifex.com/> or contact
+Artifex Software, Inc., 39 Mesa Street, Suite 108A, San Francisco,
+CA 94129, USA, for further information.
+
+---------------------------------------------------------------------
+
+PyMuPDF table union stage, behind find_tables(union=True): fuse the layout
+analyzer's table grids with the line-based finder's candidates. Table,
+TableFinder and _iou come from pymupdf.table; find_tables is imported lazily.
+"""
+
+==============================================================================
+Source: python/pymupdf/utils.py
+Official fixed source: https://raw.githubusercontent.com/pymupdf/PyMuPDF/1.28.2/src/utils.py
+Original lines: 1-8
+Full installed file SHA-256: cc172067fe277068a3abdb9c8886efbfacaabc9b261f82ecb686ecd85fb7622d
+Extracted notice bytes: 516
+Extracted notice SHA-256: d5b0713efa4771209be4081d8994e096bc5b3401ef41834305649f5da0bba7c9
+------------------------------------------------------------------------------
+# ------------------------------------------------------------------------
+# Copyright 2020-2022, Harald Lieder, mailto:harald.lieder@outlook.com
+# License: GNU AFFERO GPL 3.0, https://www.gnu.org/licenses/agpl-3.0.html
+#
+# Part of "PyMuPDF", a Python binding for "MuPDF" (http://mupdf.com), a
+# lightweight PDF, XPS, and E-book viewer, renderer and toolkit which is
+# maintained and developed by Artifex Software, Inc. https://artifex.com.
+# ------------------------------------------------------------------------
+
+==============================================================================
+Source: python/pymupdf/__main__.py
+Official fixed source: https://raw.githubusercontent.com/pymupdf/PyMuPDF/1.28.2/src/__main__.py
+Original lines: 1-7
+Full installed file SHA-256: 763a97305937d0665a43d4b6920924efb15d8f87795ec2926c09f9da69bfd2cb
+Extracted notice bytes: 523
+Extracted notice SHA-256: 879d55f3c9ca436e973c7325b73e78d0b5d2fdf4fd3c671085855a9c7e9a6fd1
+------------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
+# Copyright 2020-2022, Harald Lieder, mailto:harald.lieder@outlook.com
+# License: GNU AFFERO GPL 3.0, https://www.gnu.org/licenses/agpl-3.0.html
+# Part of "PyMuPDF", Python bindings for "MuPDF" (http://mupdf.com), a
+# lightweight PDF, XPS, and E-book viewer, renderer and toolkit which is
+# maintained and developed by Artifex Software, Inc. https://artifex.com.
+# -----------------------------------------------------------------------------
+
+==============================================================================
+End of extracted upstream notices.

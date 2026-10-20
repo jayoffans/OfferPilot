@@ -1,0 +1,10 @@
+{
+  "status": "masked_dialog_launcher_started_do_not_replay",
+  "authorization_record": "S2-2B-user-authorized-single-2026-10-14",
+  "input_method_change_explicitly_requested_by_user": true,
+  "prior_total_actual_calls": 0,
+  "max_total_real_calls": 1,
+  "key_input": "local_masked_dialog",
+  "no_credential_in_args": true,
+  "process_id": 362976
+}

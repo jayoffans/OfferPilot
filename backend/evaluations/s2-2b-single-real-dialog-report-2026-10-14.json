@@ -1,0 +1,1402 @@
+{
+  "provider": "deepseek",
+  "mode": "real",
+  "test_result": false,
+  "model": "deepseek-flash",
+  "request_model": "deepseek-flash",
+  "notice": "真实合成评测，需逐字段审核。",
+  "model_alias_audit_date": "2026-10-14",
+  "model_version_at_audit": "DeepSeek-V4.1-Flash",
+  "model_version_note": "Official alias snapshot; response model does not prove immutable weights.",
+  "openai_sdk_version": "2.54.0",
+  "provider_version": "deepseek-openai-json-v1.1",
+  "caseset_version": "s2-2b-five-synthetic-v1",
+  "prompt_version": "resume_extract_v2.1",
+  "prompt_sha256": "a4cdd80c216976470829dc2d109cfa129709a5a844b3484b0a61eb63e7456d87",
+  "schema_version": "2.0",
+  "redaction_version": "resume-redaction-v1",
+  "reserved_calls": 1,
+  "actual_calls": 1,
+  "paid_calls": 1,
+  "protocol_calls": 0,
+  "actual_cost_cny": null,
+  "estimated_usage_cost_cny": "0.008462",
+  "status": "已执行一次合成真实评测，需人工审核与核对账单",
+  "cases": [
+    {
+      "case_id": "normal_chinese",
+      "state": "validated",
+      "request_model": "deepseek-flash",
+      "run_id": "576363be-26d1-42f0-8ac2-81a2ccc7b476",
+      "token_usage": {
+        "prompt_tokens": 1107,
+        "completion_tokens": 781,
+        "total_tokens": 1888
+      },
+      "estimated_usage_cost_cny": "0.008462",
+      "evaluation_kind": "real",
+      "notice": "真实合成评测，模型响应不等于抽取准确。",
+      "pdf": {
+        "file_id": "ca25d4e7-82d1-4d02-8e66-d6fc8be1df85",
+        "file_name": "合成评测-normal_chinese.pdf",
+        "sha256": "cd6e8940637829abaa911fd22689db0f43573a24328f50574300af2f36711567",
+        "byte_size": 2081,
+        "factory_version": "s2-2b-synthetic-pdf-v1",
+        "caseset_version": "s2-2b-five-synthetic-v1",
+        "page_count": 2,
+        "text_layout": {
+          "layout_version": "1.0",
+          "text_sha256": "7dd69e69b7e12693b837cb32b312fc65d6e115bf5a37737bd2e9485439962142",
+          "pages": [
+            {
+              "page": 1,
+              "start": 0,
+              "end": 92
+            },
+            {
+              "page": 2,
+              "start": 93,
+              "end": 273
+            }
+          ],
+          "segments": [
+            {
+              "paragraph": 1,
+              "page": 1,
+              "start": 0,
+              "end": 19
+            },
+            {
+              "paragraph": 2,
+              "page": 1,
+              "start": 20,
+              "end": 28
+            },
+            {
+              "paragraph": 3,
+              "page": 1,
+              "start": 29,
+              "end": 80
+            },
+            {
+              "paragraph": 4,
+              "page": 1,
+              "start": 81,
+              "end": 92
+            },
+            {
+              "paragraph": 5,
+              "page": 2,
+              "start": 93,
+              "end": 133
+            },
+            {
+              "paragraph": 6,
+              "page": 2,
+              "start": 134,
+              "end": 144
+            },
+            {
+              "paragraph": 7,
+              "page": 2,
+              "start": 145,
+              "end": 159
+            },
+            {
+              "paragraph": 8,
+              "page": 2,
+              "start": 160,
+              "end": 217
+            },
+            {
+              "paragraph": 9,
+              "page": 2,
+              "start": 218,
+              "end": 273
+            }
+          ]
+        },
+        "processing_status": "parsed",
+        "private_storage_byte_roundtrip": true,
+        "synthetic_whitelist_verified": true
+      },
+      "provider_type": "deepseek",
+      "model": "deepseek-flash",
+      "target_model": "deepseek-flash",
+      "prompt_version": "resume_extract_v2.1",
+      "schema_version": "2.0",
+      "migration_head": "0006_deepseek_byok",
+      "preview": {
+        "model": "deepseek-flash",
+        "source_version": "e314746e2e4295c4d60e0780ec1837af013c326822f05f910e983aef71573a0f",
+        "redacted_text": "*******************\n********\n***************************************************\n***********\n教育：示例大学；本科；计算机科学；2022年9月入学；预计毕业：2026年6月。\n技能：Python。\n技能：JavaScript。\n项目：课程选课系统；角色：后端开发；2024年3月至2024年6月；技术栈：Python；工作：编写课程查询接口。\n实习：示例科技；岗位：后端实习生；2025年7月至2025年9月；职责：维护测试脚本；成果：补充接口测试用例。",
+        "sent_text_sha256": "1b4bb1d1f681092c0de6946913588d45c30bf543ed73994d0c40b64b2e025b0d",
+        "redaction_version": "resume-redaction-v1",
+        "max_calls": 1,
+        "max_input_tokens": 16548,
+        "max_output_tokens": 4096,
+        "privacy_notice": "仅发送预览中的教育、技能、项目、实习/工作文本，不发送 PDF 文件。默认遮蔽联系信息和个人资料区。仍可能含个人信息，请检查预览。DeepSeek 可能保留数据、使用去标识内容训练；API 专门退出和确切保留期限尚未核实。",
+        "cost_notice": "本次最多调用 1 次，不自动修复或重试。输入 token 为保守上界估计，输出最多 4096 token。可能产生 API 费用，由您的 Key 账户承担；实际 token、缓存和时段价格以 DeepSeek 账单为准。超时、取消或断网仍可能收费。",
+        "input_scope": "仅最终脱敏 resume_text 与固定版本 Prompt；不发送 PDF 原件",
+        "synthetic_only": true
+      },
+      "synthetic_pdf_extracted_text": "合成测试简历（全部人物和经历均为虚构）\n姓名：合成评测甲\n联系方式：000-0000-0000 synthetic-evaluation@example.com\n合成简历（仅用于测试）\n教育：示例大学；本科；计算机科学；2022年9月入学；预计毕业：2026年6月。\n技能：Python。\n技能：JavaScript。\n项目：课程选课系统；角色：后端开发；2024年3月至2024年6月；技术栈：Python；工作：编写课程查询接口。\n实习：示例科技；岗位：后端实习生；2025年7月至2025年9月；职责：维护测试脚本；成果：补充接口测试用例。",
+      "preview_matches_actual_provider_input": true,
+      "actual_sent_sha256": "1b4bb1d1f681092c0de6946913588d45c30bf543ed73994d0c40b64b2e025b0d",
+      "run": {
+        "id": "576363be-26d1-42f0-8ac2-81a2ccc7b476",
+        "resume_id": "ca25d4e7-82d1-4d02-8e66-d6fc8be1df85",
+        "status": "succeeded",
+        "mode": "deepseek",
+        "test_result": false,
+        "model": "deepseek-flash",
+        "billing_status": "usage_reported",
+        "prompt_tokens": 1107,
+        "completion_tokens": 781,
+        "total_tokens": 1888,
+        "revision": 2,
+        "source_version": "e314746e2e4295c4d60e0780ec1837af013c326822f05f910e983aef71573a0f",
+        "attempt_count": 1,
+        "max_attempts": 1,
+        "call_count": 1,
+        "max_calls": 1,
+        "candidate_count": 5,
+        "schema_version": "2.0",
+        "extraction_version": "deepseek-v2-f9f87dbe-f4b6-4798-a5be-7ca939fe77d2",
+        "prompt_version": "resume_extract_v2.1",
+        "provider_version": "deepseek-openai-json-v1.1",
+        "error_code": null,
+        "created_at": "2026-10-14T09:25:19",
+        "updated_at": "2026-10-14T09:25:24.430423",
+        "finished_at": "2026-10-14T09:25:24.430423"
+      },
+      "candidates": [
+        {
+          "id": "ea71e80d-069c-41d3-a640-08b8d912535c",
+          "category": "education",
+          "value": {
+            "school": "示例大学",
+            "degree": "本科",
+            "major": "计算机科学",
+            "start_date": "2022-09",
+            "end_date": "2026-06",
+            "end_date_kind": "expected"
+          },
+          "status": "pending",
+          "evidence_status": "supported",
+          "evidence": [
+            {
+              "field": "school",
+              "source_text": "示例大学"
+            },
+            {
+              "field": "degree",
+              "source_text": "本科"
+            },
+            {
+              "field": "major",
+              "source_text": "计算机科学"
+            },
+            {
+              "field": "start_date",
+              "source_text": "2022年9月入学"
+            },
+            {
+              "field": "end_date",
+              "source_text": "预计毕业：2026年6月"
+            },
+            {
+              "field": "end_date_kind",
+              "source_text": "预计毕业"
+            }
+          ],
+          "resume_id": "ca25d4e7-82d1-4d02-8e66-d6fc8be1df85",
+          "resume_file_name": "合成评测-normal_chinese.pdf",
+          "schema_version": "2.0",
+          "extraction_version": "deepseek-v2-f9f87dbe-f4b6-4798-a5be-7ca939fe77d2",
+          "entry_id": null,
+          "created_at": "2026-10-14T09:25:24",
+          "reviewed_at": null,
+          "extraction_run_id": "576363be-26d1-42f0-8ac2-81a2ccc7b476",
+          "extraction_metadata": {
+            "schema_version": "2.0",
+            "prompt_version": "resume_extract_v2.1",
+            "provider": "deepseek",
+            "test_result": false,
+            "model": "deepseek-flash",
+            "run_id": "576363be-26d1-42f0-8ac2-81a2ccc7b476",
+            "source_text_sha256": "7dd69e69b7e12693b837cb32b312fc65d6e115bf5a37737bd2e9485439962142",
+            "source_layout_sha256": "a31176dd4020219d98eb9e5077721dbe3795411a16c560232377e53bac76ccb5",
+            "source_file_sha256": "cd6e8940637829abaa911fd22689db0f43573a24328f50574300af2f36711567",
+            "text_layout_version": "1.0",
+            "category": "education",
+            "item_path": "education[0]",
+            "scope_text": "教育：示例大学；本科；计算机科学；2022年9月入学；预计毕业：2026年6月。",
+            "scope_locations": [
+              {
+                "start": 93,
+                "end": 133,
+                "page": 2,
+                "paragraph": 5
+              }
+            ],
+            "fields": [
+              {
+                "path": "education[0].school",
+                "mapped_field": "school",
+                "raw_value": "示例大学",
+                "source_text": "示例大学",
+                "reported_confidence": 0.5,
+                "assertion": "affirmed",
+                "normalized_value": "示例大学",
+                "locations": [
+                  {
+                    "start": 96,
+                    "end": 100,
+                    "page": 2,
+                    "paragraph": 5
+                  }
+                ],
+                "review_reasons": []
+              },
+              {
+                "path": "education[0].degree",
+                "mapped_field": "degree",
+                "raw_value": "本科",
+                "source_text": "本科",
+                "reported_confidence": 0.5,
+                "assertion": "affirmed",
+                "normalized_value": "本科",
+                "locations": [
+                  {
+                    "start": 101,
+                    "end": 103,
+                    "page": 2,
+                    "paragraph": 5
+                  }
+                ],
+                "review_reasons": []
+              },
+              {
+                "path": "education[0].major",
+                "mapped_field": "major",
+                "raw_value": "计算机科学",
+                "source_text": "计算机科学",
+                "reported_confidence": 0.5,
+                "assertion": "affirmed",
+                "normalized_value": "计算机科学",
+                "locations": [
+                  {
+                    "start": 104,
+                    "end": 109,
+                    "page": 2,
+                    "paragraph": 5
+                  }
+                ],
+                "review_reasons": []
+              },
+              {
+                "path": "education[0].start_date",
+                "mapped_field": "start_date",
+                "raw_value": "2022年9月",
+                "source_text": "2022年9月入学",
+                "reported_confidence": 0.5,
+                "assertion": "affirmed",
+                "normalized_value": "2022-09",
+                "locations": [
+                  {
+                    "start": 110,
+                    "end": 119,
+                    "page": 2,
+                    "paragraph": 5
+                  }
+                ],
+                "review_reasons": []
+              },
+              {
+                "path": "education[0].graduation_date",
+                "mapped_field": "end_date",
+                "raw_value": "2026年6月",
+                "source_text": "预计毕业：2026年6月",
+                "reported_confidence": 0.5,
+                "assertion": "affirmed",
+                "normalized_value": "2026-06",
+                "locations": [
+                  {
+                    "start": 120,
+                    "end": 132,
+                    "page": 2,
+                    "paragraph": 5
+                  }
+                ],
+                "review_reasons": []
+              },
+              {
+                "path": "education[0].graduation_status",
+                "mapped_field": "end_date_kind",
+                "raw_value": "预计毕业",
+                "source_text": "预计毕业",
+                "reported_confidence": 0.5,
+                "assertion": "affirmed",
+                "normalized_value": "expected",
+                "locations": [
+                  {
+                    "start": 120,
+                    "end": 124,
+                    "page": 2,
+                    "paragraph": 5
+                  }
+                ],
+                "review_reasons": []
+              }
+            ],
+            "review_reasons": [],
+            "evidence_status": "supported",
+            "duplicate_proposals_removed": 0,
+            "confidence_interpretation": "model_reported_not_truth_probability"
+          }
+        },
+        {
+          "id": "06ba312e-5977-4856-b6d5-ea5eff7468ff",
+          "category": "skill",
+          "value": {
+            "name": "Python",
+            "level": null
+          },
+          "status": "pending",
+          "evidence_status": "supported",
+          "evidence": [
+            {
+              "field": "name",
+              "source_text": "技能：Python。"
+            }
+          ],
+          "resume_id": "ca25d4e7-82d1-4d02-8e66-d6fc8be1df85",
+          "resume_file_name": "合成评测-normal_chinese.pdf",
+          "schema_version": "2.0",
+          "extraction_version": "deepseek-v2-f9f87dbe-f4b6-4798-a5be-7ca939fe77d2",
+          "entry_id": null,
+          "created_at": "2026-10-14T09:25:24",
+          "reviewed_at": null,
+          "extraction_run_id": "576363be-26d1-42f0-8ac2-81a2ccc7b476",
+          "extraction_metadata": {
+            "schema_version": "2.0",
+            "prompt_version": "resume_extract_v2.1",
+            "provider": "deepseek",
+            "test_result": false,
+            "model": "deepseek-flash",
+            "run_id": "576363be-26d1-42f0-8ac2-81a2ccc7b476",
+            "source_text_sha256": "7dd69e69b7e12693b837cb32b312fc65d6e115bf5a37737bd2e9485439962142",
+            "source_layout_sha256": "a31176dd4020219d98eb9e5077721dbe3795411a16c560232377e53bac76ccb5",
+            "source_file_sha256": "cd6e8940637829abaa911fd22689db0f43573a24328f50574300af2f36711567",
+            "text_layout_version": "1.0",
+            "category": "skill",
+            "item_path": "skills[0]",
+            "scope_text": null,
+            "scope_locations": [],
+            "fields": [
+              {
+                "path": "skills[0].name",
+                "mapped_field": "name",
+                "raw_value": "Python",
+                "source_text": "技能：Python。",
+                "reported_confidence": 0.5,
+                "assertion": "affirmed",
+                "normalized_value": "Python",
+                "locations": [
+                  {
+                    "start": 134,
+                    "end": 144,
+                    "page": 2,
+                    "paragraph": 6
+                  }
+                ],
+                "review_reasons": []
+              }
+            ],
+            "review_reasons": [],
+            "evidence_status": "supported",
+            "duplicate_proposals_removed": 0,
+            "confidence_interpretation": "model_reported_not_truth_probability"
+          }
+        },
+        {
+          "id": "0a60a93e-21b2-4a3f-8c37-53ea6b924ed0",
+          "category": "skill",
+          "value": {
+            "name": "JavaScript",
+            "level": null
+          },
+          "status": "pending",
+          "evidence_status": "supported",
+          "evidence": [
+            {
+              "field": "name",
+              "source_text": "技能：JavaScript。"
+            }
+          ],
+          "resume_id": "ca25d4e7-82d1-4d02-8e66-d6fc8be1df85",
+          "resume_file_name": "合成评测-normal_chinese.pdf",
+          "schema_version": "2.0",
+          "extraction_version": "deepseek-v2-f9f87dbe-f4b6-4798-a5be-7ca939fe77d2",
+          "entry_id": null,
+          "created_at": "2026-10-14T09:25:24",
+          "reviewed_at": null,
+          "extraction_run_id": "576363be-26d1-42f0-8ac2-81a2ccc7b476",
+          "extraction_metadata": {
+            "schema_version": "2.0",
+            "prompt_version": "resume_extract_v2.1",
+            "provider": "deepseek",
+            "test_result": false,
+            "model": "deepseek-flash",
+            "run_id": "576363be-26d1-42f0-8ac2-81a2ccc7b476",
+            "source_text_sha256": "7dd69e69b7e12693b837cb32b312fc65d6e115bf5a37737bd2e9485439962142",
+            "source_layout_sha256": "a31176dd4020219d98eb9e5077721dbe3795411a16c560232377e53bac76ccb5",
+            "source_file_sha256": "cd6e8940637829abaa911fd22689db0f43573a24328f50574300af2f36711567",
+            "text_layout_version": "1.0",
+            "category": "skill",
+            "item_path": "skills[1]",
+            "scope_text": null,
+            "scope_locations": [],
+            "fields": [
+              {
+                "path": "skills[1].name",
+                "mapped_field": "name",
+                "raw_value": "JavaScript",
+                "source_text": "技能：JavaScript。",
+                "reported_confidence": 0.5,
+                "assertion": "affirmed",
+                "normalized_value": "JavaScript",
+                "locations": [
+                  {
+                    "start": 145,
+                    "end": 159,
+                    "page": 2,
+                    "paragraph": 7
+                  }
+                ],
+                "review_reasons": []
+              }
+            ],
+            "review_reasons": [],
+            "evidence_status": "supported",
+            "duplicate_proposals_removed": 0,
+            "confidence_interpretation": "model_reported_not_truth_probability"
+          }
+        },
+        {
+          "id": "8d16d7f7-d557-48d4-b261-68b5415852bc",
+          "category": "project",
+          "value": {
+            "name": "课程选课系统",
+            "role": "后端开发",
+            "description": "技术栈：Python；工作：编写课程查询接口",
+            "start_date": "2024-03",
+            "end_date": "2024-06",
+            "is_current": null
+          },
+          "status": "pending",
+          "evidence_status": "supported",
+          "evidence": [
+            {
+              "field": "name",
+              "source_text": "课程选课系统"
+            },
+            {
+              "field": "role",
+              "source_text": "角色：后端开发"
+            },
+            {
+              "field": "start_date",
+              "source_text": "2024年3月"
+            },
+            {
+              "field": "end_date",
+              "source_text": "2024年6月"
+            },
+            {
+              "field": "description",
+              "source_text": "技术栈：Python；工作：编写课程查询接口"
+            }
+          ],
+          "resume_id": "ca25d4e7-82d1-4d02-8e66-d6fc8be1df85",
+          "resume_file_name": "合成评测-normal_chinese.pdf",
+          "schema_version": "2.0",
+          "extraction_version": "deepseek-v2-f9f87dbe-f4b6-4798-a5be-7ca939fe77d2",
+          "entry_id": null,
+          "created_at": "2026-10-14T09:25:24",
+          "reviewed_at": null,
+          "extraction_run_id": "576363be-26d1-42f0-8ac2-81a2ccc7b476",
+          "extraction_metadata": {
+            "schema_version": "2.0",
+            "prompt_version": "resume_extract_v2.1",
+            "provider": "deepseek",
+            "test_result": false,
+            "model": "deepseek-flash",
+            "run_id": "576363be-26d1-42f0-8ac2-81a2ccc7b476",
+            "source_text_sha256": "7dd69e69b7e12693b837cb32b312fc65d6e115bf5a37737bd2e9485439962142",
+            "source_layout_sha256": "a31176dd4020219d98eb9e5077721dbe3795411a16c560232377e53bac76ccb5",
+            "source_file_sha256": "cd6e8940637829abaa911fd22689db0f43573a24328f50574300af2f36711567",
+            "text_layout_version": "1.0",
+            "category": "project",
+            "item_path": "projects[0]",
+            "scope_text": "项目：课程选课系统；角色：后端开发；2024年3月至2024年6月；技术栈：Python；工作：编写课程查询接口。",
+            "scope_locations": [
+              {
+                "start": 160,
+                "end": 217,
+                "page": 2,
+                "paragraph": 8
+              }
+            ],
+            "fields": [
+              {
+                "path": "projects[0].name",
+                "mapped_field": "name",
+                "raw_value": "课程选课系统",
+                "source_text": "课程选课系统",
+                "reported_confidence": 0.5,
+                "assertion": "affirmed",
+                "normalized_value": "课程选课系统",
+                "locations": [
+                  {
+                    "start": 163,
+                    "end": 169,
+                    "page": 2,
+                    "paragraph": 8
+                  }
+                ],
+                "review_reasons": []
+              },
+              {
+                "path": "projects[0].role",
+                "mapped_field": "role",
+                "raw_value": "后端开发",
+                "source_text": "角色：后端开发",
+                "reported_confidence": 0.5,
+                "assertion": "affirmed",
+                "normalized_value": "后端开发",
+                "locations": [
+                  {
+                    "start": 170,
+                    "end": 177,
+                    "page": 2,
+                    "paragraph": 8
+                  }
+                ],
+                "review_reasons": []
+              },
+              {
+                "path": "projects[0].start_date",
+                "mapped_field": "start_date",
+                "raw_value": "2024年3月",
+                "source_text": "2024年3月",
+                "reported_confidence": 0.5,
+                "assertion": "affirmed",
+                "normalized_value": "2024-03",
+                "locations": [
+                  {
+                    "start": 178,
+                    "end": 185,
+                    "page": 2,
+                    "paragraph": 8
+                  }
+                ],
+                "review_reasons": []
+              },
+              {
+                "path": "projects[0].end_date",
+                "mapped_field": "end_date",
+                "raw_value": "2024年6月",
+                "source_text": "2024年6月",
+                "reported_confidence": 0.5,
+                "assertion": "affirmed",
+                "normalized_value": "2024-06",
+                "locations": [
+                  {
+                    "start": 186,
+                    "end": 193,
+                    "page": 2,
+                    "paragraph": 8
+                  }
+                ],
+                "review_reasons": []
+              },
+              {
+                "path": "projects[0].technology_stack[0]",
+                "mapped_field": "description",
+                "raw_value": "Python",
+                "source_text": "技术栈：Python",
+                "reported_confidence": 0.5,
+                "assertion": "affirmed",
+                "normalized_value": "Python",
+                "locations": [
+                  {
+                    "start": 194,
+                    "end": 204,
+                    "page": 2,
+                    "paragraph": 8
+                  }
+                ],
+                "review_reasons": []
+              },
+              {
+                "path": "projects[0].work_items[0]",
+                "mapped_field": "description",
+                "raw_value": "编写课程查询接口",
+                "source_text": "编写课程查询接口",
+                "reported_confidence": 0.5,
+                "assertion": "affirmed",
+                "normalized_value": "编写课程查询接口",
+                "locations": [
+                  {
+                    "start": 208,
+                    "end": 216,
+                    "page": 2,
+                    "paragraph": 8
+                  }
+                ],
+                "review_reasons": []
+              }
+            ],
+            "review_reasons": [],
+            "evidence_status": "supported",
+            "duplicate_proposals_removed": 0,
+            "confidence_interpretation": "model_reported_not_truth_probability"
+          }
+        },
+        {
+          "id": "81daaea9-8ada-42de-b1fd-8a07a2410b4a",
+          "category": "experience",
+          "value": {
+            "organization": "示例科技",
+            "role": "后端实习生",
+            "experience_type": "internship",
+            "description": "维护测试脚本；成果：补充接口测试用例",
+            "start_date": "2025-07",
+            "end_date": "2025-09",
+            "is_current": null
+          },
+          "status": "pending",
+          "evidence_status": "supported",
+          "evidence": [
+            {
+              "field": "organization",
+              "source_text": "示例科技"
+            },
+            {
+              "field": "role",
+              "source_text": "岗位：后端实习生"
+            },
+            {
+              "field": "experience_type",
+              "source_text": "实习：示例科技"
+            },
+            {
+              "field": "start_date",
+              "source_text": "2025年7月"
+            },
+            {
+              "field": "end_date",
+              "source_text": "2025年9月"
+            },
+            {
+              "field": "description",
+              "source_text": "维护测试脚本；成果：补充接口测试用例"
+            }
+          ],
+          "resume_id": "ca25d4e7-82d1-4d02-8e66-d6fc8be1df85",
+          "resume_file_name": "合成评测-normal_chinese.pdf",
+          "schema_version": "2.0",
+          "extraction_version": "deepseek-v2-f9f87dbe-f4b6-4798-a5be-7ca939fe77d2",
+          "entry_id": null,
+          "created_at": "2026-10-14T09:25:24",
+          "reviewed_at": null,
+          "extraction_run_id": "576363be-26d1-42f0-8ac2-81a2ccc7b476",
+          "extraction_metadata": {
+            "schema_version": "2.0",
+            "prompt_version": "resume_extract_v2.1",
+            "provider": "deepseek",
+            "test_result": false,
+            "model": "deepseek-flash",
+            "run_id": "576363be-26d1-42f0-8ac2-81a2ccc7b476",
+            "source_text_sha256": "7dd69e69b7e12693b837cb32b312fc65d6e115bf5a37737bd2e9485439962142",
+            "source_layout_sha256": "a31176dd4020219d98eb9e5077721dbe3795411a16c560232377e53bac76ccb5",
+            "source_file_sha256": "cd6e8940637829abaa911fd22689db0f43573a24328f50574300af2f36711567",
+            "text_layout_version": "1.0",
+            "category": "experience",
+            "item_path": "experiences[0]",
+            "scope_text": "实习：示例科技；岗位：后端实习生；2025年7月至2025年9月；职责：维护测试脚本；成果：补充接口测试用例。",
+            "scope_locations": [
+              {
+                "start": 218,
+                "end": 273,
+                "page": 2,
+                "paragraph": 9
+              }
+            ],
+            "fields": [
+              {
+                "path": "experiences[0].organization",
+                "mapped_field": "organization",
+                "raw_value": "示例科技",
+                "source_text": "示例科技",
+                "reported_confidence": 0.5,
+                "assertion": "affirmed",
+                "normalized_value": "示例科技",
+                "locations": [
+                  {
+                    "start": 221,
+                    "end": 225,
+                    "page": 2,
+                    "paragraph": 9
+                  }
+                ],
+                "review_reasons": []
+              },
+              {
+                "path": "experiences[0].role",
+                "mapped_field": "role",
+                "raw_value": "后端实习生",
+                "source_text": "岗位：后端实习生",
+                "reported_confidence": 0.5,
+                "assertion": "affirmed",
+                "normalized_value": "后端实习生",
+                "locations": [
+                  {
+                    "start": 226,
+                    "end": 234,
+                    "page": 2,
+                    "paragraph": 9
+                  }
+                ],
+                "review_reasons": []
+              },
+              {
+                "path": "experiences[0].experience_type",
+                "mapped_field": "experience_type",
+                "raw_value": "实习",
+                "source_text": "实习：示例科技",
+                "reported_confidence": 0.5,
+                "assertion": "affirmed",
+                "normalized_value": "internship",
+                "locations": [
+                  {
+                    "start": 218,
+                    "end": 225,
+                    "page": 2,
+                    "paragraph": 9
+                  }
+                ],
+                "review_reasons": []
+              },
+              {
+                "path": "experiences[0].start_date",
+                "mapped_field": "start_date",
+                "raw_value": "2025年7月",
+                "source_text": "2025年7月",
+                "reported_confidence": 0.5,
+                "assertion": "affirmed",
+                "normalized_value": "2025-07",
+                "locations": [
+                  {
+                    "start": 235,
+                    "end": 242,
+                    "page": 2,
+                    "paragraph": 9
+                  }
+                ],
+                "review_reasons": []
+              },
+              {
+                "path": "experiences[0].end_date",
+                "mapped_field": "end_date",
+                "raw_value": "2025年9月",
+                "source_text": "2025年9月",
+                "reported_confidence": 0.5,
+                "assertion": "affirmed",
+                "normalized_value": "2025-09",
+                "locations": [
+                  {
+                    "start": 243,
+                    "end": 250,
+                    "page": 2,
+                    "paragraph": 9
+                  }
+                ],
+                "review_reasons": []
+              },
+              {
+                "path": "experiences[0].responsibilities[0]",
+                "mapped_field": "description",
+                "raw_value": "维护测试脚本",
+                "source_text": "维护测试脚本",
+                "reported_confidence": 0.5,
+                "assertion": "affirmed",
+                "normalized_value": "维护测试脚本",
+                "locations": [
+                  {
+                    "start": 254,
+                    "end": 260,
+                    "page": 2,
+                    "paragraph": 9
+                  }
+                ],
+                "review_reasons": []
+              },
+              {
+                "path": "experiences[0].outcomes[0]",
+                "mapped_field": "description",
+                "raw_value": "补充接口测试用例",
+                "source_text": "补充接口测试用例",
+                "reported_confidence": 0.5,
+                "assertion": "affirmed",
+                "normalized_value": "补充接口测试用例",
+                "locations": [
+                  {
+                    "start": 264,
+                    "end": 272,
+                    "page": 2,
+                    "paragraph": 9
+                  }
+                ],
+                "review_reasons": []
+              }
+            ],
+            "review_reasons": [],
+            "evidence_status": "supported",
+            "duplicate_proposals_removed": 0,
+            "confidence_interpretation": "model_reported_not_truth_probability"
+          }
+        }
+      ],
+      "field_evidence": [
+        {
+          "candidate_id": "ea71e80d-069c-41d3-a640-08b8d912535c",
+          "category": "education",
+          "field": "education[0].school",
+          "raw_value": "示例大学",
+          "source_text": "示例大学",
+          "locations": [
+            {
+              "start": 96,
+              "end": 100,
+              "page": 2,
+              "paragraph": 5
+            }
+          ],
+          "verified_against_pdf_text": true,
+          "review_reasons": []
+        },
+        {
+          "candidate_id": "ea71e80d-069c-41d3-a640-08b8d912535c",
+          "category": "education",
+          "field": "education[0].degree",
+          "raw_value": "本科",
+          "source_text": "本科",
+          "locations": [
+            {
+              "start": 101,
+              "end": 103,
+              "page": 2,
+              "paragraph": 5
+            }
+          ],
+          "verified_against_pdf_text": true,
+          "review_reasons": []
+        },
+        {
+          "candidate_id": "ea71e80d-069c-41d3-a640-08b8d912535c",
+          "category": "education",
+          "field": "education[0].major",
+          "raw_value": "计算机科学",
+          "source_text": "计算机科学",
+          "locations": [
+            {
+              "start": 104,
+              "end": 109,
+              "page": 2,
+              "paragraph": 5
+            }
+          ],
+          "verified_against_pdf_text": true,
+          "review_reasons": []
+        },
+        {
+          "candidate_id": "ea71e80d-069c-41d3-a640-08b8d912535c",
+          "category": "education",
+          "field": "education[0].start_date",
+          "raw_value": "2022年9月",
+          "source_text": "2022年9月入学",
+          "locations": [
+            {
+              "start": 110,
+              "end": 119,
+              "page": 2,
+              "paragraph": 5
+            }
+          ],
+          "verified_against_pdf_text": true,
+          "review_reasons": []
+        },
+        {
+          "candidate_id": "ea71e80d-069c-41d3-a640-08b8d912535c",
+          "category": "education",
+          "field": "education[0].graduation_date",
+          "raw_value": "2026年6月",
+          "source_text": "预计毕业：2026年6月",
+          "locations": [
+            {
+              "start": 120,
+              "end": 132,
+              "page": 2,
+              "paragraph": 5
+            }
+          ],
+          "verified_against_pdf_text": true,
+          "review_reasons": []
+        },
+        {
+          "candidate_id": "ea71e80d-069c-41d3-a640-08b8d912535c",
+          "category": "education",
+          "field": "education[0].graduation_status",
+          "raw_value": "预计毕业",
+          "source_text": "预计毕业",
+          "locations": [
+            {
+              "start": 120,
+              "end": 124,
+              "page": 2,
+              "paragraph": 5
+            }
+          ],
+          "verified_against_pdf_text": true,
+          "review_reasons": []
+        },
+        {
+          "candidate_id": "06ba312e-5977-4856-b6d5-ea5eff7468ff",
+          "category": "skill",
+          "field": "skills[0].name",
+          "raw_value": "Python",
+          "source_text": "技能：Python。",
+          "locations": [
+            {
+              "start": 134,
+              "end": 144,
+              "page": 2,
+              "paragraph": 6
+            }
+          ],
+          "verified_against_pdf_text": true,
+          "review_reasons": []
+        },
+        {
+          "candidate_id": "0a60a93e-21b2-4a3f-8c37-53ea6b924ed0",
+          "category": "skill",
+          "field": "skills[1].name",
+          "raw_value": "JavaScript",
+          "source_text": "技能：JavaScript。",
+          "locations": [
+            {
+              "start": 145,
+              "end": 159,
+              "page": 2,
+              "paragraph": 7
+            }
+          ],
+          "verified_against_pdf_text": true,
+          "review_reasons": []
+        },
+        {
+          "candidate_id": "8d16d7f7-d557-48d4-b261-68b5415852bc",
+          "category": "project",
+          "field": "projects[0].name",
+          "raw_value": "课程选课系统",
+          "source_text": "课程选课系统",
+          "locations": [
+            {
+              "start": 163,
+              "end": 169,
+              "page": 2,
+              "paragraph": 8
+            }
+          ],
+          "verified_against_pdf_text": true,
+          "review_reasons": []
+        },
+        {
+          "candidate_id": "8d16d7f7-d557-48d4-b261-68b5415852bc",
+          "category": "project",
+          "field": "projects[0].role",
+          "raw_value": "后端开发",
+          "source_text": "角色：后端开发",
+          "locations": [
+            {
+              "start": 170,
+              "end": 177,
+              "page": 2,
+              "paragraph": 8
+            }
+          ],
+          "verified_against_pdf_text": true,
+          "review_reasons": []
+        },
+        {
+          "candidate_id": "8d16d7f7-d557-48d4-b261-68b5415852bc",
+          "category": "project",
+          "field": "projects[0].start_date",
+          "raw_value": "2024年3月",
+          "source_text": "2024年3月",
+          "locations": [
+            {
+              "start": 178,
+              "end": 185,
+              "page": 2,
+              "paragraph": 8
+            }
+          ],
+          "verified_against_pdf_text": true,
+          "review_reasons": []
+        },
+        {
+          "candidate_id": "8d16d7f7-d557-48d4-b261-68b5415852bc",
+          "category": "project",
+          "field": "projects[0].end_date",
+          "raw_value": "2024年6月",
+          "source_text": "2024年6月",
+          "locations": [
+            {
+              "start": 186,
+              "end": 193,
+              "page": 2,
+              "paragraph": 8
+            }
+          ],
+          "verified_against_pdf_text": true,
+          "review_reasons": []
+        },
+        {
+          "candidate_id": "8d16d7f7-d557-48d4-b261-68b5415852bc",
+          "category": "project",
+          "field": "projects[0].technology_stack[0]",
+          "raw_value": "Python",
+          "source_text": "技术栈：Python",
+          "locations": [
+            {
+              "start": 194,
+              "end": 204,
+              "page": 2,
+              "paragraph": 8
+            }
+          ],
+          "verified_against_pdf_text": true,
+          "review_reasons": []
+        },
+        {
+          "candidate_id": "8d16d7f7-d557-48d4-b261-68b5415852bc",
+          "category": "project",
+          "field": "projects[0].work_items[0]",
+          "raw_value": "编写课程查询接口",
+          "source_text": "编写课程查询接口",
+          "locations": [
+            {
+              "start": 208,
+              "end": 216,
+              "page": 2,
+              "paragraph": 8
+            }
+          ],
+          "verified_against_pdf_text": true,
+          "review_reasons": []
+        },
+        {
+          "candidate_id": "81daaea9-8ada-42de-b1fd-8a07a2410b4a",
+          "category": "experience",
+          "field": "experiences[0].organization",
+          "raw_value": "示例科技",
+          "source_text": "示例科技",
+          "locations": [
+            {
+              "start": 221,
+              "end": 225,
+              "page": 2,
+              "paragraph": 9
+            }
+          ],
+          "verified_against_pdf_text": true,
+          "review_reasons": []
+        },
+        {
+          "candidate_id": "81daaea9-8ada-42de-b1fd-8a07a2410b4a",
+          "category": "experience",
+          "field": "experiences[0].role",
+          "raw_value": "后端实习生",
+          "source_text": "岗位：后端实习生",
+          "locations": [
+            {
+              "start": 226,
+              "end": 234,
+              "page": 2,
+              "paragraph": 9
+            }
+          ],
+          "verified_against_pdf_text": true,
+          "review_reasons": []
+        },
+        {
+          "candidate_id": "81daaea9-8ada-42de-b1fd-8a07a2410b4a",
+          "category": "experience",
+          "field": "experiences[0].experience_type",
+          "raw_value": "实习",
+          "source_text": "实习：示例科技",
+          "locations": [
+            {
+              "start": 218,
+              "end": 225,
+              "page": 2,
+              "paragraph": 9
+            }
+          ],
+          "verified_against_pdf_text": true,
+          "review_reasons": []
+        },
+        {
+          "candidate_id": "81daaea9-8ada-42de-b1fd-8a07a2410b4a",
+          "category": "experience",
+          "field": "experiences[0].start_date",
+          "raw_value": "2025年7月",
+          "source_text": "2025年7月",
+          "locations": [
+            {
+              "start": 235,
+              "end": 242,
+              "page": 2,
+              "paragraph": 9
+            }
+          ],
+          "verified_against_pdf_text": true,
+          "review_reasons": []
+        },
+        {
+          "candidate_id": "81daaea9-8ada-42de-b1fd-8a07a2410b4a",
+          "category": "experience",
+          "field": "experiences[0].end_date",
+          "raw_value": "2025年9月",
+          "source_text": "2025年9月",
+          "locations": [
+            {
+              "start": 243,
+              "end": 250,
+              "page": 2,
+              "paragraph": 9
+            }
+          ],
+          "verified_against_pdf_text": true,
+          "review_reasons": []
+        },
+        {
+          "candidate_id": "81daaea9-8ada-42de-b1fd-8a07a2410b4a",
+          "category": "experience",
+          "field": "experiences[0].responsibilities[0]",
+          "raw_value": "维护测试脚本",
+          "source_text": "维护测试脚本",
+          "locations": [
+            {
+              "start": 254,
+              "end": 260,
+              "page": 2,
+              "paragraph": 9
+            }
+          ],
+          "verified_against_pdf_text": true,
+          "review_reasons": []
+        },
+        {
+          "candidate_id": "81daaea9-8ada-42de-b1fd-8a07a2410b4a",
+          "category": "experience",
+          "field": "experiences[0].outcomes[0]",
+          "raw_value": "补充接口测试用例",
+          "source_text": "补充接口测试用例",
+          "locations": [
+            {
+              "start": 264,
+              "end": 272,
+              "page": 2,
+              "paragraph": 9
+            }
+          ],
+          "verified_against_pdf_text": true,
+          "review_reasons": []
+        }
+      ],
+      "schema_validation": "passed",
+      "review_required_candidates": [],
+      "formal_profile_before_review": {
+        "education": [],
+        "skills": [],
+        "projects": [],
+        "experiences": []
+      },
+      "unconfirmed_candidates_not_in_profile": true,
+      "provider_invocations": 1,
+      "paid_calls": 1,
+      "token_usage_kind": "provider_reported",
+      "actual_cost_cny": null,
+      "candidate_count": 5,
+      "correct": 19,
+      "proposed_nonnull_fields": 19,
+      "expected_nonnull_fields": 19,
+      "precision": 1.0,
+      "recall": 1.0,
+      "false_positive_fields": 0,
+      "false_negative_fields": 0,
+      "duplicate_candidates": 0,
+      "extra_candidates": 0,
+      "missing_candidates": 0,
+      "field_errors": [],
+      "missing_fields": [],
+      "candidate_errors": [],
+      "null_expected_correct": 4,
+      "unsupported_nonnull_for_unknown": 0,
+      "expected_supported_but_blocked": [],
+      "located_fields": 21,
+      "proposed_fields": 21,
+      "evidence_location_accuracy": 1.0,
+      "severe_errors": 0,
+      "attributed_fields": 19,
+      "scoped_fields": 19,
+      "evidence_attribution_accuracy": 1.0,
+      "candidates_requiring_gold_modification": 0,
+      "candidate_modification_ratio": 0.0,
+      "evidence_note": "Literal quote location coverage only; not independent proof of semantic attribution or resume truth.",
+      "human_review_note": "Gold mismatch is a proxy for edits; real user editing effort must be measured separately.",
+      "concrete_error_cases": [],
+      "response_model": "deepseek-flash",
+      "attempt_count": 1,
+      "relogin_restores_candidate_ids": true
+    }
+  ],
+  "planned_cases": [
+    {
+      "case_id": "normal_chinese",
+      "coverage": "正常教育、技能、项目和实习",
+      "pdf": {
+        "file_id": "ca25d4e7-82d1-4d02-8e66-d6fc8be1df85",
+        "file_name": "合成评测-normal_chinese.pdf",
+        "sha256": "cd6e8940637829abaa911fd22689db0f43573a24328f50574300af2f36711567",
+        "byte_size": 2081,
+        "factory_version": "s2-2b-synthetic-pdf-v1",
+        "caseset_version": "s2-2b-five-synthetic-v1",
+        "page_count": 2,
+        "text_layout": {
+          "layout_version": "1.0",
+          "text_sha256": "7dd69e69b7e12693b837cb32b312fc65d6e115bf5a37737bd2e9485439962142",
+          "pages": [
+            {
+              "page": 1,
+              "start": 0,
+              "end": 92
+            },
+            {
+              "page": 2,
+              "start": 93,
+              "end": 273
+            }
+          ],
+          "segments": [
+            {
+              "paragraph": 1,
+              "page": 1,
+              "start": 0,
+              "end": 19
+            },
+            {
+              "paragraph": 2,
+              "page": 1,
+              "start": 20,
+              "end": 28
+            },
+            {
+              "paragraph": 3,
+              "page": 1,
+              "start": 29,
+              "end": 80
+            },
+            {
+              "paragraph": 4,
+              "page": 1,
+              "start": 81,
+              "end": 92
+            },
+            {
+              "paragraph": 5,
+              "page": 2,
+              "start": 93,
+              "end": 133
+            },
+            {
+              "paragraph": 6,
+              "page": 2,
+              "start": 134,
+              "end": 144
+            },
+            {
+              "paragraph": 7,
+              "page": 2,
+              "start": 145,
+              "end": 159
+            },
+            {
+              "paragraph": 8,
+              "page": 2,
+              "start": 160,
+              "end": 217
+            },
+            {
+              "paragraph": 9,
+              "page": 2,
+              "start": 218,
+              "end": 273
+            }
+          ]
+        },
+        "processing_status": "parsed",
+        "private_storage_byte_roundtrip": true,
+        "synthetic_whitelist_verified": true
+      },
+      "preview": {
+        "model": "deepseek-flash",
+        "source_version": "e314746e2e4295c4d60e0780ec1837af013c326822f05f910e983aef71573a0f",
+        "redacted_text": "*******************\n********\n***************************************************\n***********\n教育：示例大学；本科；计算机科学；2022年9月入学；预计毕业：2026年6月。\n技能：Python。\n技能：JavaScript。\n项目：课程选课系统；角色：后端开发；2024年3月至2024年6月；技术栈：Python；工作：编写课程查询接口。\n实习：示例科技；岗位：后端实习生；2025年7月至2025年9月；职责：维护测试脚本；成果：补充接口测试用例。",
+        "sent_text_sha256": "1b4bb1d1f681092c0de6946913588d45c30bf543ed73994d0c40b64b2e025b0d",
+        "redaction_version": "resume-redaction-v1",
+        "max_calls": 1,
+        "max_input_tokens": 16548,
+        "max_output_tokens": 4096,
+        "privacy_notice": "仅发送预览中的教育、技能、项目、实习/工作文本，不发送 PDF 文件。默认遮蔽联系信息和个人资料区。仍可能含个人信息，请检查预览。DeepSeek 可能保留数据、使用去标识内容训练；API 专门退出和确切保留期限尚未核实。",
+        "cost_notice": "本次最多调用 1 次，不自动修复或重试。输入 token 为保守上界估计，输出最多 4096 token。可能产生 API 费用，由您的 Key 账户承担；实际 token、缓存和时段价格以 DeepSeek 账单为准。超时、取消或断网仍可能收费。",
+        "input_scope": "仅最终脱敏 resume_text 与固定版本 Prompt；不发送 PDF 原件",
+        "synthetic_only": true
+      }
+    }
+  ],
+  "authorization_record": "S2-2B-user-authorized-single-2026-10-14",
+  "declared_max_calls": 1,
+  "declared_budget_cny": "1",
+  "price_audit_date": "2026-10-14",
+  "price_source": "https://api-docs.deepseek.com/zh-cn/quick_start/pricing/",
+  "input_price_per_million_cny": "2",
+  "output_price_per_million_cny": "8",
+  "estimated_upper_cny": "0.065864",
+  "summary": {
+    "correct": 19,
+    "proposed_nonnull_fields": 19,
+    "expected_nonnull_fields": 19,
+    "precision": 1.0,
+    "recall": 1.0,
+    "located_fields": 21,
+    "proposed_fields": 21,
+    "evidence_location_accuracy": 1.0,
+    "severe_errors": 0
+  }
+}

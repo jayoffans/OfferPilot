@@ -3,23 +3,105 @@
 from functools import lru_cache
 from pathlib import Path
 
+from pydantic import Field, model_validator
+from sqlalchemy.engine import make_url
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 BACKEND_ROOT = Path(__file__).resolve().parents[3]
 DEFAULT_DATABASE_PATH = BACKEND_ROOT / "data" / "offerpilot.db"
 DEFAULT_DATABASE_URL = f"sqlite:///{DEFAULT_DATABASE_PATH.as_posix()}"
+DEFAULT_UPLOAD_DIR = BACKEND_ROOT / "uploads"
 
 
 class Settings(BaseSettings):
     app_name: str = "OfferPilot API"
     environment: str = "development"
-    database_url: str = DEFAULT_DATABASE_URL
+    database_url: str = Field(default=DEFAULT_DATABASE_URL, repr=False)
+    database_pool_size: int = Field(default=5, ge=1, le=50)
+    database_max_overflow: int = Field(default=5, ge=0, le=50)
+    database_pool_timeout_seconds: int = Field(default=5, ge=1, le=60)
+    database_connect_timeout_seconds: int = Field(default=5, ge=1, le=30)
+    database_statement_timeout_ms: int = Field(default=15000, ge=100, le=120000)
+    database_lock_timeout_ms: int = Field(default=5000, ge=100, le=30000)
+    upload_dir: Path = DEFAULT_UPLOAD_DIR
+    export_dir: Path | None = None
+    deletion_ledger_dir: Path | None = None
+    export_ttl_seconds: int = Field(default=86400, ge=60, le=86400)
+    export_max_bytes: int = Field(default=67108864, ge=1048576, le=1073741824)
+    export_max_records: int = Field(default=10000, ge=10, le=100000)
+    export_timeout_seconds: int = Field(default=60, ge=1, le=300)
+    export_max_active_total: int = Field(default=20, ge=1, le=100)
+    export_max_retained_per_user: int = Field(default=2, ge=1, le=10)
+    deletion_max_attempts: int = Field(default=5, ge=1, le=10)
+    session_ttl_seconds: int = Field(default=43200, ge=60, le=604800)
+    session_cookie_secure: bool | None = None
+    trusted_origins: list[str] = ["http://localhost:8000", "http://127.0.0.1:8000"]
+    auth_attempt_window_seconds: int = Field(default=900, ge=60, le=86400)
+    auth_login_attempt_limit: int = Field(default=5, ge=1, le=100)
+    auth_ip_attempt_limit: int = Field(default=30, ge=1, le=1000)
+    auth_registration_attempt_limit: int = Field(default=10, ge=1, le=100)
+    # Test-only, opt-in; never resolves or calls a paid provider.
+    mock_extraction_enabled: bool = False
+    deepseek_extraction_enabled: bool = False
+    byok_ttl_seconds: int = Field(default=3600, ge=60, le=3600)
+
+    @property
+    def deepseek_extraction_available(self) -> bool:
+        # Supplier BYOK permission / retention / training configuration is a
+        # release gate. This batch enables only explicit local development.
+        return self.environment == "development" and self.deepseek_extraction_enabled
+    extraction_timeout_seconds: int = Field(default=30, ge=1, le=60)
+    extraction_max_attempts: int = Field(default=2, ge=1, le=2)
+    extraction_max_calls: int = Field(default=4, ge=1, le=4)
+    extraction_max_active_per_user: int = Field(default=3, ge=1, le=10)
+    extraction_max_active_total: int = Field(default=20, ge=1, le=100)
+
+    @model_validator(mode="after")
+    def validate_database(self) -> "Settings":
+        if self.export_dir is None:
+            self.export_dir = self.upload_dir.parent / (self.upload_dir.name + "-exports")
+        if self.deletion_ledger_dir is None:
+            self.deletion_ledger_dir = self.upload_dir.parent / (self.upload_dir.name + "-deletion-ledger")
+        private_roots = [path.resolve() for path in (self.upload_dir, self.export_dir, self.deletion_ledger_dir)]
+        if any(left.is_relative_to(right) or right.is_relative_to(left)
+               for index, left in enumerate(private_roots) for right in private_roots[index + 1:]):
+            raise ValueError("简历、导出与独立删除清单目录不得重叠")
+        try:
+            url = make_url(self.database_url)
+        except Exception:
+            raise ValueError("数据库配置无效") from None
+        if url.drivername == "postgresql":
+            url = url.set(drivername="postgresql+psycopg")
+            self.database_url = url.render_as_string(hide_password=False)
+        if url.drivername not in {"sqlite", "postgresql+psycopg"}:
+            raise ValueError("仅支持 SQLite 或 PostgreSQL psycopg 驱动")
+        if self.environment != "development":
+            if url.drivername != "postgresql+psycopg":
+                raise ValueError("非开发环境必须显式配置 PostgreSQL")
+            if not all((url.host, url.database, url.username, url.password)):
+                raise ValueError("非开发环境数据库配置不完整")
+            if url.username == "postgres":
+                raise ValueError("应用不得使用数据库超级用户")
+        return self
+
+    @property
+    def mock_extraction_available(self) -> bool:
+        return self.environment == "development" and self.mock_extraction_enabled
+
+    @property
+    def secure_session_cookie(self) -> bool:
+        if self.environment != "development":
+            return True
+        if self.session_cookie_secure is not None:
+            return self.session_cookie_secure
+        return False
 
     model_config = SettingsConfigDict(
         env_prefix="OFFERPILOT_",
         env_file=BACKEND_ROOT / ".env",
         env_file_encoding="utf-8",
         extra="ignore",
+        hide_input_in_errors=True,
     )
 
 

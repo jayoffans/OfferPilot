@@ -1,0 +1,109 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main, master, "codex/**"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  OFFERPILOT_ENVIRONMENT: development
+  OFFERPILOT_DATABASE_URL: "sqlite:///:memory:"
+  OFFERPILOT_DEEPSEEK_EXTRACTION_ENABLED: "false"
+  NEXT_TELEMETRY_DISABLED: "1"
+  PYTHONIOENCODING: utf-8
+
+jobs:
+  backend:
+    name: Backend / SQLite / local demo
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: "3.11"
+      - uses: astral-sh/setup-uv@94527f2e458b27549849d47d273a16bec83a01e9 # v7
+        with:
+          version: "0.12.19"
+      - run: uv sync --project backend --locked
+      - name: Backend unit and SQLite integration tests
+        run: uv run --project backend --locked python -B -m unittest discover -s tests -v
+      - name: Real HTTP file lifecycle
+        run: uv run --project backend --locked python -B tests/http_file_lifecycle_smoke.py
+      - name: Real HTTP export and deletion lifecycle
+        run: uv run --project backend --locked python -B tests/http_account_lifecycle_smoke.py
+      - name: Reproduce synthetic local demo
+        run: |
+          uv run --project backend --locked python scripts/local/manage.py init --database sqlite
+          uv run --project backend --locked python scripts/local/manage.py seed
+          uv run --project backend --locked python scripts/local/manage.py seed
+          uv run --project backend --locked python scripts/local/manage.py status
+      - name: Public demo screenshot integrity
+        run: uv run --project backend --locked python scripts/collect_demo.py --check
+
+  postgres:
+    name: PostgreSQL / migrations / concurrency / isolation
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: "3.11"
+      - uses: astral-sh/setup-uv@94527f2e458b27549849d47d273a16bec83a01e9 # v7
+        with:
+          version: "0.12.19"
+      - run: uv sync --project backend --locked
+      - name: Real PostgreSQL suites (separate migration and runtime roles)
+        run: uv run --project backend --locked python scripts/local/postgres_tests.py
+      - name: Reproduce PostgreSQL local demo
+        run: |
+          uv run --project backend --locked python scripts/local/manage.py init --database postgres
+          uv run --project backend --locked python scripts/local/manage.py seed
+          uv run --project backend --locked python scripts/local/manage.py status
+      - name: PostgreSQL failure diagnostics (status only)
+        if: ${{ failure() }}
+        run: docker compose --env-file .env.s5-postgres -f compose.postgres.yml ps --all
+
+  frontend:
+    name: Frontend / contract / build / Chromium
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: "3.11"
+      - uses: astral-sh/setup-uv@94527f2e458b27549849d47d273a16bec83a01e9 # v7
+        with:
+          version: "0.12.19"
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: "22.16.0"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: uv sync --project backend --locked
+      - run: npm --prefix frontend ci
+      - run: npm --prefix frontend run api:check
+      - run: npm --prefix frontend run lint
+      - run: npm --prefix frontend test
+      # Build creates Next-generated route types; keep .next writers sequential.
+      - run: npm --prefix frontend run build
+      - run: npm --prefix frontend run typecheck
+      - run: npx playwright install --with-deps chromium
+        working-directory: frontend
+      - run: npm --prefix frontend run test:e2e

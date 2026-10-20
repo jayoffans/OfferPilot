@@ -6,14 +6,24 @@ build-backend = "setuptools.build_meta"
 name = "offerpilot-backend"
 version = "0.1.0"
 description = "OfferPilot MVP API skeleton"
+license = { text = "AGPL-3.0-only" }
 requires-python = ">=3.11,<3.12"
 dependencies = [
+    "alembic>=1.20,<1.21",
     "fastapi[standard-no-fastapi-cloud-cli]>=0.141.1,<0.142",
+    "openai>=2,<3",
+    "PyMuPDF>=1.27,<1.29",
     "SQLAlchemy>=2.1,<2.2",
     "pydantic>=2.13.5,<3",
     "pydantic-settings>=2.15,<3",
     "python-dotenv>=1.0,<2",
+    "argon2-cffi>=25.1,<26",
+    "cryptography>=46,<51",
+    "psycopg[binary]==3.3.3",
 ]
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.package-data]
+"offerpilot_api.resume_ingestion.prompts" = ["*.txt"]
