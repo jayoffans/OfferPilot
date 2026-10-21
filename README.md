@@ -12,22 +12,7 @@ OfferPilot 将文本 PDF 简历、个人画像、岗位条件、匹配依据和�
 
 **岗位选择、事实确认、声明、申请提交和 Offer 决策始终由用户负责。** 项目不自动海投，也不生成未经确认的经历。
 
-[系统截图](#系统截图) · [本地启动](docs/LOCAL_SETUP.md) · [演示路线](docs/DEMO.md) · [测试说明](docs/TESTING.md) · [当前架构](docs/ARCHITECTURE_GUIDE.md) · [面试材料](docs/INTERVIEW.md) · [交付验收](docs/PORTFOLIO-acceptance.md)
-
-## 核心功能
-
-| 功能 | 当前实现 |
-|---|---|
-| 账户与工作台 | 邀请注册、会话登录/退出、今日/逾期/近期行动、当前申请统计 |
-| 简历管理 | 文本 PDF 上传、文本提取、改名、本人原件下载、删除与失败恢复 |
-| AI 候选审核 | DeepSeek Adapter、会话 BYOK、发送预览与单次授权；严格 Schema、证据检查、逐项确认/修订/拒绝 |
-| 正式画像 | 教育、技能、项目、实习/工作；手工值和审核值区分来源，未知可留空 |
-| 职位管理 | 手工录入/粘贴 JD、免费规则整理、必须/优先/待核实条件审核、收藏及版本快照 |
-| 可信匹配 | 四态判断、画像与 JD 双侧证据、三类综合提示、历史依据变化后失效 |
-| 投递管理 | 用户手工维护八态、备注、下一步行动和追加式时间线；支持多轮申请 |
-| 数据生命周期 | 密码重验后导出本人 ZIP；明确确认注销，撤销访问、持久清理及旧备份删除重放 |
-
-以上保留 S1～S5-2 已完成能力，实施证据见各批[验收文档](docs/INDEX.md)。未配置 DeepSeek Key 也能使用手工画像、简历管理、JD 规则整理、匹配、投递和导出。免费候选演示使用明确标识的 **Mock 合成样本**。
+[系统截图](#系统截图) · [四项工程亮点](#四项工程亮点) · [本地启动](docs/LOCAL_SETUP.md) · [80 秒演示分镜](docs/DEMO.md#招聘展示短片分镜80-秒) · [测试说明](docs/TESTING.md) · [当前架构](docs/ARCHITECTURE_GUIDE.md) · [面试材料](docs/INTERVIEW.md)
 
 ## 系统截图
 
@@ -71,6 +56,30 @@ OfferPilot 将文本 PDF 简历、个人画像、岗位条件、匹配依据和�
 ![本人数据导出就绪，密码输入已清空](docs/images/demo/export.png)
 
 </details>
+
+## 四项工程亮点
+
+| 工程设计 | 实际解决的问题与证据 |
+|---|---|
+| 候选与事实隔离 | 模型输出先过版本化 Schema、原文定位及经历归属检查，再由用户确认；待审候选不能进入正式匹配。[抽取与审核验收](docs/S2-2A-acceptance.md) |
+| 可解释的四态匹配 | 正式画像与已审核 JD 双侧引用，区分“未发现证据”和“明确不满足”；依据版本变化后提示失效，不伪造分数或录用概率。[匹配验收](docs/S3-2-acceptance.md) |
+| 并发、幂等与错误恢复 | revision 冲突保护、幂等回执、持久任务租约和文件补偿，防止重复写入、静默覆盖及取消后的迟到结果复活。[PostgreSQL 并发验收](docs/S5-1-acceptance.md) |
+| 用户隔离与数据生命周期 | 服务端解析归属、会话/CSRF、私有下载；本人导出、先撤销访问再注销清理，以及旧备份恢复后的删除重放。[生命周期验收](docs/S5-2-acceptance.md) |
+
+## 核心功能
+
+| 功能 | 当前实现 |
+|---|---|
+| 账户与工作台 | 邀请注册、会话登录/退出、今日/逾期/近期行动、当前申请统计 |
+| 简历管理 | 文本 PDF 上传、文本提取、改名、本人原件下载、删除与失败恢复 |
+| AI 候选审核 | DeepSeek Adapter、会话 BYOK、发送预览与单次授权；严格 Schema、证据检查、逐项确认/修订/拒绝 |
+| 正式画像 | 教育、技能、项目、实习/工作；手工值和审核值区分来源，未知可留空 |
+| 职位管理 | 手工录入/粘贴 JD、免费规则整理、必须/优先/待核实条件审核、收藏及版本快照 |
+| 可信匹配 | 四态判断、画像与 JD 双侧证据、三类综合提示、历史依据变化后失效 |
+| 投递管理 | 用户手工维护八态、备注、下一步行动和追加式时间线；支持多轮申请 |
+| 数据生命周期 | 密码重验后导出本人 ZIP；明确确认注销，撤销访问、持久清理及旧备份删除重放 |
+
+以上保留 S1～S5-2 已完成能力，实施证据见各批[验收文档](docs/INDEX.md)。未配置 DeepSeek Key 也能使用手工画像、简历管理、JD 规则整理、匹配、投递和导出。免费候选演示使用明确标识的 **Mock 合成样本**。
 
 ## 技术栈与架构
 
@@ -137,6 +146,8 @@ Next.js 仅代理明确允许的方法和路径，不接受任意上游地址。
 
 准备 Python 3.11、uv、Node.js 22.12+（22.x）或 24+；PostgreSQL 路线还需 Docker Compose。命令均在仓库根目录执行，Windows 可将 `npm` 换为 `npm.cmd`。
 
+**Windows 一键演示：** 安装上述工具后双击 [start-demo.cmd](start-demo.cmd)，或执行 `.\start-demo.cmd`。入口复用现有脚本，按锁安装依赖，在 `.local/windows-demo/` 建立独立 SQLite 合成环境并启动 API / Web；不需要 Docker 或 Key，已有演示操作不被重置。按 Ctrl+C 停止本次服务，凭据查看与参数见 [LOCAL_SETUP](docs/LOCAL_SETUP.md#windows-一键演示)。以下双终端命令继续用于手动选择 PostgreSQL 或 SQLite。
+
 ```sh
 uv sync --project backend --locked
 npm --prefix frontend ci
@@ -170,13 +181,13 @@ uv run --locked --project backend python scripts/local/manage.py web
 
 E2E 自动创建独立数据库、合成账户与文件，启动真实 API / Web，结束清理。不要同时运行 E2E 和 build，它们共用 `.next`。CI 覆盖锁定依赖、SQLite、PostgreSQL、前端和 Chromium，使用无网络模型夹具；浏览器层默认使用 SQLite，PostgreSQL Chromium 保留独立本地入口。
 
-2026-10-20，合并后的 `main`（`c341eb6`）已通过 GitHub Actions 的后端、PostgreSQL、前端 / Chromium 三项任务，见[实际运行结果](https://github.com/jayoffans/OfferPilot/actions/runs/39386760528)。许可与启动的历史检查见[发布准备报告](docs/GITHUB-RELEASE-READY.md)，完整本地回归环境见[作品集验收](docs/PORTFOLIO-acceptance.md)。
+2026-10-21 核对的远程 `main`（`ceb3014`）已通过 GitHub Actions 的后端、PostgreSQL、前端 / Chromium 三项任务，见[实际运行结果](https://github.com/jayoffans/OfferPilot/actions/runs/39553336784)。当前本地收尾分支的启动器、回归与构建结果单独见[最终验收](docs/PORTFOLIO-FINAL-ACCEPTANCE.md)，不将远程基线 CI 当作未推送分支的新结果。许可与启动的历史检查见[发布准备报告](docs/GITHUB-RELEASE-READY.md)，此前本地回归环境见[作品集验收](docs/PORTFOLIO-acceptance.md)。
 
 ## 当前限制与后续计划
 
 仅支持文本 PDF；没有 OCR/DOCX、密码找回/邮箱验证、自动岗位抓取、简历重写、通知派发或浏览器代填。真实 BYOK 仅单进程；模型质量只验证过一个真实合成样本，规则证据检查与 JD 整理都有语义局限。开发 SQLite 不能替代真实 PostgreSQL 的并发测试。
 
-2026-10-19 的[依赖安全审查](docs/GITHUB-DEPENDENCY-REVIEW.md)仍记录 5 项 High 开发依赖告警，生产依赖审计范围内为 0 项；ESLint peer dependency 兼容警告仍在。第三方许可证库存仍需补齐后续锁文件变动，见[许可审查的当前边界](docs/THIRD_PARTY_LICENSES.md)。
+2026-10-21 复核仍为 5 项 High 开发依赖告警，生产依赖审计范围内为 0 项；ESLint peer dependency 兼容警告仍在。根公告与既有判断见[依赖安全审查](docs/GITHUB-DEPENDENCY-REVIEW.md)，本轮实测见[最终验收](docs/PORTFOLIO-FINAL-ACCEPTANCE.md)。第三方许可证库存仍需补齐后续锁文件变动，见[许可审查的当前边界](docs/THIRD_PARTY_LICENSES.md)。
 
 后续聚焦仓库规范、技术说明、本地复现、合成演示、测试与面试材料。公网云部署、域名备案、大规模容量、多节点高可用、复杂生产监控、商业化隐私政策和线上试点从当前计划取消；已有安全、隔离与许可要求继续保留。[PLAN](docs/PLAN.md) · [路线图](docs/roadmap.md)
 

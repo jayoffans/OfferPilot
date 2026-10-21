@@ -26,6 +26,7 @@ Windows PowerShell 如因执行策略不能直接运行 npm / npx，改用 `npm.
 | TypeScript | `npm --prefix frontend run typecheck` | TypeScript 类型，包括 Next 生成的路由类型；干净环境先运行 build |
 | Chromium E2E | 见下一节 | 真实浏览器及真实后端闭环、持久恢复/故障和跨用户边界 |
 | 合成本地环境 | `uv run --project backend --locked python scripts/local/manage.py status` | 本机种子登录、health、正式画像、申请、明确 Mock 的待审候选；先按 LOCAL_SETUP 初始化/播种 |
+| 一键启动边界 | `uv run --project backend --locked python -B -m unittest tests.test_local_launcher -v` | 端口冲突、独立 profile、保留已有操作、失败不启动、就绪超时、本次进程树清理及 Windows 含中文空格路径 |
 
 未配置 PostgreSQL 的普通 unittest 中，`tests/postgres` 明确 skip；这不表示 PostgreSQL 已验证。应单独执行 PostgreSQL 入口。需要只跑一个层次时：
 
@@ -69,6 +70,8 @@ npm --prefix frontend run api:check
 
 生成文件应随 API 变更一起提交；不要手工维护第二套会漂移的客户端 Schema。导出只读取 OpenAPI，不迁移数据库或读取用户记录。
 
+Windows 的 Git checkout 可能将已生成文件转换为 CRLF。契约检查只归一这一换行差异后比较完整生成内容，不修改 Schema、忽略类型变化或要求为换行重新生成客户端。
+
 ## CI 的实际范围
 
 [`.github/workflows/ci.yml`](../.github/workflows/ci.yml) 包含三项并行任务，均按锁文件安装、限制总时长、只读 GitHub 权限，不访问仓库秘密，也不启用真实 DeepSeek：
@@ -81,8 +84,8 @@ npm --prefix frontend run api:check
 
 本地/CI PostgreSQL 启动的健康等待上限为90秒；失败时工作流只输出 `docker compose ps --all` 状态，不打印容器配置、凭据或数据库日志。浏览器关闭 trace/自动截图/录像，避免在失败时收集登录秘密；复现时只主动截取经审阅的合成页面。最终发布顺序与本轮复验见 [GITHUB-RELEASE-CHECKLIST](GITHUB-RELEASE-CHECKLIST.md)。
 
-2026-10-20 已核实合并后的 `main`（`c341eb643d13dd1775d750c8b9581a183eb8b96e`）在 Ubuntu 24.04 上的 [Actions 运行 39386760528](https://github.com/jayoffans/OfferPilot/actions/runs/39386760528)成功，三项任务均通过：后端 / SQLite / 本地演示、PostgreSQL / 迁移 / 并发 / 隔离、前端 / 契约 / 构建 / Chromium。这是该提交的实际远程结果，不代替后续运行代码变更的 CI。
+2026-10-21 已核实远程 `main`（`ceb3014bf4b225dbeb0ebfd66ae0fc21469f1ece`）在 Ubuntu 24.04 上的 [Actions 运行 39553336784](https://github.com/jayoffans/OfferPilot/actions/runs/39553336784)成功，三项任务均通过：后端 / SQLite / 本地演示、PostgreSQL / 迁移 / 并发 / 隔离、前端 / 契约 / 构建 / Chromium。这是该提交的实际远程结果，不代替后续运行代码变更的 CI。
 
-本轮未改动运行代码，沿用已验证的 main 分支 CI；本轮完成文档专项检查。既有更重的100用户合成查询及独立备份/删除重放演练继续保留在 `scripts/postgres/quality.py`、`backup_restore.py`、`lifecycle_restore.py`，不作为此次作品集上手的必要步骤。
+2026-10-20 的展示发布仅改文档，沿用当时 main CI。2026-10-21 的本地收尾增加启动编排与 Windows 契约换行兼容，实际本机回归、构建、启动及失败/未运行项见 [最终验收](PORTFOLIO-FINAL-ACCEPTANCE.md)，不把旧 main 的绿色结果当成本分支的新 CI。既有更重的100用户合成查询及独立备份/删除重放演练继续保留在 `scripts/postgres/quality.py`、`backup_restore.py`、`lifecycle_restore.py`，不作为此次作品集上手的必要步骤。
 
 历史重型演练以 S5-1/S5-2 的 Windows 实测为依据，`quality.py` 的服务子进程仍有 Windows venv 路径假设，不属于 Linux CI 入口。跨平台快速启动/PG测试入口与 CI 使用的 HTTP、E2E 解释器路径已区分平台；已验证 Windows 和上述 Ubuntu CI 环境，macOS 等其他平台仍须实际运行确认。

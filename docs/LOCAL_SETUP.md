@@ -2,6 +2,30 @@
 
 本项目以 GitHub 作品展示和本机技术演示为目标。推荐 PostgreSQL + 本机 FastAPI / Next.js；不需要云服务器、域名或 DeepSeek Key。Docker 只运行已有的 PostgreSQL 服务，避免把 Python、Node 开发调试再包进多层容器。
 
+## Windows 一键演示
+
+先安装 Python 3.11、uv 和受支持的 Node.js / npm（版本见下节），再双击仓库根目录的 [start-demo.cmd](../start-demo.cmd)，或在 PowerShell 执行：
+
+```powershell
+.\start-demo.cmd
+```
+
+入口只编排现有 `manage.py`：按锁文件执行 `uv sync` 和 `npm ci`，在独立 `.local/windows-demo/` 初始化 SQLite、迁移并播种合成数据，再启动单进程 FastAPI 和 Next.js，健康检查就绪后打开 `http://127.0.0.1:3000`。**这条路线不需要 Docker 或模型 Key，只使用明确标识的 Mock。** 安装需要可访问依赖源；5 High 和 ESLint peer 警告仍会显示，不用强制升级或忽略参数掩盖。
+
+默认 profile 与下文旧 `demo`、PostgreSQL 环境及 `backend/data/` 分开，不复制或修改已有 `.env`。后端演示子进程不载入开发者的 `.env`，前端现有服务配置由本机地址显式覆盖。若已有播种记录，不会重播种或还原之后的用户操作；密码仍由本人打开提示路径中的私有 `demo-credentials.json` 查看，程序不打印密码。
+
+8000 / 3000 端口被占用或 Next 开发锁存在时会拒绝启动，不复用、终止其他服务，也不偷偷换端口。按 Ctrl+C 停止本次启动的 API / Web 及其子进程；若 Windows 询问 `Terminate batch job (Y/N)?`，输入 `Y` 关闭批处理，数据库保留。安装、初始化或就绪检查失败时同样清理本次服务并保留现场；不要删库或重建删除清单来绕过错误。
+
+需要新的独立演示或不自动打开浏览器时：
+
+```powershell
+.\start-demo.cmd --profile interview-demo --no-browser
+# 只有依赖已按锁安装、且锁文件未变化时才跳过安装。
+.\start-demo.cmd --profile interview-demo --skip-install --no-browser
+```
+
+默认每个服务的就绪等待上限为 90 秒，可用 `--startup-timeout 120` 调整（允许 10～180 秒）。现有跨平台 `init` / `seed` / `api` / `web` 命令保持，见下文；已有 profile 的后续迁移仍须停写和备份后显式执行 `migrate`，一键入口不隐式升级已有库。
+
 ## 1. 准备依赖
 
 - Python 3.11（后端声明 `>=3.11,<3.12`）。
@@ -136,7 +160,7 @@ macOS / Linux 可用同名环境变量的 `export NAME=value` 语法；推荐直
 | 现象 | 处理 |
 |---|---|
 | Docker 未运行、镜像下载失败 | 启动 Docker，确认 Linux 容器和网络，再重跑同一个 `init`。不要更换已有卷密码或移除卷 |
-| 55432 被占用 | 初始化前在私有 `.env.s5-postgres` 设置空闲的 `S5_POSTGRES_PORT`；已有环境连接配置不能自动迁移到另一个实例 |
+| 55432 被占用或位于 Windows 保留端口范围 | 初始化前在私有 `.env.s5-postgres` 设置空闲的 `S5_POSTGRES_PORT`，可用 `netsh interface ipv4 show excludedportrange protocol=tcp` 查看保留范围；已有环境连接配置不能自动迁移到另一个实例 |
 | 8000 / 3000 被占用 | 停止自己启动的旧 API / Next 服务；不要用其他项目服务假装启动成功 |
 | 种子中断 | 失败环境保留；选择新的 `--profile` 重试。不要重放密码未知或已修改的旧种子 |
 | 登录后仍是登录页 | 使用同一 `127.0.0.1` 地址，确认密码来自当前 profile；工具会为本机 HTTP 固定关闭 Secure Cookie |
