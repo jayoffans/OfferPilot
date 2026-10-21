@@ -15,7 +15,8 @@ const live = JSON.parse(exported.stdout);
 const saved = JSON.parse(readFileSync(path.join(root, 'openapi.json'), 'utf8'));
 if (JSON.stringify(live) !== JSON.stringify(saved)) throw new Error('OpenAPI differs from backend. Run export-openapi.py then npm run api:generate.');
 const generated = astToString(await openapiTS(saved));
-const checked = readFileSync(path.join(root, 'src/lib/schema.d.ts'), 'utf8');
+// Git may check out CRLF on Windows; compare content without newline drift.
+const checked = readFileSync(path.join(root, 'src/lib/schema.d.ts'), 'utf8').replace(/\r\n/g, '\n');
 // The CLI prepends the generated-file banner.
 if (!checked.endsWith(generated)) throw new Error('Generated client types differ. Run npm run api:generate.');
 console.log('Backend schema and generated TypeScript are in sync.');
