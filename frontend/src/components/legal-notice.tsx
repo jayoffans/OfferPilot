@@ -1,5 +1,5 @@
-const projectBranch = "https://github.com/jayoffans/OfferPilot/tree/codex/s5-1-postgresql";
-const thirdPartyNotices = "https://github.com/jayoffans/OfferPilot/blob/codex/s5-1-postgresql/docs/THIRD_PARTY_LICENSES.md";
+const projectBranch = "https://github.com/jayoffans/OfferPilot";
+const thirdPartyNotices = "https://github.com/jayoffans/OfferPilot/blob/main/docs/THIRD_PARTY_LICENSES.md";
 
 export function LegalNotice({ className }: { className: string }) {
   return <footer className={`legal-notice ${className}`} aria-label="开源许可与声明">
